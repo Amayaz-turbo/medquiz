@@ -68,11 +68,61 @@ ALERTS{alertname="MedQuizBackendTargetDown"}
 
 ## 7) Configuration production
 
+### Option A - VM / Docker Compose (prêt à lancer)
+
+Fichiers utilisés:
+- `prometheus.production.yml`
+- `alertmanager.production.yml`
+- `docker-compose.production.yml`
+
+Étapes:
+
+1. Préparer le secret (Terminal 2: Prometheus):
+
+```bash
+cd /Users/amayazturbo/Documents/New\ project/backend/ops/prometheus
+mkdir -p secrets
+grep '^METRICS_AUTH_TOKEN=' ../../.env.production | cut -d= -f2- > secrets/medquiz_metrics_token
+chmod 600 secrets/medquiz_metrics_token
+```
+
+Important:
+- Le fichier attendu est `backend/.env.production` (pas `.env.production.example`).
+- Dans `backend/.env.production`, ne laisse pas de placeholder avec `<...>` (ex: `<strong-password>`), sinon `source` échoue.
+
+2. Éditer les deux valeurs obligatoires:
+- Dans `prometheus.production.yml`: remplacer `api.medquiz.fr:443` par ton endpoint réel.
+- Dans `alertmanager.production.yml`: remplacer l’URL webhook par ton endpoint d’alerte réel.
+
+3. Lancer la stack (Terminal 2: Prometheus):
+
+```bash
+docker compose -f docker-compose.production.yml up -d
+```
+
+4. Vérifier:
+
+```bash
+curl -s 'http://localhost:9090/api/v1/query?query=up%7Bjob%3D%22medquiz-backend%22%7D'
+curl -s 'http://localhost:9090/api/v1/rules' | grep -n MedQuizBackendTargetDown
+```
+
+5. Si tu testes en local, garder le backend actif (Terminal 1: Backend):
+
+```bash
+cd /Users/amayazturbo/Documents/New\ project/backend
+set -a; source .env.production; set +a
+npm run build
+npm run start
+```
+
+### Option B - Kubernetes / autre orchestrateur
+
 Utiliser `prometheus.production.example.yml` comme base:
 
-1. Copier le fichier et adapter les `targets`.
-2. Garder `authorization.credentials_file` pour éviter les tokens en clair dans le YAML.
-3. Monter le fichier secret `medquiz_metrics_token` via ton orchestrateur (Kubernetes secret, VM file, etc.).
+1. Adapter les `targets`.
+2. Conserver `authorization.credentials_file` (pas de token en clair).
+3. Monter le secret `medquiz_metrics_token` via Secret Kubernetes / fichier VM.
 4. Charger `medquiz-alert-rules.yml`.
 
 ## 8) Troubleshooting rapide

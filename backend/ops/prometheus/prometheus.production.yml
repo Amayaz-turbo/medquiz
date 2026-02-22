@@ -1,0 +1,33 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    service: medquiz-backend
+    environment: production
+
+rule_files:
+  - /etc/prometheus/medquiz-alert-rules.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+scrape_configs:
+  - job_name: medquiz-backend
+    metrics_path: /v1/observability/metrics
+    # For local backend target (host.docker.internal:8080), keep scheme=http.
+    # For real production endpoint behind TLS (e.g. api.medquiz.fr:443), set scheme=https.
+    scheme: http
+    authorization:
+      type: Bearer
+      credentials_file: /etc/prometheus/secrets/medquiz_metrics_token
+    static_configs:
+      # REPLACE this target with your real production API endpoint.
+      # Example: host.docker.internal:8080
+      - targets:
+          - host.docker.internal:8080
+        labels:
+          app: medquiz-backend
+          team: platform

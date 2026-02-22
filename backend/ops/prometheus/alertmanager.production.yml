@@ -1,0 +1,16 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: ops-webhook
+  group_by: ["alertname", "service", "severity"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 2h
+
+receivers:
+  - name: ops-webhook
+    webhook_configs:
+      # REPLACE with your real webhook receiver endpoint (PagerDuty/Slack bridge/etc.).
+      - url: https://replace-me-with-real-alert-webhook.example.com/alerts
+        send_resolved: true

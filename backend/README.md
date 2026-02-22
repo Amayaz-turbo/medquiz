@@ -80,6 +80,7 @@ The internal duel timeout worker is enabled by default (`DUEL_EXPIRATION_JOB_ENA
 - In production, `METRICS_AUTH_TOKEN` is mandatory when `METRICS_ENABLED=true`.
 - Prometheus alert rules template is provided at `ops/prometheus/medquiz-alert-rules.yml`.
 - Full Prometheus setup + local alert test guide: `ops/prometheus/README.md`.
+- Ready-to-run production compose stack: `ops/prometheus/docker-compose.production.yml`.
 - Go-live checklist: `ops/PROD_ROLLOUT_CHECKLIST.md`.
 - Incident response runbook: `ops/INCIDENT_RUNBOOK.md`.
 - Production env template: `.env.production.example`.
