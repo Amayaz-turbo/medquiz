@@ -1,0 +1,32 @@
+services:
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.enable-lifecycle"
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.local.yml:/etc/prometheus/prometheus.yml:ro
+      - ./medquiz-alert-rules.yml:/etc/prometheus/medquiz-alert-rules.yml:ro
+      - ./secrets:/etc/prometheus/secrets:ro
+      - ./prometheus-data:/prometheus
+    depends_on:
+      - alertmanager
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alertmanager.local.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./alertmanager-data:/alertmanager
+    restart: unless-stopped

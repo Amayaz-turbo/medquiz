@@ -1,0 +1,1891 @@
+openapi: 3.1.0
+info:
+  title: MedQuiz API
+  version: 1.0.0
+  description: |
+    API contract v1 for MedQuiz (PASS/LAS -> DFGSM/DFASM -> Interne/Docteur junior),
+    aligned with Lots B/C/D/E.
+servers:
+  - url: https://api.medquiz.app
+    description: Production
+  - url: https://staging-api.medquiz.app
+    description: Staging
+security:
+  - bearerAuth: []
+tags:
+  - name: Auth
+  - name: Me
+  - name: Content
+  - name: Quiz
+  - name: Duel
+  - name: Ads
+  - name: Billing
+  - name: Notifications
+  - name: Submissions
+  - name: Avatar
+  - name: Admin
+paths:
+  /v1/auth/register:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Register account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '200':
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccessResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+  /v1/auth/login:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccessResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+  /v1/auth/refresh:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Refresh access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccessResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+  /v1/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout
+      responses:
+        '200':
+          $ref: '#/components/responses/OkEnvelope'
+  /v1/auth/oauth/google:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Login or register with Google
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OAuthGoogleRequest'
+      responses:
+        '200':
+          description: Auth success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccessResponse'
+  /v1/auth/oauth/apple:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Login or register with Apple
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OAuthAppleRequest'
+      responses:
+        '200':
+          description: Auth success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccessResponse'
+  /v1/me:
+    get:
+      tags: [Me]
+      summary: Get current user profile and subscription
+      responses:
+        '200':
+          description: Profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+  /v1/me/profile:
+    patch:
+      tags: [Me]
+      summary: Update basic profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkEnvelope'
+  /v1/me/push-token:
+    put:
+      tags: [Me]
+      summary: Register push token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PushTokenRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkEnvelope'
+  /v1/me/profile/customization:
+    patch:
+      tags: [Me, Avatar]
+      summary: Update public profile customization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileCustomizationRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkEnvelope'
+
+  /v1/subjects:
+    get:
+      tags: [Content]
+      summary: List active subjects
+      responses:
+        '200':
+          description: Subject list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubjectsResponse'
+  /v1/subjects/{subjectId}/chapters:
+    get:
+      tags: [Content]
+      summary: List active chapters for a subject
+      parameters:
+        - $ref: '#/components/parameters/SubjectId'
+      responses:
+        '200':
+          description: Chapter list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChaptersResponse'
+  /v1/me/progress/chapters:
+    put:
+      tags: [Me, Content]
+      summary: Upsert declared chapter progress
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChapterProgressUpsertRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkEnvelope'
+
+  /v1/quiz/sessions:
+    post:
+      tags: [Quiz]
+      summary: Create quiz session
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateQuizSessionRequest'
+      responses:
+        '201':
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizSessionCreatedResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+  /v1/quiz/sessions/{sessionId}:
+    get:
+      tags: [Quiz]
+      summary: Get session state
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: Session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizSessionStateResponse'
+  /v1/quiz/sessions/{sessionId}/next-question:
+    get:
+      tags: [Quiz]
+      summary: Get next question for session
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: Question or completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizNextQuestionResponse'
+  /v1/quiz/sessions/{sessionId}/answers:
+    post:
+      tags: [Quiz]
+      summary: Submit one answer with immediate feedback
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuizAnswerSubmitRequest'
+      responses:
+        '200':
+          description: Answer result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizAnswerSubmitResponse'
+        '422':
+          $ref: '#/components/responses/BusinessRuleError'
+  /v1/quiz/sessions/{sessionId}/complete:
+    post:
+      tags: [Quiz]
+      summary: Complete session (mainly for until_stop)
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuizSessionCompleteRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkEnvelope'
+  /v1/me/stats/subjects:
+    get:
+      tags: [Me, Quiz]
+      summary: Get subject-level performance stats
+      responses:
+        '200':
+          description: Stats by subject
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubjectStatsResponse'
+  /v1/me/stats/summary:
+    get:
+      tags: [Me, Quiz]
+      summary: Get global summary stats
+      responses:
+        '200':
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SummaryStatsResponse'
+
+  /v1/ads/eligibility:
+    get:
+      tags: [Ads]
+      summary: Check ads eligibility for placement
+      parameters:
+        - name: placement
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/AdPlacement'
+        - name: sessionId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Eligibility
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdsEligibilityResponse'
+  /v1/ads/impressions:
+    post:
+      tags: [Ads]
+      summary: Track ad impression/click/reward
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdImpressionRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkEnvelope'
+  /v1/ads/reward-grants:
+    post:
+      tags: [Ads]
+      summary: Grant reward after rewarded ad
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RewardGrantRequest'
+      responses:
+        '200':
+          description: Reward granted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RewardGrantResponse'
+        '422':
+          $ref: '#/components/responses/BusinessRuleError'
+
+  /v1/duels:
+    post:
+      tags: [Duel]
+      summary: Create duel
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDuelRequest'
+      responses:
+        '201':
+          description: Duel created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateDuelResponse'
+        '422':
+          $ref: '#/components/responses/BusinessRuleError'
+    get:
+      tags: [Duel]
+      summary: List duels
+      parameters:
+        - $ref: '#/components/parameters/StatusFilter'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Duel list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DuelListResponse'
+  /v1/duels/{duelId}:
+    get:
+      tags: [Duel]
+      summary: Get duel details
+      parameters:
+        - $ref: '#/components/parameters/DuelId'
+      responses:
+        '200':
+          description: Duel details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DuelDetailResponse'
+  /v1/duels/{duelId}/accept:
+    post:
+      tags: [Duel]
+      summary: Accept duel invitation
+      parameters:
+        - $ref: '#/components/parameters/DuelId'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkEnvelope'
+  /v1/duels/{duelId}/decline:
+    post:
+      tags: [Duel]
+      summary: Decline duel invitation
+      parameters:
+        - $ref: '#/components/parameters/DuelId'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkEnvelope'
+  /v1/duels/{duelId}/opener:
+    get:
+      tags: [Duel]
+      summary: Get opener question
+      parameters:
+        - $ref: '#/components/parameters/DuelId'
+      responses:
+        '200':
+          description: Opener question
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpenerQuestionResponse'
+  /v1/duels/{duelId}/opener/answer:
+    post:
+      tags: [Duel]
+      summary: Submit opener answer
+      parameters:
+        - $ref: '#/components/parameters/DuelId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpenerAnswerRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkEnvelope'
+  /v1/duels/{duelId}/opener/decision:
+    post:
+      tags: [Duel]
+      summary: Winner chooses take or leave hand
+      parameters:
+        - $ref: '#/components/parameters/DuelId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpenerDecisionRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkEnvelope'
+  /v1/duels/{duelId}/rounds/current:
+    get:
+      tags: [Duel]
+      summary: Get current round state
+      parameters:
+        - $ref: '#/components/parameters/DuelId'
+      responses:
+        '200':
+          description: Round state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentRoundResponse'
+  /v1/duels/{duelId}/rounds/{roundNo}/choose-subject:
+    post:
+      tags: [Duel]
+      summary: Choose subject for current round
+      parameters:
+        - $ref: '#/components/parameters/DuelId'
+        - $ref: '#/components/parameters/RoundNo'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChooseSubjectRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkEnvelope'
+        '422':
+          $ref: '#/components/responses/BusinessRuleError'
+  /v1/duels/{duelId}/rounds/{roundNo}/questions:
+    get:
+      tags: [Duel]
+      summary: Get assigned round questions for current player
+      parameters:
+        - $ref: '#/components/parameters/DuelId'
+        - $ref: '#/components/parameters/RoundNo'
+      responses:
+        '200':
+          description: Question list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DuelRoundQuestionsResponse'
+  /v1/duels/{duelId}/rounds/{roundNo}/answers:
+    post:
+      tags: [Duel]
+      summary: Submit one round answer (unit mode)
+      parameters:
+        - $ref: '#/components/parameters/DuelId'
+        - $ref: '#/components/parameters/RoundNo'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DuelRoundAnswerRequest'
+      responses:
+        '200':
+          description: Round answer result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DuelRoundAnswerResponse'
+        '422':
+          $ref: '#/components/responses/BusinessRuleError'
+  /v1/duels/{duelId}/jokers/request:
+    post:
+      tags: [Duel]
+      summary: Request +24h joker
+      parameters:
+        - $ref: '#/components/parameters/DuelId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JokerRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkEnvelope'
+        '422':
+          $ref: '#/components/responses/BusinessRuleError'
+  /v1/duels/{duelId}/jokers/{jokerId}/respond:
+    post:
+      tags: [Duel]
+      summary: Respond to joker request
+      parameters:
+        - $ref: '#/components/parameters/DuelId'
+        - $ref: '#/components/parameters/JokerId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JokerResponseRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkEnvelope'
+  /v1/duels/{duelId}/forfeit:
+    post:
+      tags: [Duel]
+      summary: Forfeit duel
+      parameters:
+        - $ref: '#/components/parameters/DuelId'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkEnvelope'
+
+  /v1/notifications:
+    get:
+      tags: [Notifications]
+      summary: List notifications
+      parameters:
+        - $ref: '#/components/parameters/StatusFilter'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Notification list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationListResponse'
+  /v1/notifications/{notificationId}/read:
+    post:
+      tags: [Notifications]
+      summary: Mark notification as read
+      parameters:
+        - $ref: '#/components/parameters/NotificationId'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkEnvelope'
+
+  /v1/billing/subscription:
+    get:
+      tags: [Billing]
+      summary: Get current subscription
+      responses:
+        '200':
+          description: Subscription
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionResponse'
+  /v1/billing/checkout-session:
+    post:
+      tags: [Billing]
+      summary: Create checkout session
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutRequest'
+      responses:
+        '200':
+          description: Checkout payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutResponse'
+  /v1/billing/webhooks/stripe:
+    post:
+      tags: [Billing]
+      security: []
+      summary: Stripe webhook receiver
+      responses:
+        '200':
+          $ref: '#/components/responses/OkEnvelope'
+  /v1/billing/apple/verify-receipt:
+    post:
+      tags: [Billing]
+      summary: Verify Apple receipt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppleVerifyRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkEnvelope'
+  /v1/billing/google/verify-purchase:
+    post:
+      tags: [Billing]
+      summary: Verify Google purchase
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoogleVerifyRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkEnvelope'
+  /v1/billing/restore:
+    post:
+      tags: [Billing]
+      summary: Restore purchases
+      responses:
+        '200':
+          $ref: '#/components/responses/OkEnvelope'
+
+  /v1/question-submissions:
+    post:
+      tags: [Submissions]
+      summary: Submit user question proposal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuestionSubmissionCreateRequest'
+      responses:
+        '201':
+          description: Submission created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionSubmissionResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+  /v1/question-submissions/me:
+    get:
+      tags: [Submissions]
+      summary: List my submissions
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Submission list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionSubmissionListResponse'
+  /v1/question-submissions/{submissionId}:
+    get:
+      tags: [Submissions]
+      summary: Get one submission
+      parameters:
+        - $ref: '#/components/parameters/SubmissionId'
+      responses:
+        '200':
+          description: Submission
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionSubmissionResponse'
+  /v1/questions/{questionId}/reports:
+    post:
+      tags: [Submissions]
+      summary: Report a published question
+      parameters:
+        - $ref: '#/components/parameters/QuestionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuestionReportRequest'
+      responses:
+        '201':
+          $ref: '#/components/responses/OkEnvelope'
+
+  /v1/admin/question-submissions:
+    get:
+      tags: [Admin]
+      summary: List submissions for moderation
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [pending, approved, rejected]
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Moderation list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionSubmissionListResponse'
+  /v1/admin/question-submissions/{submissionId}/approve:
+    post:
+      tags: [Admin]
+      summary: Approve submission
+      parameters:
+        - $ref: '#/components/parameters/SubmissionId'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkEnvelope'
+  /v1/admin/question-submissions/{submissionId}/reject:
+    post:
+      tags: [Admin]
+      summary: Reject submission
+      parameters:
+        - $ref: '#/components/parameters/SubmissionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/OkEnvelope'
+
+  /v1/me/avatar:
+    get:
+      tags: [Avatar]
+      summary: Get avatar state
+      responses:
+        '200':
+          description: Avatar state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvatarStateResponse'
+  /v1/avatar/stages:
+    get:
+      tags: [Avatar]
+      summary: List avatar stages
+      responses:
+        '200':
+          description: Stage list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvatarStageListResponse'
+  /v1/avatar/specialties:
+    get:
+      tags: [Avatar]
+      summary: List medical specialties
+      responses:
+        '200':
+          description: Specialty list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedicalSpecialtyListResponse'
+  /v1/me/avatar/specialty:
+    post:
+      tags: [Avatar]
+      summary: Set avatar specialty (requires stage Interne+)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [specialtyId]
+              properties:
+                specialtyId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          $ref: '#/components/responses/OkEnvelope'
+        '422':
+          $ref: '#/components/responses/BusinessRuleError'
+  /v1/me/avatar/inventory:
+    get:
+      tags: [Avatar]
+      summary: Get avatar inventory
+      parameters:
+        - name: itemType
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/AvatarItemType'
+      responses:
+        '200':
+          description: Inventory
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvatarInventoryResponse'
+  /v1/me/avatar/equipment:
+    post:
+      tags: [Avatar]
+      summary: Equip avatar item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AvatarEquipRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkEnvelope'
+        '422':
+          $ref: '#/components/responses/BusinessRuleError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema:
+        type: string
+    SubjectId:
+      name: subjectId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    SessionId:
+      name: sessionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    DuelId:
+      name: duelId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    RoundNo:
+      name: roundNo
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 5
+    JokerId:
+      name: jokerId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    NotificationId:
+      name: notificationId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    SubmissionId:
+      name: submissionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    QuestionId:
+      name: questionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      schema:
+        type: string
+    StatusFilter:
+      name: status
+      in: query
+      required: false
+      schema:
+        type: string
+  responses:
+    OkEnvelope:
+      description: Generic ok response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/OkResponse'
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    UnauthorizedError:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    BusinessRuleError:
+      description: Business rule violation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    QuizMode:
+      type: string
+      enum: [learning, discovery, review, par_coeur, rattrapage]
+    SessionStopRule:
+      type: string
+      enum: [fixed_10, fixed_custom, until_stop]
+    DuelStatus:
+      type: string
+      enum: [pending_opener, in_progress, completed, cancelled, expired]
+    SubscriptionPlan:
+      type: string
+      enum: [free, premium]
+    AdPlacement:
+      type: string
+      enum: [rewarded_end_first_session, quiz_start_interstitial, rewarded_avatar_cosmetic]
+    AvatarItemType:
+      type: string
+      enum: [object, pose, outfit, background]
+    RewardGrantType:
+      type: string
+      enum: [ad_free_window, avatar_cosmetic]
+
+    OkResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          additionalProperties: true
+          default: {}
+        meta:
+          type: object
+          additionalProperties: true
+          default: {}
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+            requestId:
+              type: string
+
+    TokenPair:
+      type: object
+      required: [accessToken, refreshToken]
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+    UserPublic:
+      type: object
+      required: [id, email, displayName]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+    AuthSuccessResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            user:
+              $ref: '#/components/schemas/UserPublic'
+            tokens:
+              $ref: '#/components/schemas/TokenPair'
+
+    RegisterRequest:
+      type: object
+      required: [email, password, displayName]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        displayName:
+          type: string
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+    OAuthGoogleRequest:
+      type: object
+      required: [idToken]
+      properties:
+        idToken:
+          type: string
+    OAuthAppleRequest:
+      type: object
+      required: [identityToken]
+      properties:
+        identityToken:
+          type: string
+        authorizationCode:
+          type: string
+
+    MeResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            email:
+              type: string
+              format: email
+            displayName:
+              type: string
+            timezone:
+              type: string
+            countryCode:
+              type: string
+            subscription:
+              type: object
+              properties:
+                plan:
+                  $ref: '#/components/schemas/SubscriptionPlan'
+                status:
+                  type: string
+    UpdateProfileRequest:
+      type: object
+      properties:
+        displayName:
+          type: string
+        studyTrack:
+          type: string
+        yearLabel:
+          type: string
+        uxTone:
+          type: string
+    PushTokenRequest:
+      type: object
+      required: [platform, pushToken]
+      properties:
+        platform:
+          type: string
+          enum: [ios, android, web]
+        pushToken:
+          type: string
+    ProfileCustomizationRequest:
+      type: object
+      properties:
+        publicAlias:
+          type: string
+        profileColor:
+          type: string
+        bio:
+          type: string
+          maxLength: 140
+        visibility:
+          type: string
+          enum: [public, friends, private]
+
+    Subject:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+    Chapter:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        subjectId:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+    SubjectsResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Subject'
+    ChaptersResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Chapter'
+
+    ChapterProgressUpsertRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            required: [chapterId, declaredProgressPct]
+            properties:
+              chapterId:
+                type: string
+                format: uuid
+              declaredProgressPct:
+                type: number
+                minimum: 0
+                maximum: 100
+
+    CreateQuizSessionRequest:
+      type: object
+      required: [mode, stopRule, subjectIds]
+      properties:
+        mode:
+          $ref: '#/components/schemas/QuizMode'
+        stopRule:
+          $ref: '#/components/schemas/SessionStopRule'
+        targetQuestionCount:
+          type: integer
+          minimum: 1
+          maximum: 200
+        subjectIds:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            format: uuid
+        chapterIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+    QuizSessionCreatedResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            session:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                mode:
+                  $ref: '#/components/schemas/QuizMode'
+                stopRule:
+                  $ref: '#/components/schemas/SessionStopRule'
+                targetQuestionCount:
+                  type: integer
+                  nullable: true
+                isFirstSessionOfDay:
+                  type: boolean
+                startedAt:
+                  type: string
+                  format: date-time
+    QuizSessionStateResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          additionalProperties: true
+
+    Choice:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        label:
+          type: string
+        position:
+          type: integer
+          minimum: 1
+          maximum: 4
+    Question:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        prompt:
+          type: string
+        choices:
+          type: array
+          items:
+            $ref: '#/components/schemas/Choice'
+        subjectId:
+          type: string
+          format: uuid
+        chapterId:
+          type: string
+          format: uuid
+    QuizNextQuestionResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            question:
+              oneOf:
+                - $ref: '#/components/schemas/Question'
+                - type: 'null'
+            sessionCompleted:
+              type: boolean
+            progress:
+              type: object
+              additionalProperties: true
+
+    QuizAnswerSubmitRequest:
+      type: object
+      required: [questionId, selectedChoiceId]
+      properties:
+        questionId:
+          type: string
+          format: uuid
+        selectedChoiceId:
+          type: string
+          format: uuid
+        responseTimeMs:
+          type: integer
+          minimum: 1
+    QuizAnswerSubmitResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            result:
+              type: object
+              properties:
+                isCorrect:
+                  type: boolean
+                correctChoiceId:
+                  type: string
+                  format: uuid
+                explanation:
+                  type: string
+            progress:
+              type: object
+              additionalProperties: true
+    QuizSessionCompleteRequest:
+      type: object
+      required: [endedReason]
+      properties:
+        endedReason:
+          type: string
+          enum: [user_stop, completed_target]
+
+    SubjectStatsItem:
+      type: object
+      properties:
+        subjectId:
+          type: string
+          format: uuid
+        attemptsCount:
+          type: integer
+        correctCount:
+          type: integer
+        successRate:
+          type: number
+        questionsSeenCount:
+          type: integer
+        questionsToReinforceCount:
+          type: integer
+    SubjectStatsResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/SubjectStatsItem'
+    SummaryStatsResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          additionalProperties: true
+
+    AdsEligibilityResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            placement:
+              $ref: '#/components/schemas/AdPlacement'
+            eligible:
+              type: boolean
+            reason:
+              type: string
+            rewardWindowEndsAt:
+              type: string
+              format: date-time
+              nullable: true
+    AdImpressionRequest:
+      type: object
+      required: [placement]
+      properties:
+        placement:
+          $ref: '#/components/schemas/AdPlacement'
+        sessionId:
+          type: string
+          format: uuid
+          nullable: true
+        network:
+          type: string
+        rewardGranted:
+          type: boolean
+    RewardGrantRequest:
+      type: object
+      required: [placement, grantType]
+      properties:
+        placement:
+          $ref: '#/components/schemas/AdPlacement'
+        grantType:
+          $ref: '#/components/schemas/RewardGrantType'
+        sessionId:
+          type: string
+          format: uuid
+          nullable: true
+    RewardGrantResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            grantType:
+              $ref: '#/components/schemas/RewardGrantType'
+            rewardWindowEndsAt:
+              type: string
+              format: date-time
+              nullable: true
+            avatarItem:
+              $ref: '#/components/schemas/AvatarItem'
+
+    CreateDuelRequest:
+      type: object
+      required: [matchmakingMode]
+      properties:
+        matchmakingMode:
+          type: string
+          enum: [friend_invite, random_free, random_level]
+        opponentUserId:
+          type: string
+          format: uuid
+          nullable: true
+    CreateDuelResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            duelId:
+              type: string
+              format: uuid
+            status:
+              $ref: '#/components/schemas/DuelStatus'
+    DuelListResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  status:
+                    $ref: '#/components/schemas/DuelStatus'
+                  player1Score:
+                    type: integer
+                  player2Score:
+                    type: integer
+            meta:
+              type: object
+              properties:
+                nextCursor:
+                  type: string
+                  nullable: true
+    DuelDetailResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          additionalProperties: true
+    OpenerQuestionResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            question:
+              $ref: '#/components/schemas/Question'
+    OpenerAnswerRequest:
+      type: object
+      required: [selectedChoiceId, responseTimeMs]
+      properties:
+        selectedChoiceId:
+          type: string
+          format: uuid
+        responseTimeMs:
+          type: integer
+          minimum: 1
+    OpenerDecisionRequest:
+      type: object
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          enum: [take_hand, leave_hand]
+    CurrentRoundResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          additionalProperties: true
+    ChooseSubjectRequest:
+      type: object
+      required: [subjectId]
+      properties:
+        subjectId:
+          type: string
+          format: uuid
+    DuelRoundQuestionsResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Question'
+    DuelRoundAnswerRequest:
+      type: object
+      required: [slotNo, questionId, selectedChoiceId, responseTimeMs]
+      properties:
+        slotNo:
+          type: integer
+          minimum: 1
+          maximum: 3
+        questionId:
+          type: string
+          format: uuid
+        selectedChoiceId:
+          type: string
+          format: uuid
+        responseTimeMs:
+          type: integer
+          minimum: 1
+    DuelRoundAnswerResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            answerResult:
+              type: object
+              properties:
+                isCorrect:
+                  type: boolean
+                correctChoiceId:
+                  type: string
+                  format: uuid
+                explanation:
+                  type: string
+            roundProgress:
+              type: object
+              properties:
+                answeredSlots:
+                  type: integer
+                remainingSlots:
+                  type: integer
+            turnCompleted:
+              type: boolean
+    JokerRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+    JokerResponseRequest:
+      type: object
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          enum: [grant, reject]
+
+    NotificationListResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+            meta:
+              type: object
+              properties:
+                nextCursor:
+                  type: string
+                  nullable: true
+
+    SubscriptionResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            plan:
+              $ref: '#/components/schemas/SubscriptionPlan'
+            status:
+              type: string
+            provider:
+              type: string
+            startedAt:
+              type: string
+              format: date-time
+            endsAt:
+              type: string
+              format: date-time
+              nullable: true
+    CheckoutRequest:
+      type: object
+      required: [provider, plan]
+      properties:
+        provider:
+          type: string
+          enum: [stripe, apple, google]
+        plan:
+          $ref: '#/components/schemas/SubscriptionPlan'
+    CheckoutResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            provider:
+              type: string
+            checkoutUrl:
+              type: string
+              format: uri
+              nullable: true
+            clientSecret:
+              type: string
+              nullable: true
+    AppleVerifyRequest:
+      type: object
+      required: [receiptData]
+      properties:
+        receiptData:
+          type: string
+    GoogleVerifyRequest:
+      type: object
+      required: [purchaseToken, productId]
+      properties:
+        purchaseToken:
+          type: string
+        productId:
+          type: string
+
+    QuestionSubmissionChoice:
+      type: object
+      required: [label, position, isCorrect]
+      properties:
+        label:
+          type: string
+        position:
+          type: integer
+          minimum: 1
+          maximum: 4
+        isCorrect:
+          type: boolean
+    QuestionSubmissionCreateRequest:
+      type: object
+      required: [subjectId, chapterId, questionType, prompt, explanation, choices]
+      properties:
+        subjectId:
+          type: string
+          format: uuid
+        chapterId:
+          type: string
+          format: uuid
+        questionType:
+          type: string
+          enum: [single_choice]
+        prompt:
+          type: string
+        explanation:
+          type: string
+        choices:
+          type: array
+          minItems: 4
+          maxItems: 4
+          items:
+            $ref: '#/components/schemas/QuestionSubmissionChoice'
+    QuestionSubmissionResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          additionalProperties: true
+    QuestionSubmissionListResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+            meta:
+              type: object
+              properties:
+                nextCursor:
+                  type: string
+                  nullable: true
+    QuestionReportRequest:
+      type: object
+      required: [reasonCode]
+      properties:
+        reasonCode:
+          type: string
+          enum: [wrong_answer, unclear, out_of_scope, typo, other]
+        comment:
+          type: string
+
+    AvatarStage:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        sortOrder:
+          type: integer
+    MedicalSpecialty:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+    AvatarItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        itemType:
+          $ref: '#/components/schemas/AvatarItemType'
+        rarity:
+          type: string
+          enum: [common, rare, epic, legendary]
+    AvatarStateResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            stage:
+              $ref: '#/components/schemas/AvatarStage'
+            xpPoints:
+              type: integer
+            nextStage:
+              type: object
+              properties:
+                code:
+                  type: string
+                xpRequired:
+                  type: integer
+            specialty:
+              oneOf:
+                - $ref: '#/components/schemas/MedicalSpecialty'
+                - type: 'null'
+            equipped:
+              type: object
+              additionalProperties:
+                type: string
+                format: uuid
+    AvatarStageListResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/AvatarStage'
+    MedicalSpecialtyListResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/MedicalSpecialty'
+    AvatarInventoryResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/AvatarItem'
+    AvatarEquipRequest:
+      type: object
+      required: [itemType, itemId]
+      properties:
+        itemType:
+          $ref: '#/components/schemas/AvatarItemType'
+        itemId:
+          type: string
+          format: uuid

@@ -1,0 +1,435 @@
+import { ValidationPipe } from "@nestjs/common";
+import { Test } from "@nestjs/testing";
+import { FastifyAdapter, NestFastifyApplication } from "@nestjs/platform-fastify";
+import * as request from "supertest";
+import { HttpExceptionFilter } from "../src/common/filters/http-exception.filter";
+import { RequestIdInterceptor } from "../src/common/interceptors/request-id.interceptor";
+import { DatabaseService } from "../src/database/database.service";
+import {
+  IsolatedTestDatabase,
+  createIsolatedTestDatabase,
+  dropIsolatedTestDatabase,
+  seedPublishedSingleChoiceQuestions
+} from "./e2e.utils";
+
+interface TestUserSession {
+  userId: string;
+  email: string;
+  accessToken: string;
+  refreshToken: string;
+}
+
+interface DuelView {
+  id: string;
+  status: string;
+  currentRoundNo: number;
+  currentTurnUserId: string | null;
+  turnDeadlineAt: string | null;
+  rounds: Array<{ roundNo: number; status: string; chosenSubjectId: string | null }>;
+  completedAt: string | null;
+  winReason: string | null;
+}
+
+interface CurrentRoundView {
+  roundNo: number;
+  chosenSubjectId: string | null;
+  offeredSubjects: Array<{ id: string; name: string }>;
+}
+
+interface DuelQuestionItem {
+  slotNo: number;
+  question: {
+    id: string;
+    choices: Array<{ id: string; label: string; position: number }>;
+  };
+}
+
+describe("Critical integration flows", () => {
+  jest.setTimeout(180_000);
+  const metricsToken = "metrics-token-1234567890";
+
+  let app: NestFastifyApplication;
+  let db: DatabaseService;
+  let duelsService: { expireDueTurns: (limit?: number) => Promise<{ processed: number }> };
+  let isolatedDb: IsolatedTestDatabase;
+
+  beforeAll(async () => {
+    isolatedDb = await createIsolatedTestDatabase();
+    process.env.NODE_ENV = "test";
+    process.env.PORT = "18080";
+    process.env.DATABASE_URL = isolatedDb.databaseUrl;
+    process.env.ACCESS_TOKEN_SECRET = "test-access-secret-very-long";
+    process.env.ACCESS_TOKEN_TTL = "15m";
+    process.env.REFRESH_TOKEN_SECRET = "test-refresh-secret-very-long";
+    process.env.REFRESH_TOKEN_TTL_DAYS = "30";
+    process.env.CORS_ORIGIN = "";
+    process.env.DUEL_EXPIRATION_JOB_ENABLED = "false";
+    process.env.DUEL_EXPIRATION_INTERVAL_SECONDS = "300";
+    process.env.METRICS_ENABLED = "true";
+    process.env.METRICS_AUTH_TOKEN = metricsToken;
+    process.env.SLO_AVAILABILITY_TARGET_PCT = "99.9";
+    process.env.SLO_P95_LATENCY_MS = "300";
+    process.env.SLO_WINDOW_DAYS = "30";
+    process.env.HEALTH_DB_TIMEOUT_MS = "1500";
+
+    const { AppModule } = await import("../src/app.module");
+    const { DuelsService } = await import("../src/duels/duels.service");
+
+    const moduleRef = await Test.createTestingModule({
+      imports: [AppModule]
+    }).compile();
+
+    app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
+    app.setGlobalPrefix("v1");
+    app.useGlobalPipes(
+      new ValidationPipe({
+        transform: true,
+        whitelist: true,
+        forbidNonWhitelisted: true
+      })
+    );
+    app.useGlobalFilters(new HttpExceptionFilter());
+    app.useGlobalInterceptors(new RequestIdInterceptor());
+
+    await app.init();
+    await app.getHttpAdapter().getInstance().ready();
+
+    db = app.get(DatabaseService);
+    duelsService = app.get(DuelsService);
+
+    await seedPublishedSingleChoiceQuestions(isolatedDb.databaseUrl);
+  });
+
+  afterAll(async () => {
+    if (app) {
+      await app.close();
+    }
+    if (isolatedDb) {
+      await dropIsolatedTestDatabase(isolatedDb);
+    }
+  });
+
+  it("exposes liveness, readiness and observability endpoints", async () => {
+    const live = await request(app.getHttpServer()).get("/v1/health/live").expect(200);
+    expect(live.body.data.status).toBe("ok");
+
+    const ready = await request(app.getHttpServer()).get("/v1/health/ready").expect(200);
+    expect(ready.body.data.status).toBe("ok");
+    expect(ready.body.data.database).toBe("ok");
+
+    await request(app.getHttpServer()).get("/v1/observability/slo").expect(401);
+    await request(app.getHttpServer()).get("/v1/observability/metrics").expect(401);
+
+    const slo = await request(app.getHttpServer())
+      .get("/v1/observability/slo")
+      .set("Authorization", `Bearer ${metricsToken}`)
+      .expect(200);
+    expect(slo.body.data.targets.availabilityPct).toBe(99.9);
+    expect(typeof slo.body.data.actual.p95LatencyMs).toBe("number");
+
+    const metrics = await request(app.getHttpServer())
+      .get("/v1/observability/metrics")
+      .set("x-metrics-token", metricsToken)
+      .expect(200);
+    expect(metrics.headers["content-type"]).toContain("text/plain");
+    expect(metrics.text).toContain("http_requests_total");
+    expect(metrics.text).toContain("http_request_duration_ms_bucket");
+  });
+
+  it("register/login/refresh with token rotation", async () => {
+    const registered = await registerUser("Auth Runner");
+
+    const loginResponse = await request(app.getHttpServer())
+      .post("/v1/auth/login")
+      .send({
+        email: registered.email,
+        password: passwordForTests()
+      })
+      .expect(201);
+
+    const loginAccess = loginResponse.body.data.tokens.accessToken as string;
+    const loginRefresh = loginResponse.body.data.tokens.refreshToken as string;
+    expect(typeof loginAccess).toBe("string");
+    expect(typeof loginRefresh).toBe("string");
+
+    const refreshResponse = await request(app.getHttpServer())
+      .post("/v1/auth/refresh")
+      .send({
+        refreshToken: loginRefresh
+      })
+      .expect(201);
+
+    const rotatedRefresh = refreshResponse.body.data.tokens.refreshToken as string;
+    expect(rotatedRefresh).not.toEqual(loginRefresh);
+
+    await request(app.getHttpServer())
+      .post("/v1/auth/refresh")
+      .send({
+        refreshToken: loginRefresh
+      })
+      .expect(401);
+
+    const meResponse = await request(app.getHttpServer())
+      .get("/v1/auth/me")
+      .set("Authorization", `Bearer ${refreshResponse.body.data.tokens.accessToken as string}`)
+      .expect(200);
+
+    expect(meResponse.body.data.id).toBe(registered.userId);
+    expect(meResponse.body.data.email).toBe(registered.email);
+  });
+
+  it("plays a full duel (5 rounds) to completion", async () => {
+    const player1 = await registerUser("Duel Player 1");
+    const player2 = await registerUser("Duel Player 2");
+    const duelId = await startInProgressDuel(player1, player2);
+
+    let duel = await getDuel(player1, duelId);
+    let turnSafety = 0;
+    while (duel.status !== "completed" && turnSafety < 20) {
+      const actor = duel.currentTurnUserId === player1.userId ? player1 : player2;
+      await playCurrentTurn(duelId, actor);
+      duel = await getDuel(player1, duelId);
+      turnSafety += 1;
+    }
+
+    expect(turnSafety).toBeLessThan(20);
+    expect(duel.status).toBe("completed");
+    expect(duel.completedAt).not.toBeNull();
+    expect(duel.rounds).toHaveLength(5);
+    expect(duel.rounds.every((round) => round.status === "completed")).toBe(true);
+    expect(["score", "tie_break_speed"]).toContain(duel.winReason);
+  });
+
+  it("handles joker request/grant and enforces one joker per player", async () => {
+    const player1 = await registerUser("Joker Player 1");
+    const player2 = await registerUser("Joker Player 2");
+    const duelId = await startInProgressDuel(player1, player2);
+
+    const before = await getDuel(player1, duelId);
+    const beforeDeadline = new Date(before.turnDeadlineAt as string).getTime();
+
+    const requestJoker = await request(app.getHttpServer())
+      .post(`/v1/duels/${duelId}/jokers/request`)
+      .set("Authorization", `Bearer ${player1.accessToken}`)
+      .send({ reason: "retard train" })
+      .expect(201);
+
+    const jokerId = requestJoker.body.data.jokerId as string;
+    expect(requestJoker.body.data.status).toBe("pending");
+
+    await request(app.getHttpServer())
+      .post(`/v1/duels/${duelId}/jokers/${jokerId}/respond`)
+      .set("Authorization", `Bearer ${player2.accessToken}`)
+      .send({ decision: "grant" })
+      .expect(201);
+
+    const after = await getDuel(player1, duelId);
+    const afterDeadline = new Date(after.turnDeadlineAt as string).getTime();
+    expect(afterDeadline).toBeGreaterThan(beforeDeadline);
+
+    const secondJoker = await request(app.getHttpServer())
+      .post(`/v1/duels/${duelId}/jokers/request`)
+      .set("Authorization", `Bearer ${player1.accessToken}`)
+      .send({ reason: "second try" })
+      .expect(422);
+
+    expect(secondJoker.body.error.code).toBe("DUEL_JOKER_ALREADY_USED");
+  });
+
+  it("expires due turns through worker service and gives hand to opponent", async () => {
+    const player1 = await registerUser("Timeout Player 1");
+    const player2 = await registerUser("Timeout Player 2");
+    const duelId = await startInProgressDuel(player1, player2);
+
+    await db.query(
+      `
+        UPDATE duels
+        SET turn_deadline_at = NOW() - INTERVAL '2 minutes'
+        WHERE id = $1
+      `,
+      [duelId]
+    );
+
+    const result = await duelsService.expireDueTurns(10);
+    expect(result.processed).toBeGreaterThanOrEqual(1);
+
+    const duel = await getDuel(player1, duelId);
+    expect(duel.status).toBe("in_progress");
+    expect(duel.currentTurnUserId).toBe(player2.userId);
+  });
+
+  it("serializes concurrent answers on same slot (one success, one business error)", async () => {
+    const player1 = await registerUser("Race Player 1");
+    const player2 = await registerUser("Race Player 2");
+    const duelId = await startInProgressDuel(player1, player2);
+
+    const round = await getCurrentRound(player1, duelId);
+    await chooseSubjectIfNeeded(player1, duelId, round);
+    const questions = await getRoundQuestions(player1, duelId, round.roundNo);
+    const firstSlot = questions[0];
+
+    const payload = {
+      slotNo: firstSlot.slotNo,
+      questionId: firstSlot.question.id,
+      selectedChoiceId: firstSlot.question.choices[0].id,
+      responseTimeMs: 1200
+    };
+
+    const [resp1, resp2] = await Promise.all([
+      request(app.getHttpServer())
+        .post(`/v1/duels/${duelId}/rounds/${round.roundNo}/answers`)
+        .set("Authorization", `Bearer ${player1.accessToken}`)
+        .send(payload),
+      request(app.getHttpServer())
+        .post(`/v1/duels/${duelId}/rounds/${round.roundNo}/answers`)
+        .set("Authorization", `Bearer ${player1.accessToken}`)
+        .send(payload)
+    ]);
+
+    const statuses = [resp1.status, resp2.status].sort((a, b) => a - b);
+    expect(statuses).toEqual([201, 422]);
+
+    const businessError = resp1.status === 422 ? resp1 : resp2;
+    expect(businessError.body.error.code).toBe("DUEL_SLOT_ALREADY_ANSWERED");
+  });
+
+  async function registerUser(displayName: string): Promise<TestUserSession> {
+    const suffix = `${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
+    const email = `integration-${suffix}@example.com`;
+    const response = await request(app.getHttpServer())
+      .post("/v1/auth/register")
+      .send({
+        email,
+        password: passwordForTests(),
+        displayName
+      })
+      .expect(201);
+
+    return {
+      userId: response.body.data.user.id as string,
+      email,
+      accessToken: response.body.data.tokens.accessToken as string,
+      refreshToken: response.body.data.tokens.refreshToken as string
+    };
+  }
+
+  async function startInProgressDuel(player1: TestUserSession, player2: TestUserSession): Promise<string> {
+    const created = await request(app.getHttpServer())
+      .post("/v1/duels")
+      .set("Authorization", `Bearer ${player1.accessToken}`)
+      .send({
+        matchmakingMode: "friend_invite",
+        opponentUserId: player2.userId
+      })
+      .expect(201);
+    const duelId = created.body.data.duelId as string;
+
+    await request(app.getHttpServer())
+      .post(`/v1/duels/${duelId}/accept`)
+      .set("Authorization", `Bearer ${player2.accessToken}`)
+      .expect(201);
+
+    const opener = await request(app.getHttpServer())
+      .get(`/v1/duels/${duelId}/opener`)
+      .set("Authorization", `Bearer ${player1.accessToken}`)
+      .expect(200);
+    const openerChoiceId = opener.body.data.question.choices[0].id as string;
+
+    await request(app.getHttpServer())
+      .post(`/v1/duels/${duelId}/opener/answer`)
+      .set("Authorization", `Bearer ${player1.accessToken}`)
+      .send({
+        selectedChoiceId: openerChoiceId,
+        responseTimeMs: 150
+      })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post(`/v1/duels/${duelId}/opener/answer`)
+      .set("Authorization", `Bearer ${player2.accessToken}`)
+      .send({
+        selectedChoiceId: openerChoiceId,
+        responseTimeMs: 450
+      })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post(`/v1/duels/${duelId}/opener/decision`)
+      .set("Authorization", `Bearer ${player1.accessToken}`)
+      .send({
+        decision: "take_hand"
+      })
+      .expect(201);
+
+    return duelId;
+  }
+
+  async function playCurrentTurn(duelId: string, actor: TestUserSession): Promise<void> {
+    const round = await getCurrentRound(actor, duelId);
+    await chooseSubjectIfNeeded(actor, duelId, round);
+
+    const questions = await getRoundQuestions(actor, duelId, round.roundNo);
+    for (const item of questions) {
+      await request(app.getHttpServer())
+        .post(`/v1/duels/${duelId}/rounds/${round.roundNo}/answers`)
+        .set("Authorization", `Bearer ${actor.accessToken}`)
+        .send({
+          slotNo: item.slotNo,
+          questionId: item.question.id,
+          selectedChoiceId: item.question.choices[0].id,
+          responseTimeMs: 1000 + item.slotNo
+        })
+        .expect(201);
+    }
+  }
+
+  async function chooseSubjectIfNeeded(
+    actor: TestUserSession,
+    duelId: string,
+    round: CurrentRoundView
+  ): Promise<void> {
+    if (round.chosenSubjectId) {
+      return;
+    }
+
+    await request(app.getHttpServer())
+      .post(`/v1/duels/${duelId}/rounds/${round.roundNo}/choose-subject`)
+      .set("Authorization", `Bearer ${actor.accessToken}`)
+      .send({
+        subjectId: round.offeredSubjects[0].id
+      })
+      .expect(201);
+  }
+
+  async function getDuel(user: TestUserSession, duelId: string): Promise<DuelView> {
+    const response = await request(app.getHttpServer())
+      .get(`/v1/duels/${duelId}`)
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .expect(200);
+    return response.body.data as DuelView;
+  }
+
+  async function getCurrentRound(user: TestUserSession, duelId: string): Promise<CurrentRoundView> {
+    const response = await request(app.getHttpServer())
+      .get(`/v1/duels/${duelId}/rounds/current`)
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .expect(200);
+    return response.body.data as CurrentRoundView;
+  }
+
+  async function getRoundQuestions(
+    user: TestUserSession,
+    duelId: string,
+    roundNo: number
+  ): Promise<DuelQuestionItem[]> {
+    const response = await request(app.getHttpServer())
+      .get(`/v1/duels/${duelId}/rounds/${roundNo}/questions`)
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .expect(200);
+    return response.body.data.items as DuelQuestionItem[];
+  }
+});
+
+function passwordForTests(): string {
+  return "Password12345!";
+}

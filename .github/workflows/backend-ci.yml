@@ -1,0 +1,62 @@
+name: Backend CI
+
+on:
+  pull_request:
+    paths:
+      - backend/**
+      - migrations/**
+      - .github/workflows/backend-ci.yml
+  push:
+    paths:
+      - backend/**
+      - migrations/**
+      - .github/workflows/backend-ci.yml
+  workflow_dispatch:
+
+jobs:
+  backend-build-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    defaults:
+      run:
+        working-directory: backend
+
+    env:
+      CI: "true"
+      TEST_ADMIN_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run E2E tests
+        run: JEST_DISABLE_WATCHMAN=1 npm run test:e2e -- --runInBand --watchman=false

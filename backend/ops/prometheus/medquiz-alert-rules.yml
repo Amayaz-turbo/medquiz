@@ -1,0 +1,80 @@
+groups:
+  - name: medquiz-infra
+    rules:
+      - alert: MedQuizBackendTargetDown
+        expr: up{job="medquiz-backend"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: medquiz-backend
+          component: scrape
+        annotations:
+          summary: "MedQuiz backend target is down"
+          description: "Prometheus cannot scrape medquiz-backend for at least 2 minutes."
+
+  - name: medquiz-slo-availability
+    rules:
+      - alert: MedQuizApiAvailabilityHighBurnFast
+        expr: |
+          (
+            sum(rate(http_requests_total{status_class="5xx"}[5m]))
+            /
+            clamp_min(sum(rate(http_requests_total[5m])), 1)
+          ) > 0.0144
+        for: 5m
+        labels:
+          severity: critical
+          service: medquiz-backend
+          slo: availability
+          window: 5m
+        annotations:
+          summary: "High fast burn on API availability error budget"
+          description: "5xx ratio is burning >14.4x error budget over 5m (target 99.9%)."
+
+      - alert: MedQuizApiAvailabilityHighBurnSlow
+        expr: |
+          (
+            sum(rate(http_requests_total{status_class="5xx"}[30m]))
+            /
+            clamp_min(sum(rate(http_requests_total[30m])), 1)
+          ) > 0.006
+        for: 30m
+        labels:
+          severity: warning
+          service: medquiz-backend
+          slo: availability
+          window: 30m
+        annotations:
+          summary: "Slow burn detected on API availability error budget"
+          description: "5xx ratio is burning >6x error budget over 30m (target 99.9%)."
+
+  - name: medquiz-slo-latency
+    rules:
+      - alert: MedQuizApiP95LatencyTooHigh
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(http_request_duration_ms_bucket[5m])) by (le)
+          ) > 300
+        for: 10m
+        labels:
+          severity: warning
+          service: medquiz-backend
+          slo: latency
+          percentile: p95
+        annotations:
+          summary: "API latency SLO at risk"
+          description: "Estimated p95 latency has been >300ms for at least 10m."
+
+  - name: medquiz-dependencies
+    rules:
+      - alert: MedQuizDatabaseDependencyDown
+        expr: min_over_time(dependency_up{dependency="database"}[5m]) < 1
+        for: 2m
+        labels:
+          severity: critical
+          service: medquiz-backend
+          dependency: database
+        annotations:
+          summary: "Database dependency reported as down"
+          description: "Readiness checks report the database dependency as unhealthy."
