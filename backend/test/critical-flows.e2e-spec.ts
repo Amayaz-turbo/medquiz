@@ -1,6 +1,7 @@
 import { ValidationPipe } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { FastifyAdapter, NestFastifyApplication } from "@nestjs/platform-fastify";
+import { randomUUID } from "node:crypto";
 import * as request from "supertest";
 import { HttpExceptionFilter } from "../src/common/filters/http-exception.filter";
 import { RequestIdInterceptor } from "../src/common/interceptors/request-id.interceptor";
@@ -71,6 +72,7 @@ describe("Critical integration flows", () => {
     process.env.SLO_P95_LATENCY_MS = "300";
     process.env.SLO_WINDOW_DAYS = "30";
     process.env.HEALTH_DB_TIMEOUT_MS = "1500";
+    process.env.OPEN_TEXT_EDITOR_USER_IDS = "";
 
     const { AppModule } = await import("../src/app.module");
     const { DuelsService } = await import("../src/duels/duels.service");
@@ -225,7 +227,9 @@ describe("Critical integration flows", () => {
       choices: Array<{ id: string }>;
     } | null;
     expect(question).not.toBeNull();
-    expect(question?.choices.length).toBeGreaterThan(0);
+    if (question?.questionType !== "open_text") {
+      expect(question?.choices.length).toBeGreaterThan(0);
+    }
 
     const answerPayload: {
       questionId: string;
@@ -519,6 +523,110 @@ describe("Critical integration flows", () => {
     expect(wrongAnswer.body.data.isCorrect).toBe(false);
     expect(wrongAnswer.body.data.correction.questionType).toBe("open_text");
     expect((wrongAnswer.body.data.correction.expectedAnswers as unknown[]).length).toBeGreaterThan(0);
+  });
+
+  it("manages open_text accepted answers with ownership checks and constraints", async () => {
+    const owner = await registerUser("Open Text Owner");
+    const outsider = await registerUser("Open Text Outsider");
+
+    const chapterRow = await db.query<{ subject_id: string; chapter_id: string }>(
+      `
+        SELECT c.subject_id, c.id AS chapter_id
+        FROM chapters c
+        JOIN subjects s
+          ON s.id = c.subject_id
+        WHERE c.is_active = TRUE
+          AND s.is_active = TRUE
+        ORDER BY s.sort_order ASC, c.sort_order ASC
+        LIMIT 1
+      `
+    );
+    expect(chapterRow.rowCount).toBe(1);
+
+    const questionId = randomUUID();
+    await db.query(
+      `
+        INSERT INTO questions
+          (
+            id,
+            subject_id,
+            chapter_id,
+            question_type,
+            prompt,
+            explanation,
+            difficulty,
+            status,
+            published_at,
+            created_by_user_id
+          )
+        VALUES
+          ($1, $2, $3, 'open_text', $4, $5, 2, 'published', NOW(), $6)
+      `,
+      [
+        questionId,
+        chapterRow.rows[0].subject_id,
+        chapterRow.rows[0].chapter_id,
+        "Nommer la molécule énergétique principale",
+        "La molécule énergétique principale est ATP.",
+        owner.userId
+      ]
+    );
+
+    const answer1Id = randomUUID();
+    const answer2Id = randomUUID();
+    await db.query(
+      `
+        INSERT INTO question_open_text_answers
+          (id, question_id, accepted_answer_text, normalized_answer_text)
+        VALUES
+          ($1, $2, $3, $4),
+          ($5, $2, $6, $7)
+      `,
+      [answer1Id, questionId, "ATP", "atp", answer2Id, "Adenosine triphosphate", "adenosine triphosphate"]
+    );
+
+    const outsiderList = await request(app.getHttpServer())
+      .get(`/v1/trainings/admin/open-text/questions/${questionId}/accepted-answers`)
+      .set("Authorization", `Bearer ${outsider.accessToken}`)
+      .expect(403);
+    expect(outsiderList.body.error.code).toBe("OPEN_TEXT_EDITOR_FORBIDDEN");
+
+    const ownerList = await request(app.getHttpServer())
+      .get(`/v1/trainings/admin/open-text/questions/${questionId}/accepted-answers`)
+      .set("Authorization", `Bearer ${owner.accessToken}`)
+      .expect(200);
+    expect((ownerList.body.data.items as unknown[]).length).toBe(2);
+
+    const duplicateAnswer = await request(app.getHttpServer())
+      .post(`/v1/trainings/admin/open-text/questions/${questionId}/accepted-answers`)
+      .set("Authorization", `Bearer ${owner.accessToken}`)
+      .send({ acceptedAnswerText: "  aTp !!! " })
+      .expect(409);
+    expect(duplicateAnswer.body.error.code).toBe("OPEN_TEXT_ACCEPTED_ANSWER_EXISTS");
+
+    const createdAnswer = await request(app.getHttpServer())
+      .post(`/v1/trainings/admin/open-text/questions/${questionId}/accepted-answers`)
+      .set("Authorization", `Bearer ${owner.accessToken}`)
+      .send({ acceptedAnswerText: "Molécule énergétique" })
+      .expect(201);
+    const createdAnswerId = createdAnswer.body.data.id as string;
+    expect(createdAnswer.body.data.normalizedAnswerText).toBe("molecule energetique");
+
+    await request(app.getHttpServer())
+      .delete(`/v1/trainings/admin/open-text/questions/${questionId}/accepted-answers/${createdAnswerId}`)
+      .set("Authorization", `Bearer ${owner.accessToken}`)
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .delete(`/v1/trainings/admin/open-text/questions/${questionId}/accepted-answers/${answer1Id}`)
+      .set("Authorization", `Bearer ${owner.accessToken}`)
+      .expect(200);
+
+    const deleteLast = await request(app.getHttpServer())
+      .delete(`/v1/trainings/admin/open-text/questions/${questionId}/accepted-answers/${answer2Id}`)
+      .set("Authorization", `Bearer ${owner.accessToken}`)
+      .expect(422);
+    expect(deleteLast.body.error.code).toBe("OPEN_TEXT_MIN_ANSWERS_REQUIRED");
   });
 
   it("plays a full duel (5 rounds) to completion", async () => {

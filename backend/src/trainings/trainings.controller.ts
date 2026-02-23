@@ -1,8 +1,20 @@
-import { Body, Controller, Get, Param, Post, Put, Query, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Put,
+  Query,
+  UseGuards
+} from "@nestjs/common";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { AuthenticatedUser } from "../auth/interfaces/authenticated-user.interface";
 import { AnswerTrainingQuestionDto } from "./dto/answer-training-question.dto";
+import { AddOpenTextAcceptedAnswerDto } from "./dto/add-open-text-accepted-answer.dto";
 import { CreateTrainingSessionDto } from "./dto/create-training-session.dto";
 import { SetChapterProgressDto } from "./dto/set-chapter-progress.dto";
 import { TrainingsService } from "./trainings.service";
@@ -43,6 +55,43 @@ export class TrainingsController {
       user.userId,
       chapterId,
       dto.declaredProgressPct
+    );
+    return { data: result };
+  }
+
+  @Get("admin/open-text/questions/:questionId/accepted-answers")
+  async listOpenTextAcceptedAnswers(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("questionId", new ParseUUIDPipe({ version: "4" })) questionId: string
+  ) {
+    const result = await this.trainingsService.listOpenTextAcceptedAnswers(user.userId, questionId);
+    return { data: { items: result } };
+  }
+
+  @Post("admin/open-text/questions/:questionId/accepted-answers")
+  async addOpenTextAcceptedAnswer(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("questionId", new ParseUUIDPipe({ version: "4" })) questionId: string,
+    @Body() dto: AddOpenTextAcceptedAnswerDto
+  ) {
+    const result = await this.trainingsService.addOpenTextAcceptedAnswer(
+      user.userId,
+      questionId,
+      dto.acceptedAnswerText
+    );
+    return { data: result };
+  }
+
+  @Delete("admin/open-text/questions/:questionId/accepted-answers/:answerId")
+  async deleteOpenTextAcceptedAnswer(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("questionId", new ParseUUIDPipe({ version: "4" })) questionId: string,
+    @Param("answerId", new ParseUUIDPipe({ version: "4" })) answerId: string
+  ) {
+    const result = await this.trainingsService.deleteOpenTextAcceptedAnswer(
+      user.userId,
+      questionId,
+      answerId
     );
     return { data: result };
   }

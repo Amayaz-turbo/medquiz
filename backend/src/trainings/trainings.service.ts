@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   UnprocessableEntityException
@@ -7,6 +9,7 @@ import {
 import { randomUUID } from "node:crypto";
 import { PoolClient } from "pg";
 import { DatabaseService } from "../database/database.service";
+import { env } from "../config/env";
 import { AnswerTrainingQuestionDto } from "./dto/answer-training-question.dto";
 import { CreateTrainingSessionDto } from "./dto/create-training-session.dto";
 
@@ -43,6 +46,8 @@ interface DashboardSuggestedAction {
 
 @Injectable()
 export class TrainingsService {
+  private readonly cfg = env();
+
   constructor(private readonly db: DatabaseService) {}
 
   async createSession(userId: string, dto: CreateTrainingSessionDto) {
@@ -855,6 +860,144 @@ export class TrainingsService {
     };
   }
 
+  async listOpenTextAcceptedAnswers(userId: string, questionId: string) {
+    await this.assertCanManageOpenTextQuestion(userId, questionId);
+
+    const result = await this.db.query<{
+      id: string;
+      accepted_answer_text: string;
+      normalized_answer_text: string;
+      created_at: string;
+    }>(
+      `
+        SELECT
+          id,
+          accepted_answer_text,
+          normalized_answer_text,
+          created_at
+        FROM question_open_text_answers
+        WHERE question_id = $1
+        ORDER BY created_at ASC
+      `,
+      [questionId]
+    );
+
+    return result.rows.map((row) => ({
+      id: row.id,
+      acceptedAnswerText: row.accepted_answer_text,
+      normalizedAnswerText: row.normalized_answer_text,
+      createdAt: row.created_at
+    }));
+  }
+
+  async addOpenTextAcceptedAnswer(userId: string, questionId: string, acceptedAnswerText: string) {
+    await this.assertCanManageOpenTextQuestion(userId, questionId);
+
+    const normalized = this.normalizeOpenTextValue(acceptedAnswerText);
+    if (normalized.length === 0) {
+      throw new BadRequestException({
+        code: "VALIDATION_ERROR",
+        message: "acceptedAnswerText must contain at least one letter or number"
+      });
+    }
+
+    const cleanText = acceptedAnswerText.replace(/\s+/g, " ").trim();
+    if (cleanText.length === 0) {
+      throw new BadRequestException({
+        code: "VALIDATION_ERROR",
+        message: "acceptedAnswerText must not be empty"
+      });
+    }
+
+    try {
+      const result = await this.db.query<{
+        id: string;
+        accepted_answer_text: string;
+        normalized_answer_text: string;
+        created_at: string;
+      }>(
+        `
+          INSERT INTO question_open_text_answers
+            (id, question_id, accepted_answer_text, normalized_answer_text)
+          VALUES
+            ($1, $2, $3, $4)
+          RETURNING id, accepted_answer_text, normalized_answer_text, created_at
+        `,
+        [randomUUID(), questionId, cleanText, normalized]
+      );
+
+      const row = result.rows[0];
+      return {
+        id: row.id,
+        acceptedAnswerText: row.accepted_answer_text,
+        normalizedAnswerText: row.normalized_answer_text,
+        createdAt: row.created_at
+      };
+    } catch (error: unknown) {
+      if (this.isUniqueViolation(error)) {
+        throw new ConflictException({
+          code: "OPEN_TEXT_ACCEPTED_ANSWER_EXISTS",
+          message: "This normalized answer already exists for the question"
+        });
+      }
+      throw error;
+    }
+  }
+
+  async deleteOpenTextAcceptedAnswer(userId: string, questionId: string, answerId: string) {
+    await this.assertCanManageOpenTextQuestion(userId, questionId);
+
+    return this.db.withTransaction(async (client) => {
+      const existing = await client.query<{ id: string }>(
+        `
+          SELECT id
+          FROM question_open_text_answers
+          WHERE id = $1
+            AND question_id = $2
+          LIMIT 1
+          FOR UPDATE
+        `,
+        [answerId, questionId]
+      );
+      if (existing.rowCount === 0) {
+        throw new NotFoundException({
+          code: "OPEN_TEXT_ACCEPTED_ANSWER_NOT_FOUND",
+          message: "Accepted answer not found for this question"
+        });
+      }
+
+      const countResult = await client.query<{ c: string }>(
+        `
+          SELECT COUNT(*)::text AS c
+          FROM question_open_text_answers
+          WHERE question_id = $1
+        `,
+        [questionId]
+      );
+      const answerCount = Number(countResult.rows[0]?.c ?? 0);
+      if (answerCount <= 1) {
+        throw new UnprocessableEntityException({
+          code: "OPEN_TEXT_MIN_ANSWERS_REQUIRED",
+          message: "An open-text question must keep at least one accepted answer"
+        });
+      }
+
+      await client.query(
+        `
+          DELETE FROM question_open_text_answers
+          WHERE id = $1
+            AND question_id = $2
+        `,
+        [answerId, questionId]
+      );
+
+      return {
+        deleted: true,
+        answerId
+      };
+    });
+  }
+
   private normalizeSingleChoiceSelection(dto: AnswerTrainingQuestionDto): string[] {
     if (dto.openTextAnswer !== undefined) {
       throw new BadRequestException({
@@ -930,6 +1073,53 @@ export class TrainingsService {
       .replace(/[^\p{L}\p{N}\s]/gu, " ")
       .replace(/\s+/g, " ")
       .trim();
+  }
+
+  private async assertCanManageOpenTextQuestion(userId: string, questionId: string): Promise<void> {
+    const questionResult = await this.db.query<{
+      id: string;
+      question_type: string;
+      created_by_user_id: string | null;
+    }>(
+      `
+        SELECT id, question_type, created_by_user_id
+        FROM questions
+        WHERE id = $1
+          AND status = 'published'
+        LIMIT 1
+      `,
+      [questionId]
+    );
+    const question = questionResult.rows[0];
+    if (!question) {
+      throw new NotFoundException({
+        code: "QUESTION_NOT_FOUND",
+        message: "Question not found"
+      });
+    }
+    if (question.question_type !== "open_text") {
+      throw new UnprocessableEntityException({
+        code: "QUESTION_TYPE_NOT_OPEN_TEXT",
+        message: "Question must be open_text"
+      });
+    }
+
+    const isAllowlisted = this.cfg.openTextEditorUserIds.includes(userId);
+    const isOwner = question.created_by_user_id === userId;
+    if (!isAllowlisted && !isOwner) {
+      throw new ForbiddenException({
+        code: "OPEN_TEXT_EDITOR_FORBIDDEN",
+        message: "You are not allowed to manage accepted answers for this question"
+      });
+    }
+  }
+
+  private isUniqueViolation(error: unknown): boolean {
+    if (!error || typeof error !== "object") {
+      return false;
+    }
+    const maybe = error as { code?: unknown };
+    return maybe.code === "23505";
   }
 
   private getSubjectMomentumLabel(subject: SubjectStateView): string {

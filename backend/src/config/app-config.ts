@@ -15,9 +15,12 @@ export interface AppConfig {
   sloP95LatencyMs: number;
   sloWindowDays: number;
   healthDbTimeoutMs: number;
+  openTextEditorUserIds: string[];
 }
 
 export function getAppConfig(): AppConfig {
+  const uuidV4Regex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   const nodeEnv = process.env.NODE_ENV ?? "development";
   const port = Number(process.env.PORT ?? "8080");
   if (!Number.isFinite(port) || port <= 0 || port > 65535) {
@@ -77,6 +80,15 @@ export function getAppConfig(): AppConfig {
   if (metricsEnabled && nodeEnv === "production" && !metricsAuthToken) {
     throw new Error("METRICS_AUTH_TOKEN is required in production when metrics are enabled");
   }
+  const openTextEditorUserIds = (process.env.OPEN_TEXT_EDITOR_USER_IDS ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+  for (const userId of openTextEditorUserIds) {
+    if (!uuidV4Regex.test(userId)) {
+      throw new Error("OPEN_TEXT_EDITOR_USER_IDS must contain valid UUID v4 values");
+    }
+  }
 
   return {
     nodeEnv,
@@ -94,6 +106,7 @@ export function getAppConfig(): AppConfig {
     sloAvailabilityTargetPct,
     sloP95LatencyMs,
     sloWindowDays,
-    healthDbTimeoutMs
+    healthDbTimeoutMs,
+    openTextEditorUserIds
   };
 }
