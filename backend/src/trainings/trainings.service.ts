@@ -19,6 +19,28 @@ interface SessionRow {
   ended_at: string | null;
 }
 
+export interface SubjectStateView {
+  id: string;
+  code: string;
+  name: string;
+  chapterCount: number;
+  chaptersStarted: number;
+  declaredProgressPct: number;
+  publishedQuestionCount: number;
+  attemptsCount: number;
+  correctCount: number;
+  successRatePct: number | null;
+  questionsToReinforceCount: number;
+}
+
+interface DashboardSuggestedAction {
+  score: number;
+  subjectId: string;
+  subjectName: string;
+  mode: "learning" | "discovery" | "review" | "par_coeur" | "rattrapage";
+  label: string;
+}
+
 @Injectable()
 export class TrainingsService {
   constructor(private readonly db: DatabaseService) {}
@@ -445,7 +467,95 @@ export class TrainingsService {
     };
   }
 
-  async listSubjectStates(userId: string) {
+  async getDashboard(userId: string) {
+    const [globalResult, sessions7dResult, chapterCoverageResult] = await Promise.all([
+      this.db.query<{ attempts: string; correct: string; attempts_7d: string }>(
+        `
+          SELECT
+            COUNT(*)::text AS attempts,
+            COUNT(*) FILTER (WHERE qa.is_correct)::text AS correct,
+            COUNT(*) FILTER (WHERE qa.answered_at >= NOW() - INTERVAL '7 days')::text AS attempts_7d
+          FROM quiz_answers qa
+          WHERE qa.user_id = $1
+        `,
+        [userId]
+      ),
+      this.db.query<{ c: string }>(
+        `
+          SELECT COUNT(*)::text AS c
+          FROM quiz_sessions qs
+          WHERE qs.user_id = $1
+            AND qs.started_at >= NOW() - INTERVAL '7 days'
+        `,
+        [userId]
+      ),
+      this.db.query<{ total_chapters: string; started_chapters: string }>(
+        `
+          SELECT
+            COUNT(*)::text AS total_chapters,
+            COUNT(*) FILTER (
+              WHERE COALESCE(ucp.declared_progress_pct, 0) > 0
+            )::text AS started_chapters
+          FROM chapters c
+          JOIN subjects s
+            ON s.id = c.subject_id
+           AND s.is_active = TRUE
+          LEFT JOIN user_chapter_progress ucp
+            ON ucp.chapter_id = c.id
+           AND ucp.user_id = $1
+          WHERE c.is_active = TRUE
+        `,
+        [userId]
+      )
+    ]);
+
+    const subjectStates = await this.listSubjectStates(userId);
+
+    const attempts = Number(globalResult.rows[0]?.attempts ?? 0);
+    const correct = Number(globalResult.rows[0]?.correct ?? 0);
+    const attempts7d = Number(globalResult.rows[0]?.attempts_7d ?? 0);
+    const sessions7d = Number(sessions7dResult.rows[0]?.c ?? 0);
+    const totalChapters = Number(chapterCoverageResult.rows[0]?.total_chapters ?? 0);
+    const startedChapters = Number(chapterCoverageResult.rows[0]?.started_chapters ?? 0);
+
+    const successRatePct = attempts > 0 ? Math.round((correct / attempts) * 1000) / 10 : null;
+    const chapterCoveragePct =
+      totalChapters > 0 ? Math.round((startedChapters / totalChapters) * 1000) / 10 : 0;
+
+    const suggestedActionCandidates: DashboardSuggestedAction[] = [];
+    for (const subject of subjectStates) {
+      const action = this.buildSuggestedAction(subject);
+      if (action) {
+        suggestedActionCandidates.push(action);
+      }
+    }
+
+    const suggestedActions = suggestedActionCandidates
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3)
+      .map(({ score: _score, ...rest }) => rest);
+
+    return {
+      overview: {
+        attemptsCount: attempts,
+        correctCount: correct,
+        successRatePct,
+        sessions7dCount: sessions7d,
+        attempts7dCount: attempts7d,
+        startedChaptersCount: startedChapters,
+        totalChaptersCount: totalChapters,
+        chapterCoveragePct,
+        suggestedMode: this.pickGlobalSuggestedMode(subjectStates, attempts, successRatePct)
+      },
+      subjects: subjectStates.map((subject) => ({
+        ...subject,
+        momentumLabel: this.getSubjectMomentumLabel(subject)
+      })),
+      suggestedActions
+    };
+  }
+
+  async listSubjectStates(userId: string): Promise<SubjectStateView[]> {
     const result = await this.db.query<{
       id: string;
       code: string;
@@ -633,6 +743,94 @@ export class TrainingsService {
       subjectId: chapter.subject_id,
       declaredProgressPct
     };
+  }
+
+  private getSubjectMomentumLabel(subject: SubjectStateView): string {
+    if (subject.attemptsCount === 0) {
+      return "Point de départ";
+    }
+
+    if (subject.questionsToReinforceCount > 0) {
+      return "À consolider";
+    }
+
+    if ((subject.successRatePct ?? 0) >= 80 && subject.declaredProgressPct >= 60) {
+      return "Bonne dynamique";
+    }
+
+    if ((subject.successRatePct ?? 0) >= 65) {
+      return "En progression";
+    }
+
+    return "À renforcer progressivement";
+  }
+
+  private buildSuggestedAction(subject: SubjectStateView): DashboardSuggestedAction | null {
+    if (subject.attemptsCount === 0 && subject.publishedQuestionCount > 0) {
+      return {
+        score: 300,
+        subjectId: subject.id,
+        subjectName: subject.name,
+        mode: "discovery",
+        label: "Démarrer cette matière en mode découverte"
+      };
+    }
+
+    if (subject.questionsToReinforceCount > 0) {
+      return {
+        score: 200 + subject.questionsToReinforceCount,
+        subjectId: subject.id,
+        subjectName: subject.name,
+        mode: "rattrapage",
+        label: "Consolider les notions déjà rencontrées"
+      };
+    }
+
+    if (subject.successRatePct !== null && subject.successRatePct >= 80) {
+      return {
+        score: 120 + subject.successRatePct,
+        subjectId: subject.id,
+        subjectName: subject.name,
+        mode: "par_coeur",
+        label: "Stabiliser les acquis avec des questions validées"
+      };
+    }
+
+    if (subject.attemptsCount > 0) {
+      return {
+        score: 100 + (100 - (subject.successRatePct ?? 0)),
+        subjectId: subject.id,
+        subjectName: subject.name,
+        mode: "review",
+        label: "Revoir les questions déjà travaillées"
+      };
+    }
+
+    return null;
+  }
+
+  private pickGlobalSuggestedMode(
+    subjects: SubjectStateView[],
+    attemptsCount: number,
+    successRatePct: number | null
+  ): "learning" | "discovery" | "review" | "par_coeur" | "rattrapage" {
+    if (subjects.some((subject) => subject.questionsToReinforceCount > 0)) {
+      return "rattrapage";
+    }
+
+    if (subjects.some((subject) => subject.attemptsCount === 0 && subject.publishedQuestionCount > 0)) {
+      return "discovery";
+    }
+
+    if (attemptsCount >= 20 && (successRatePct ?? 0) >= 80) {
+      return "par_coeur";
+    }
+
+    if (attemptsCount > 0) {
+      return "review";
+    }
+
+    return "learning";
   }
 
   private async getOwnedSession(userId: string, sessionId: string): Promise<SessionRow> {

@@ -242,6 +242,27 @@ describe("Critical integration flows", () => {
       .expect(200);
     expect(session.body.data.progress.attempts).toBe(1);
 
+    const dashboard = await request(app.getHttpServer())
+      .get("/v1/trainings/dashboard")
+      .set("Authorization", `Bearer ${trainee.accessToken}`)
+      .expect(200);
+    expect(dashboard.body.data.overview.attemptsCount).toBe(1);
+    expect(dashboard.body.data.overview.correctCount).toBe(1);
+    expect(typeof dashboard.body.data.overview.chapterCoveragePct).toBe("number");
+    expect(["learning", "discovery", "review", "par_coeur", "rattrapage"]).toContain(
+      dashboard.body.data.overview.suggestedMode
+    );
+    const dashboardSubject = (
+      dashboard.body.data.subjects as Array<{
+        id: string;
+        declaredProgressPct: number;
+        momentumLabel: string;
+      }>
+    ).find((item) => item.id === subjectId);
+    expect(dashboardSubject).toBeDefined();
+    expect(typeof dashboardSubject?.momentumLabel).toBe("string");
+    expect((dashboard.body.data.suggestedActions as unknown[]).length).toBeGreaterThan(0);
+
     const chaptersAfter = await request(app.getHttpServer())
       .get(`/v1/trainings/state/subjects/${subjectId}/chapters`)
       .set("Authorization", `Bearer ${trainee.accessToken}`)

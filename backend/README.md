@@ -27,6 +27,7 @@ Public:
 
 Protected:
 - `GET /me`
+- `GET /trainings/dashboard`
 - `GET /trainings/state/subjects`
 - `GET /trainings/state/subjects/:subjectId/chapters`
 - `PUT /trainings/state/chapters/:chapterId`

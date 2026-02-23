@@ -12,6 +12,12 @@ import { TrainingsService } from "./trainings.service";
 export class TrainingsController {
   constructor(private readonly trainingsService: TrainingsService) {}
 
+  @Get("dashboard")
+  async getDashboard(@CurrentUser() user: AuthenticatedUser) {
+    const result = await this.trainingsService.getDashboard(user.userId);
+    return { data: result };
+  }
+
   @Get("state/subjects")
   async getSubjectStates(@CurrentUser() user: AuthenticatedUser) {
     const result = await this.trainingsService.listSubjectStates(user.userId);
