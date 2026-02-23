@@ -1,15 +1,45 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Put, Query, UseGuards } from "@nestjs/common";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { AuthenticatedUser } from "../auth/interfaces/authenticated-user.interface";
 import { AnswerTrainingQuestionDto } from "./dto/answer-training-question.dto";
 import { CreateTrainingSessionDto } from "./dto/create-training-session.dto";
+import { SetChapterProgressDto } from "./dto/set-chapter-progress.dto";
 import { TrainingsService } from "./trainings.service";
 
 @Controller(["trainings", "quiz"])
 @UseGuards(JwtAuthGuard)
 export class TrainingsController {
   constructor(private readonly trainingsService: TrainingsService) {}
+
+  @Get("state/subjects")
+  async getSubjectStates(@CurrentUser() user: AuthenticatedUser) {
+    const result = await this.trainingsService.listSubjectStates(user.userId);
+    return { data: { items: result } };
+  }
+
+  @Get("state/subjects/:subjectId/chapters")
+  async getSubjectChapterStates(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("subjectId") subjectId: string
+  ) {
+    const result = await this.trainingsService.listSubjectChapterStates(user.userId, subjectId);
+    return { data: result };
+  }
+
+  @Put("state/chapters/:chapterId")
+  async setChapterProgress(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("chapterId") chapterId: string,
+    @Body() dto: SetChapterProgressDto
+  ) {
+    const result = await this.trainingsService.setChapterProgress(
+      user.userId,
+      chapterId,
+      dto.declaredProgressPct
+    );
+    return { data: result };
+  }
 
   @Post("sessions")
   async createSession(

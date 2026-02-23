@@ -5,6 +5,7 @@ import {
   UnprocessableEntityException
 } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
+import { PoolClient } from "pg";
 import { DatabaseService } from "../database/database.service";
 import { AnswerTrainingQuestionDto } from "./dto/answer-training-question.dto";
 import { CreateTrainingSessionDto } from "./dto/create-training-session.dto";
@@ -26,6 +27,8 @@ export class TrainingsService {
     this.validateStopRule(dto.stopRule, dto.targetQuestionCount);
 
     return this.db.withTransaction(async (client) => {
+      await this.validateSessionFilters(client, dto);
+
       const sessionId = randomUUID();
       const target =
         dto.stopRule === "fixed_10"
@@ -125,84 +128,9 @@ export class TrainingsService {
     }
 
     const safeLimit = Math.max(1, Math.min(limit, 50));
-    const whereParts: string[] = [
-      "q.status = 'published'",
-      "NOT EXISTS (SELECT 1 FROM quiz_answers qa WHERE qa.session_id = $1 AND qa.question_id = q.id)"
-    ];
+    const whereParts = this.buildSessionQuestionWhereParts(session.mode);
+    whereParts.push("NOT EXISTS (SELECT 1 FROM quiz_answers qa WHERE qa.session_id = $1 AND qa.question_id = q.id)");
     const values: unknown[] = [sessionId, userId, safeLimit];
-
-    const subjectFilterCount = await this.db.query<{ c: string }>(
-      `
-        SELECT COUNT(*)::text AS c
-        FROM quiz_session_subject_filters
-        WHERE session_id = $1
-      `,
-      [sessionId]
-    );
-    if (Number(subjectFilterCount.rows[0]?.c ?? 0) > 0) {
-      whereParts.push(
-        "q.subject_id IN (SELECT subject_id FROM quiz_session_subject_filters WHERE session_id = $1)"
-      );
-    }
-
-    const chapterFilterCount = await this.db.query<{ c: string }>(
-      `
-        SELECT COUNT(*)::text AS c
-        FROM quiz_session_chapter_filters
-        WHERE session_id = $1
-      `,
-      [sessionId]
-    );
-    if (Number(chapterFilterCount.rows[0]?.c ?? 0) > 0) {
-      whereParts.push(
-        "q.chapter_id IN (SELECT chapter_id FROM quiz_session_chapter_filters WHERE session_id = $1)"
-      );
-    }
-
-    if (session.mode === "discovery") {
-      whereParts.push(
-        "NOT EXISTS (SELECT 1 FROM user_question_stats uqs WHERE uqs.user_id = $2 AND uqs.question_id = q.id AND uqs.attempts_count > 0)"
-      );
-    }
-
-    if (session.mode === "review") {
-      whereParts.push(
-        "EXISTS (SELECT 1 FROM user_question_stats uqs WHERE uqs.user_id = $2 AND uqs.question_id = q.id AND uqs.attempts_count > 0)"
-      );
-    }
-
-    if (session.mode === "par_coeur") {
-      whereParts.push(
-        `
-        EXISTS (
-          SELECT 1
-          FROM user_question_stats uqs
-          WHERE uqs.user_id = $2
-            AND uqs.question_id = q.id
-            AND (
-              (uqs.attempts_count <= 4 AND uqs.correct_count = uqs.attempts_count AND uqs.attempts_count > 0)
-              OR
-              (uqs.attempts_count > 4 AND (uqs.correct_count::numeric / uqs.attempts_count) >= 0.8)
-            )
-        )
-        `
-      );
-    }
-
-    if (session.mode === "rattrapage") {
-      whereParts.push(
-        `
-        EXISTS (
-          SELECT 1
-          FROM user_question_stats uqs
-          WHERE uqs.user_id = $2
-            AND uqs.question_id = q.id
-            AND uqs.attempts_count > 0
-            AND uqs.correct_count < uqs.attempts_count
-        )
-        `
-      );
-    }
 
     const targetQuestionCount = session.target_question_count;
     if (targetQuestionCount !== null) {
@@ -277,58 +205,19 @@ export class TrainingsService {
       });
     }
 
-    const questionResult = await this.db.query<{
-      id: string;
-      question_type: string;
-      explanation: string;
-      subject_id: string;
-    }>(
-      `
-        SELECT id, question_type, explanation, subject_id
-        FROM questions
-        WHERE id = $1
-          AND status = 'published'
-        LIMIT 1
-      `,
-      [dto.questionId]
-    );
-    const question = questionResult.rows[0];
-    if (!question) {
-      throw new NotFoundException({
-        code: "QUESTION_NOT_FOUND",
-        message: "Question not found"
-      });
-    }
+    return this.db.withTransaction(async (client) => {
+      await client.query(
+        `
+          SELECT id
+          FROM quiz_sessions
+          WHERE id = $1
+            AND user_id = $2
+          LIMIT 1
+          FOR UPDATE
+        `,
+        [sessionId, userId]
+      );
 
-    if (question.question_type !== "single_choice") {
-      throw new UnprocessableEntityException({
-        code: "UNSUPPORTED_QUESTION_TYPE",
-        message: "Only single_choice is supported in v1 answer endpoint"
-      });
-    }
-
-    const choiceResult = await this.db.query<{ is_correct: boolean }>(
-      `
-        SELECT is_correct
-        FROM question_choices
-        WHERE question_id = $1
-          AND id = $2
-        LIMIT 1
-      `,
-      [dto.questionId, dto.selectedChoiceId]
-    );
-    const selected = choiceResult.rows[0];
-    if (!selected) {
-      throw new BadRequestException({
-        code: "QUESTION_CHOICE_INVALID",
-        message: "Selected choice does not belong to question"
-      });
-    }
-
-    const isCorrect = selected.is_correct;
-    const hit = isCorrect ? "1" : "0";
-
-    await this.db.withTransaction(async (client) => {
       const answeredCountResult = await client.query<{ c: string }>(
         `
           SELECT COUNT(*)::text AS c
@@ -337,7 +226,84 @@ export class TrainingsService {
         `,
         [sessionId]
       );
-      const answerOrder = Number(answeredCountResult.rows[0]?.c ?? 0) + 1;
+      const answeredCount = Number(answeredCountResult.rows[0]?.c ?? 0);
+      if (session.target_question_count !== null && answeredCount >= session.target_question_count) {
+        throw new UnprocessableEntityException({
+          code: "SESSION_QUESTION_LIMIT_REACHED",
+          message: "Session question limit already reached"
+        });
+      }
+
+      const questionResult = await client.query<{
+        id: string;
+        question_type: string;
+        explanation: string;
+        subject_id: string;
+      }>(
+        `
+          SELECT id, question_type, explanation, subject_id
+          FROM questions
+          WHERE id = $1
+            AND status = 'published'
+          LIMIT 1
+        `,
+        [dto.questionId]
+      );
+      const question = questionResult.rows[0];
+      if (!question) {
+        throw new NotFoundException({
+          code: "QUESTION_NOT_FOUND",
+          message: "Question not found"
+        });
+      }
+
+      if (question.question_type !== "single_choice") {
+        throw new UnprocessableEntityException({
+          code: "UNSUPPORTED_QUESTION_TYPE",
+          message: "Only single_choice is supported in v1 answer endpoint"
+        });
+      }
+
+      await this.ensureQuestionEligibleForSession(client, userId, session, dto.questionId);
+
+      const alreadyAnswered = await client.query<{ id: string }>(
+        `
+          SELECT id
+          FROM quiz_answers
+          WHERE session_id = $1
+            AND question_id = $2
+          LIMIT 1
+        `,
+        [sessionId, dto.questionId]
+      );
+      if (alreadyAnswered.rowCount > 0) {
+        throw new UnprocessableEntityException({
+          code: "TRAINING_QUESTION_ALREADY_ANSWERED",
+          message: "Question already answered in this session"
+        });
+      }
+
+      const choiceResult = await client.query<{ is_correct: boolean }>(
+        `
+          SELECT is_correct
+          FROM question_choices
+          WHERE question_id = $1
+            AND id = $2
+          LIMIT 1
+        `,
+        [dto.questionId, dto.selectedChoiceId]
+      );
+      const selected = choiceResult.rows[0];
+      if (!selected) {
+        throw new BadRequestException({
+          code: "QUESTION_CHOICE_INVALID",
+          message: "Selected choice does not belong to question"
+        });
+      }
+
+      const isCorrect = selected.is_correct;
+      const hit = isCorrect ? "1" : "0";
+      const answerOrder = answeredCount + 1;
 
       await client.query(
         `
@@ -438,12 +404,11 @@ export class TrainingsService {
         `,
         [userId, question.subject_id, reinforceCount]
       );
+      return {
+        isCorrect,
+        explanation: question.explanation
+      };
     });
-
-    return {
-      isCorrect,
-      explanation: question.explanation
-    };
   }
 
   async completeSession(userId: string, sessionId: string) {
@@ -480,6 +445,196 @@ export class TrainingsService {
     };
   }
 
+  async listSubjectStates(userId: string) {
+    const result = await this.db.query<{
+      id: string;
+      code: string;
+      name: string;
+      chapter_count: string;
+      chapters_started: string;
+      declared_progress_pct: string;
+      published_question_count: string;
+      attempts_count: string;
+      correct_count: string;
+      questions_to_reinforce_count: string;
+    }>(
+      `
+        SELECT
+          s.id,
+          s.code,
+          s.name,
+          (
+            SELECT COUNT(*)::text
+            FROM chapters c
+            WHERE c.subject_id = s.id
+              AND c.is_active = TRUE
+          ) AS chapter_count,
+          (
+            SELECT COUNT(*)::text
+            FROM chapters c
+            JOIN user_chapter_progress ucp
+              ON ucp.chapter_id = c.id
+             AND ucp.user_id = $1
+            WHERE c.subject_id = s.id
+              AND c.is_active = TRUE
+              AND ucp.declared_progress_pct > 0
+          ) AS chapters_started,
+          (
+            SELECT COALESCE(ROUND(AVG(COALESCE(ucp.declared_progress_pct, 0))::numeric, 1), 0)::text
+            FROM chapters c
+            LEFT JOIN user_chapter_progress ucp
+              ON ucp.chapter_id = c.id
+             AND ucp.user_id = $1
+            WHERE c.subject_id = s.id
+              AND c.is_active = TRUE
+          ) AS declared_progress_pct,
+          (
+            SELECT COUNT(*)::text
+            FROM questions q
+            WHERE q.subject_id = s.id
+              AND q.status = 'published'
+              AND q.question_type = 'single_choice'
+          ) AS published_question_count,
+          COALESCE(uss.attempts_count, 0)::text AS attempts_count,
+          COALESCE(uss.correct_count, 0)::text AS correct_count,
+          COALESCE(uss.questions_to_reinforce_count, 0)::text AS questions_to_reinforce_count
+        FROM subjects s
+        LEFT JOIN user_subject_stats uss
+          ON uss.user_id = $1
+         AND uss.subject_id = s.id
+        WHERE s.is_active = TRUE
+        ORDER BY s.sort_order ASC, s.name ASC
+      `,
+      [userId]
+    );
+
+    return result.rows.map((row) => {
+      const attempts = Number(row.attempts_count);
+      const correct = Number(row.correct_count);
+      const successRatePct = attempts > 0 ? Math.round((correct / attempts) * 1000) / 10 : null;
+      return {
+        id: row.id,
+        code: row.code,
+        name: row.name,
+        chapterCount: Number(row.chapter_count),
+        chaptersStarted: Number(row.chapters_started),
+        declaredProgressPct: Number(row.declared_progress_pct),
+        publishedQuestionCount: Number(row.published_question_count),
+        attemptsCount: attempts,
+        correctCount: correct,
+        successRatePct,
+        questionsToReinforceCount: Number(row.questions_to_reinforce_count)
+      };
+    });
+  }
+
+  async listSubjectChapterStates(userId: string, subjectId: string) {
+    const subjectResult = await this.db.query<{ id: string; code: string; name: string }>(
+      `
+        SELECT id, code, name
+        FROM subjects
+        WHERE id = $1
+          AND is_active = TRUE
+        LIMIT 1
+      `,
+      [subjectId]
+    );
+    const subject = subjectResult.rows[0];
+    if (!subject) {
+      throw new NotFoundException({
+        code: "SUBJECT_NOT_FOUND",
+        message: "Subject not found"
+      });
+    }
+
+    const chaptersResult = await this.db.query<{
+      id: string;
+      code: string;
+      name: string;
+      sort_order: number;
+      declared_progress_pct: string;
+      published_question_count: string;
+    }>(
+      `
+        SELECT
+          c.id,
+          c.code,
+          c.name,
+          c.sort_order,
+          COALESCE(ucp.declared_progress_pct, 0)::text AS declared_progress_pct,
+          (
+            SELECT COUNT(*)::text
+            FROM questions q
+            WHERE q.chapter_id = c.id
+              AND q.status = 'published'
+              AND q.question_type = 'single_choice'
+          ) AS published_question_count
+        FROM chapters c
+        LEFT JOIN user_chapter_progress ucp
+          ON ucp.chapter_id = c.id
+         AND ucp.user_id = $1
+        WHERE c.subject_id = $2
+          AND c.is_active = TRUE
+        ORDER BY c.sort_order ASC, c.name ASC
+      `,
+      [userId, subjectId]
+    );
+
+    return {
+      subject,
+      items: chaptersResult.rows.map((row) => ({
+        id: row.id,
+        code: row.code,
+        name: row.name,
+        sortOrder: row.sort_order,
+        declaredProgressPct: Number(row.declared_progress_pct),
+        publishedQuestionCount: Number(row.published_question_count)
+      }))
+    };
+  }
+
+  async setChapterProgress(userId: string, chapterId: string, declaredProgressPct: number) {
+    const chapterResult = await this.db.query<{ id: string; subject_id: string }>(
+      `
+        SELECT c.id, c.subject_id
+        FROM chapters c
+        JOIN subjects s ON s.id = c.subject_id
+        WHERE c.id = $1
+          AND c.is_active = TRUE
+          AND s.is_active = TRUE
+        LIMIT 1
+      `,
+      [chapterId]
+    );
+    const chapter = chapterResult.rows[0];
+    if (!chapter) {
+      throw new NotFoundException({
+        code: "CHAPTER_NOT_FOUND",
+        message: "Chapter not found"
+      });
+    }
+
+    await this.db.query(
+      `
+        INSERT INTO user_chapter_progress
+          (user_id, chapter_id, declared_progress_pct)
+        VALUES
+          ($1, $2, $3)
+        ON CONFLICT (user_id, chapter_id)
+        DO UPDATE
+        SET declared_progress_pct = EXCLUDED.declared_progress_pct,
+            updated_at = NOW()
+      `,
+      [userId, chapterId, declaredProgressPct]
+    );
+
+    return {
+      chapterId,
+      subjectId: chapter.subject_id,
+      declaredProgressPct
+    };
+  }
+
   private async getOwnedSession(userId: string, sessionId: string): Promise<SessionRow> {
     const result = await this.db.query<SessionRow>(
       `
@@ -499,6 +654,167 @@ export class TrainingsService {
       });
     }
     return session;
+  }
+
+  private buildSessionQuestionWhereParts(mode: SessionRow["mode"]): string[] {
+    const whereParts: string[] = [
+      "q.status = 'published'",
+      "q.question_type = 'single_choice'",
+      "$2::uuid IS NOT NULL",
+      `(
+        NOT EXISTS (SELECT 1 FROM quiz_session_subject_filters ssf WHERE ssf.session_id = $1)
+        OR q.subject_id IN (
+          SELECT ssf.subject_id
+          FROM quiz_session_subject_filters ssf
+          WHERE ssf.session_id = $1
+        )
+      )`,
+      `(
+        NOT EXISTS (SELECT 1 FROM quiz_session_chapter_filters scf WHERE scf.session_id = $1)
+        OR q.chapter_id IN (
+          SELECT scf.chapter_id
+          FROM quiz_session_chapter_filters scf
+          WHERE scf.session_id = $1
+        )
+      )`
+    ];
+
+    if (mode === "discovery") {
+      whereParts.push(
+        "NOT EXISTS (SELECT 1 FROM user_question_stats uqs WHERE uqs.user_id = $2 AND uqs.question_id = q.id AND uqs.attempts_count > 0)"
+      );
+    }
+
+    if (mode === "review") {
+      whereParts.push(
+        "EXISTS (SELECT 1 FROM user_question_stats uqs WHERE uqs.user_id = $2 AND uqs.question_id = q.id AND uqs.attempts_count > 0)"
+      );
+    }
+
+    if (mode === "par_coeur") {
+      whereParts.push(
+        `
+        EXISTS (
+          SELECT 1
+          FROM user_question_stats uqs
+          WHERE uqs.user_id = $2
+            AND uqs.question_id = q.id
+            AND (
+              (uqs.attempts_count <= 4 AND uqs.correct_count = uqs.attempts_count AND uqs.attempts_count > 0)
+              OR
+              (uqs.attempts_count > 4 AND (uqs.correct_count::numeric / uqs.attempts_count) >= 0.8)
+            )
+        )
+        `
+      );
+    }
+
+    if (mode === "rattrapage") {
+      whereParts.push(
+        `
+        EXISTS (
+          SELECT 1
+          FROM user_question_stats uqs
+          WHERE uqs.user_id = $2
+            AND uqs.question_id = q.id
+            AND uqs.attempts_count > 0
+            AND uqs.correct_count < uqs.attempts_count
+        )
+        `
+      );
+    }
+
+    return whereParts;
+  }
+
+  private async ensureQuestionEligibleForSession(
+    client: PoolClient,
+    userId: string,
+    session: SessionRow,
+    questionId: string
+  ): Promise<void> {
+    const whereParts = this.buildSessionQuestionWhereParts(session.mode);
+    whereParts.push("q.id = $3");
+    whereParts.push("NOT EXISTS (SELECT 1 FROM quiz_answers qa WHERE qa.session_id = $1 AND qa.question_id = q.id)");
+
+    const eligibilityResult = await client.query<{ id: string }>(
+      `
+        SELECT q.id
+        FROM questions q
+        WHERE ${whereParts.join(" AND ")}
+        LIMIT 1
+      `,
+      [session.id, userId, questionId]
+    );
+
+    if (eligibilityResult.rowCount === 0) {
+      throw new UnprocessableEntityException({
+        code: "QUESTION_NOT_ELIGIBLE_FOR_SESSION",
+        message: "Question does not match this session filters or mode"
+      });
+    }
+  }
+
+  private async validateSessionFilters(
+    client: PoolClient,
+    dto: Pick<CreateTrainingSessionDto, "subjectIds" | "chapterIds">
+  ): Promise<void> {
+    const subjectIds = dto.subjectIds ?? [];
+    const chapterIds = dto.chapterIds ?? [];
+
+    if (subjectIds.length > 0) {
+      const subjects = await client.query<{ id: string }>(
+        `
+          SELECT id
+          FROM subjects
+          WHERE id = ANY($1::uuid[])
+            AND is_active = TRUE
+        `,
+        [subjectIds]
+      );
+      if (subjects.rowCount !== subjectIds.length) {
+        throw new BadRequestException({
+          code: "VALIDATION_ERROR",
+          message: "One or more subjectIds are invalid or inactive"
+        });
+      }
+    }
+
+    if (chapterIds.length > 0) {
+      const chapters = await client.query<{ id: string }>(
+        `
+          SELECT id
+          FROM chapters
+          WHERE id = ANY($1::uuid[])
+            AND is_active = TRUE
+        `,
+        [chapterIds]
+      );
+      if (chapters.rowCount !== chapterIds.length) {
+        throw new BadRequestException({
+          code: "VALIDATION_ERROR",
+          message: "One or more chapterIds are invalid or inactive"
+        });
+      }
+    }
+
+    if (subjectIds.length > 0 && chapterIds.length > 0) {
+      const compatibleChapters = await client.query<{ id: string }>(
+        `
+          SELECT id
+          FROM chapters
+          WHERE id = ANY($1::uuid[])
+            AND subject_id = ANY($2::uuid[])
+        `,
+        [chapterIds, subjectIds]
+      );
+      if (compatibleChapters.rowCount !== chapterIds.length) {
+        throw new BadRequestException({
+          code: "VALIDATION_ERROR",
+          message: "All chapterIds must belong to selected subjectIds"
+        });
+      }
+    }
   }
 
   private validateStopRule(stopRule: string, targetQuestionCount?: number): void {

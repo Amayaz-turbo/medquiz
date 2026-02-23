@@ -27,6 +27,9 @@ Public:
 
 Protected:
 - `GET /me`
+- `GET /trainings/state/subjects`
+- `GET /trainings/state/subjects/:subjectId/chapters`
+- `PUT /trainings/state/chapters/:chapterId`
 - `POST /trainings/sessions`
 - `GET /trainings/sessions/:sessionId`
 - `GET /trainings/sessions/:sessionId/questions`

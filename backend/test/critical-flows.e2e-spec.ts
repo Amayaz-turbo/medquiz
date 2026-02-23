@@ -178,6 +178,139 @@ describe("Critical integration flows", () => {
     expect(meResponse.body.data.email).toBe(registered.email);
   });
 
+  it("runs a training session and updates chapter progress state", async () => {
+    const trainee = await registerUser("Training Player");
+
+    const subjectsState = await request(app.getHttpServer())
+      .get("/v1/trainings/state/subjects")
+      .set("Authorization", `Bearer ${trainee.accessToken}`)
+      .expect(200);
+    const subjectId = subjectsState.body.data.items[0].id as string;
+    expect(subjectId).toBeDefined();
+
+    const chaptersState = await request(app.getHttpServer())
+      .get(`/v1/trainings/state/subjects/${subjectId}/chapters`)
+      .set("Authorization", `Bearer ${trainee.accessToken}`)
+      .expect(200);
+    const chapterId = chaptersState.body.data.items[0].id as string;
+    expect(chapterId).toBeDefined();
+
+    await request(app.getHttpServer())
+      .put(`/v1/trainings/state/chapters/${chapterId}`)
+      .set("Authorization", `Bearer ${trainee.accessToken}`)
+      .send({ declaredProgressPct: 35 })
+      .expect(200);
+
+    const created = await request(app.getHttpServer())
+      .post("/v1/trainings/sessions")
+      .set("Authorization", `Bearer ${trainee.accessToken}`)
+      .send({
+        mode: "learning",
+        stopRule: "fixed_custom",
+        targetQuestionCount: 2,
+        subjectIds: [subjectId],
+        chapterIds: [chapterId]
+      })
+      .expect(201);
+    const sessionId = created.body.data.id as string;
+
+    const nextQuestion = await request(app.getHttpServer())
+      .get(`/v1/trainings/sessions/${sessionId}/next-question`)
+      .set("Authorization", `Bearer ${trainee.accessToken}`)
+      .expect(200);
+
+    const question = nextQuestion.body.data.item as {
+      id: string;
+      choices: Array<{ id: string }>;
+    } | null;
+    expect(question).not.toBeNull();
+    expect(question?.choices.length).toBeGreaterThan(0);
+
+    await request(app.getHttpServer())
+      .post(`/v1/trainings/sessions/${sessionId}/answers`)
+      .set("Authorization", `Bearer ${trainee.accessToken}`)
+      .send({
+        questionId: question?.id,
+        selectedChoiceId: question?.choices[0].id,
+        responseTimeMs: 1200
+      })
+      .expect(201);
+
+    const session = await request(app.getHttpServer())
+      .get(`/v1/trainings/sessions/${sessionId}`)
+      .set("Authorization", `Bearer ${trainee.accessToken}`)
+      .expect(200);
+    expect(session.body.data.progress.attempts).toBe(1);
+
+    const chaptersAfter = await request(app.getHttpServer())
+      .get(`/v1/trainings/state/subjects/${subjectId}/chapters`)
+      .set("Authorization", `Bearer ${trainee.accessToken}`)
+      .expect(200);
+    const updated = (chaptersAfter.body.data.items as Array<{ id: string; declaredProgressPct: number }>).find(
+      (item) => item.id === chapterId
+    );
+    expect(updated?.declaredProgressPct).toBe(35);
+  });
+
+  it("rejects training answers outside session filters", async () => {
+    const trainee = await registerUser("Training Scope Guard");
+    const subjects = await db.query<{ id: string }>(
+      `
+        SELECT id
+        FROM subjects
+        ORDER BY sort_order ASC
+        LIMIT 2
+      `
+    );
+    expect(subjects.rows).toHaveLength(2);
+
+    const allowedSubjectId = subjects.rows[0].id;
+    const blockedSubjectId = subjects.rows[1].id;
+
+    const blockedQuestion = await db.query<{ question_id: string; choice_id: string }>(
+      `
+        SELECT
+          q.id AS question_id,
+          qc.id AS choice_id
+        FROM questions q
+        JOIN question_choices qc
+          ON qc.question_id = q.id
+         AND qc.position = 1
+        WHERE q.subject_id = $1
+          AND q.status = 'published'
+          AND q.question_type = 'single_choice'
+        ORDER BY q.created_at ASC
+        LIMIT 1
+      `,
+      [blockedSubjectId]
+    );
+    expect(blockedQuestion.rowCount).toBe(1);
+
+    const created = await request(app.getHttpServer())
+      .post("/v1/trainings/sessions")
+      .set("Authorization", `Bearer ${trainee.accessToken}`)
+      .send({
+        mode: "learning",
+        stopRule: "fixed_custom",
+        targetQuestionCount: 1,
+        subjectIds: [allowedSubjectId]
+      })
+      .expect(201);
+    const sessionId = created.body.data.id as string;
+
+    const rejected = await request(app.getHttpServer())
+      .post(`/v1/trainings/sessions/${sessionId}/answers`)
+      .set("Authorization", `Bearer ${trainee.accessToken}`)
+      .send({
+        questionId: blockedQuestion.rows[0].question_id,
+        selectedChoiceId: blockedQuestion.rows[0].choice_id,
+        responseTimeMs: 900
+      })
+      .expect(422);
+
+    expect(rejected.body.error.code).toBe("QUESTION_NOT_ELIGIBLE_FOR_SESSION");
+  });
+
   it("plays a full duel (5 rounds) to completion", async () => {
     const player1 = await registerUser("Duel Player 1");
     const player2 = await registerUser("Duel Player 2");
