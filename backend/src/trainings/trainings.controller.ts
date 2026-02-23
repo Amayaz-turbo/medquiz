@@ -146,6 +146,24 @@ export class TrainingsController {
     return { data: result };
   }
 
+  @Post("admin/submissions/:submissionId/claim")
+  async claimQuestionSubmission(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("submissionId", new ParseUUIDPipe({ version: "4" })) submissionId: string
+  ) {
+    const result = await this.trainingsService.claimQuestionSubmission(user.userId, submissionId);
+    return { data: result };
+  }
+
+  @Post("admin/submissions/:submissionId/release-claim")
+  async releaseQuestionSubmissionClaim(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("submissionId", new ParseUUIDPipe({ version: "4" })) submissionId: string
+  ) {
+    const result = await this.trainingsService.releaseQuestionSubmissionClaim(user.userId, submissionId);
+    return { data: result };
+  }
+
   @Get("submissions/:submissionId")
   async getQuestionSubmission(
     @CurrentUser() user: AuthenticatedUser,

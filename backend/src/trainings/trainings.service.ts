@@ -135,6 +135,12 @@ export interface QuestionSubmissionView {
   reviewedByUserId: string | null;
   reviewedAt: string | null;
   publishedQuestionId: string | null;
+  claim: {
+    claimedByUserId: string | null;
+    claimedAt: string | null;
+    claimExpiresAt: string | null;
+    isActive: boolean;
+  };
   createdAt: string;
   choices: Array<{ id: string; label: string; position: number; isCorrect: boolean }>;
   acceptedAnswers: Array<{
@@ -157,6 +163,12 @@ export interface SubmissionReviewQueueItem {
   qualityScore: number;
   queueScore: number;
   flags: string[];
+  claim: {
+    claimedByUserId: string | null;
+    claimExpiresAt: string | null;
+    isActive: boolean;
+    isClaimedByMe: boolean;
+  };
   duplicateCandidates: Array<{
     sourceType: "question" | "submission";
     sourceId: string;
@@ -207,6 +219,7 @@ export interface SubmissionReviewDashboard {
 @Injectable()
 export class TrainingsService {
   private readonly cfg = env();
+  private readonly submissionClaimTtlMinutes = 20;
 
   constructor(private readonly db: DatabaseService) {}
 
@@ -1353,6 +1366,8 @@ export class TrainingsService {
       explanation: string;
       difficulty: number;
       created_at: string;
+      claimed_by_user_id: string | null;
+      claim_expires_at: string | null;
       choice_count: string;
       accepted_answers_count: string;
     }>(
@@ -1367,6 +1382,8 @@ export class TrainingsService {
           qs.explanation,
           qs.difficulty,
           qs.created_at,
+          qs.claimed_by_user_id,
+          qs.claim_expires_at,
           (
             SELECT COUNT(*)::text
             FROM question_submission_choices qsc
@@ -1471,6 +1488,13 @@ export class TrainingsService {
       if (duplicateCandidates.length > 0) {
         flags.push("potential_duplicate");
       }
+      const claimActive = this.isSubmissionClaimActive(submission.claim_expires_at);
+      if (claimActive && submission.claimed_by_user_id !== userId) {
+        flags.push("claimed_by_other");
+      }
+      if (claimActive && submission.claimed_by_user_id === userId) {
+        flags.push("claimed_by_me");
+      }
       if (submission.prompt.replace(/\s+/g, " ").trim().length < 40) {
         flags.push("short_prompt");
       }
@@ -1518,6 +1542,12 @@ export class TrainingsService {
         qualityScore,
         queueScore,
         flags,
+        claim: {
+          claimedByUserId: submission.claimed_by_user_id,
+          claimExpiresAt: submission.claim_expires_at,
+          isActive: claimActive,
+          isClaimedByMe: claimActive && submission.claimed_by_user_id === userId
+        },
         duplicateCandidates
       } satisfies SubmissionReviewQueueItem;
     });
@@ -1532,6 +1562,130 @@ export class TrainingsService {
       .slice(0, limit);
 
     return { items };
+  }
+
+  async claimQuestionSubmission(userId: string, submissionId: string) {
+    if (!this.canAccessAllSubmissions(userId)) {
+      throw new ForbiddenException({
+        code: "TRAINING_SUBMISSION_REVIEW_FORBIDDEN",
+        message: "You are not allowed to claim submissions"
+      });
+    }
+
+    return this.db.withTransaction(async (client) => {
+      const context = await this.getQuestionSubmissionContext(client, submissionId, true);
+
+      if (context.status !== "pending") {
+        throw new UnprocessableEntityException({
+          code: "QUESTION_SUBMISSION_NOT_PENDING",
+          message: "Only pending submissions can be claimed"
+        });
+      }
+
+      const activeClaimByOther =
+        this.isSubmissionClaimActive(context.claim_expires_at) &&
+        context.claimed_by_user_id !== null &&
+        context.claimed_by_user_id !== userId;
+      if (activeClaimByOther) {
+        throw new ConflictException({
+          code: "SUBMISSION_ALREADY_CLAIMED",
+          message: "Submission is currently claimed by another reviewer",
+          details: {
+            claimedByUserId: context.claimed_by_user_id,
+            claimExpiresAt: context.claim_expires_at
+          }
+        });
+      }
+
+      const updated = await client.query<{
+        claimed_by_user_id: string;
+        claimed_at: string;
+        claim_expires_at: string;
+      }>(
+        `
+          UPDATE question_submissions
+          SET claimed_by_user_id = $2,
+              claimed_at = NOW(),
+              claim_expires_at = NOW() + make_interval(mins => $3)
+          WHERE id = $1
+          RETURNING claimed_by_user_id, claimed_at, claim_expires_at
+        `,
+        [submissionId, userId, this.submissionClaimTtlMinutes]
+      );
+      const row = updated.rows[0];
+
+      return {
+        submissionId,
+        claim: {
+          claimedByUserId: row.claimed_by_user_id,
+          claimedAt: row.claimed_at,
+          claimExpiresAt: row.claim_expires_at,
+          isActive: true,
+          ttlMinutes: this.submissionClaimTtlMinutes
+        }
+      };
+    });
+  }
+
+  async releaseQuestionSubmissionClaim(userId: string, submissionId: string) {
+    if (!this.canAccessAllSubmissions(userId)) {
+      throw new ForbiddenException({
+        code: "TRAINING_SUBMISSION_REVIEW_FORBIDDEN",
+        message: "You are not allowed to release submission claims"
+      });
+    }
+
+    return this.db.withTransaction(async (client) => {
+      const context = await this.getQuestionSubmissionContext(client, submissionId, true);
+
+      if (context.status !== "pending") {
+        throw new UnprocessableEntityException({
+          code: "QUESTION_SUBMISSION_NOT_PENDING",
+          message: "Only pending submissions can release claims"
+        });
+      }
+
+      const isActive = this.isSubmissionClaimActive(context.claim_expires_at);
+      if (!isActive || !context.claimed_by_user_id) {
+        await client.query(
+          `
+            UPDATE question_submissions
+            SET claimed_by_user_id = NULL,
+                claimed_at = NULL,
+                claim_expires_at = NULL
+            WHERE id = $1
+          `,
+          [submissionId]
+        );
+        return {
+          submissionId,
+          released: false
+        };
+      }
+
+      if (context.claimed_by_user_id !== userId) {
+        throw new ForbiddenException({
+          code: "SUBMISSION_CLAIM_FORBIDDEN",
+          message: "Only current claimer can release this submission claim"
+        });
+      }
+
+      await client.query(
+        `
+          UPDATE question_submissions
+          SET claimed_by_user_id = NULL,
+              claimed_at = NULL,
+              claim_expires_at = NULL
+          WHERE id = $1
+        `,
+        [submissionId]
+      );
+
+      return {
+        submissionId,
+        released: true
+      };
+    });
   }
 
   async getSubmissionReviewDashboard(userId: string): Promise<SubmissionReviewDashboard> {
@@ -1744,6 +1898,20 @@ export class TrainingsService {
           message: "Only pending submissions can be reviewed"
         });
       }
+      if (
+        this.isSubmissionClaimActive(context.claim_expires_at) &&
+        context.claimed_by_user_id !== null &&
+        context.claimed_by_user_id !== userId
+      ) {
+        throw new ConflictException({
+          code: "SUBMISSION_ALREADY_CLAIMED",
+          message: "Submission is currently claimed by another reviewer",
+          details: {
+            claimedByUserId: context.claimed_by_user_id,
+            claimExpiresAt: context.claim_expires_at
+          }
+        });
+      }
 
       if (decision === "reject") {
         await client.query(
@@ -1752,7 +1920,10 @@ export class TrainingsService {
             SET status = 'rejected',
                 reviewed_by_user_id = $2,
                 review_note = $3,
-                reviewed_at = NOW()
+                reviewed_at = NOW(),
+                claimed_by_user_id = NULL,
+                claimed_at = NULL,
+                claim_expires_at = NULL
             WHERE id = $1
           `,
           [submissionId, userId, reviewNote]
@@ -1812,7 +1983,10 @@ export class TrainingsService {
               reviewed_by_user_id = $2,
               review_note = $3,
               reviewed_at = NOW(),
-              published_question_id = $4
+              published_question_id = $4,
+              claimed_by_user_id = NULL,
+              claimed_at = NULL,
+              claim_expires_at = NULL
           WHERE id = $1
         `,
         [submissionId, userId, reviewNote, questionId]
@@ -2448,14 +2622,23 @@ export class TrainingsService {
     id: string;
     proposer_user_id: string;
     status: "pending" | "approved" | "rejected";
+    claimed_by_user_id: string | null;
+    claim_expires_at: string | null;
   }> {
     const result = await queryRunner.query<{
       id: string;
       proposer_user_id: string;
       status: "pending" | "approved" | "rejected";
+      claimed_by_user_id: string | null;
+      claim_expires_at: string | null;
     }>(
       `
-        SELECT id, proposer_user_id, status
+        SELECT
+          id,
+          proposer_user_id,
+          status,
+          claimed_by_user_id,
+          claim_expires_at
         FROM question_submissions
         WHERE id = $1
         ${forUpdate ? "FOR UPDATE" : ""}
@@ -2880,6 +3063,9 @@ export class TrainingsService {
       reviewed_by_user_id: string | null;
       reviewed_at: string | null;
       published_question_id: string | null;
+      claimed_by_user_id: string | null;
+      claimed_at: string | null;
+      claim_expires_at: string | null;
       created_at: string;
     }>(
       `
@@ -2897,6 +3083,9 @@ export class TrainingsService {
           reviewed_by_user_id,
           reviewed_at,
           published_question_id,
+          claimed_by_user_id,
+          claimed_at,
+          claim_expires_at,
           created_at
         FROM question_submissions
         WHERE id = $1
@@ -2940,6 +3129,7 @@ export class TrainingsService {
       `,
       [submissionId]
     );
+    const claimIsActive = this.isSubmissionClaimActive(submission.claim_expires_at);
 
     return {
       id: submission.id,
@@ -2955,6 +3145,12 @@ export class TrainingsService {
       reviewedByUserId: submission.reviewed_by_user_id,
       reviewedAt: submission.reviewed_at,
       publishedQuestionId: submission.published_question_id,
+      claim: {
+        claimedByUserId: submission.claimed_by_user_id,
+        claimedAt: submission.claimed_at,
+        claimExpiresAt: submission.claim_expires_at,
+        isActive: claimIsActive
+      },
       createdAt: submission.created_at,
       choices: choicesResult.rows.map((row) => ({
         id: row.id,
@@ -3164,6 +3360,14 @@ export class TrainingsService {
     }
     const factor = 10 ** decimals;
     return Math.round(parsed * factor) / factor;
+  }
+
+  private isSubmissionClaimActive(claimExpiresAt: string | null): boolean {
+    if (!claimExpiresAt) {
+      return false;
+    }
+    const expiresAtMs = new Date(claimExpiresAt).getTime();
+    return Number.isFinite(expiresAtMs) && expiresAtMs > Date.now();
   }
 
   private isUuidV4(value: string): boolean {

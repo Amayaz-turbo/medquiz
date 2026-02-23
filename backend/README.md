@@ -51,6 +51,8 @@ Protected:
 - `POST /trainings/admin/submissions/:submissionId/review`
 - `GET /trainings/admin/submissions/review-queue`
 - `GET /trainings/admin/submissions/dashboard`
+- `POST /trainings/admin/submissions/:submissionId/claim`
+- `POST /trainings/admin/submissions/:submissionId/release-claim`
 - `POST /duels`
 - `GET /duels`
 - `GET /duels/:duelId`

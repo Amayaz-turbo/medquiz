@@ -1190,6 +1190,96 @@ describe("Critical integration flows", () => {
     expect((dashboard.body.data.pendingDistribution.byDifficulty as unknown[]).length).toBeGreaterThan(0);
   });
 
+  it("enforces reviewer claim/release locking for submission moderation", async () => {
+    const proposer = await registerUser("Claim Proposer");
+    const reviewer1 = await registerUser("Claim Reviewer 1");
+    const reviewer2 = await registerUser("Claim Reviewer 2");
+
+    const chapterRow = await db.query<{ subject_id: string; chapter_id: string }>(
+      `
+        SELECT c.subject_id, c.id AS chapter_id
+        FROM chapters c
+        JOIN subjects s
+          ON s.id = c.subject_id
+        WHERE c.is_active = TRUE
+          AND s.is_active = TRUE
+        ORDER BY s.sort_order ASC, c.sort_order ASC
+        LIMIT 1
+      `
+    );
+    expect(chapterRow.rowCount).toBe(1);
+    const subjectId = chapterRow.rows[0].subject_id;
+    const chapterId = chapterRow.rows[0].chapter_id;
+
+    const submission = await request(app.getHttpServer())
+      .post("/v1/trainings/submissions")
+      .set("Authorization", `Bearer ${proposer.accessToken}`)
+      .send({
+        subjectId,
+        chapterId,
+        questionType: "open_text",
+        prompt: "Quelle est la principale molécule énergétique immédiate de la cellule ?",
+        explanation: "L'ATP est la principale molécule énergétique immédiatement utilisable.",
+        difficulty: 2,
+        acceptedAnswers: ["ATP", "Adénosine triphosphate"]
+      })
+      .expect(201);
+    const submissionId = submission.body.data.id as string;
+
+    const claimedByReviewer1 = await request(app.getHttpServer())
+      .post(`/v1/trainings/admin/submissions/${submissionId}/claim`)
+      .set("Authorization", `Bearer ${reviewer1.accessToken}`)
+      .expect(201);
+    expect(claimedByReviewer1.body.data.claim.claimedByUserId).toBe(reviewer1.userId);
+    expect(claimedByReviewer1.body.data.claim.isActive).toBe(true);
+
+    const claimByReviewer2 = await request(app.getHttpServer())
+      .post(`/v1/trainings/admin/submissions/${submissionId}/claim`)
+      .set("Authorization", `Bearer ${reviewer2.accessToken}`)
+      .expect(409);
+    expect(claimByReviewer2.body.error.code).toBe("SUBMISSION_ALREADY_CLAIMED");
+
+    const releaseByReviewer2 = await request(app.getHttpServer())
+      .post(`/v1/trainings/admin/submissions/${submissionId}/release-claim`)
+      .set("Authorization", `Bearer ${reviewer2.accessToken}`)
+      .expect(403);
+    expect(releaseByReviewer2.body.error.code).toBe("SUBMISSION_CLAIM_FORBIDDEN");
+
+    const releaseByReviewer1 = await request(app.getHttpServer())
+      .post(`/v1/trainings/admin/submissions/${submissionId}/release-claim`)
+      .set("Authorization", `Bearer ${reviewer1.accessToken}`)
+      .expect(201);
+    expect(releaseByReviewer1.body.data.released).toBe(true);
+
+    await request(app.getHttpServer())
+      .post(`/v1/trainings/admin/submissions/${submissionId}/claim`)
+      .set("Authorization", `Bearer ${reviewer2.accessToken}`)
+      .expect(201);
+
+    const reviewByReviewer1 = await request(app.getHttpServer())
+      .post(`/v1/trainings/admin/submissions/${submissionId}/review`)
+      .set("Authorization", `Bearer ${reviewer1.accessToken}`)
+      .send({ decision: "reject", reviewNote: "blocked by claim" })
+      .expect(409);
+    expect(reviewByReviewer1.body.error.code).toBe("SUBMISSION_ALREADY_CLAIMED");
+
+    const reviewedByReviewer2 = await request(app.getHttpServer())
+      .post(`/v1/trainings/admin/submissions/${submissionId}/review`)
+      .set("Authorization", `Bearer ${reviewer2.accessToken}`)
+      .send({ decision: "approve", reviewNote: "Reviewed and approved" })
+      .expect(201);
+    expect(reviewedByReviewer2.body.data.status).toBe("approved");
+    expect(reviewedByReviewer2.body.data.claim.isActive).toBe(false);
+    expect(reviewedByReviewer2.body.data.claim.claimedByUserId).toBeNull();
+
+    const submissionAfter = await request(app.getHttpServer())
+      .get(`/v1/trainings/submissions/${submissionId}`)
+      .set("Authorization", `Bearer ${proposer.accessToken}`)
+      .expect(200);
+    expect(submissionAfter.body.data.claim.isActive).toBe(false);
+    expect(submissionAfter.body.data.claim.claimedByUserId).toBeNull();
+  });
+
   it("plays a full duel (5 rounds) to completion", async () => {
     const player1 = await registerUser("Duel Player 1");
     const player2 = await registerUser("Duel Player 2");

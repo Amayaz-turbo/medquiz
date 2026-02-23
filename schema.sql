@@ -174,6 +174,9 @@ CREATE TABLE question_submissions (
   explanation TEXT NOT NULL,
   difficulty SMALLINT NOT NULL,
   status submission_status NOT NULL DEFAULT 'pending',
+  claimed_by_user_id UUID REFERENCES users(id),
+  claimed_at TIMESTAMPTZ,
+  claim_expires_at TIMESTAMPTZ,
   reviewed_by_user_id UUID REFERENCES users(id),
   review_note TEXT,
   published_question_id UUID REFERENCES questions(id),
@@ -194,11 +197,22 @@ CREATE TABLE question_submissions (
       AND review_note IS NOT NULL
       AND LENGTH(TRIM(review_note)) > 0
     )
+  ),
+  CONSTRAINT question_submissions_claim_shape_chk CHECK (
+    (claimed_by_user_id IS NULL AND claimed_at IS NULL AND claim_expires_at IS NULL)
+    OR
+    (
+      claimed_by_user_id IS NOT NULL
+      AND claimed_at IS NOT NULL
+      AND claim_expires_at IS NOT NULL
+      AND claim_expires_at > claimed_at
+    )
   )
 );
 
 CREATE INDEX question_submissions_status_created_idx ON question_submissions (status, created_at);
 CREATE INDEX question_submissions_proposer_created_idx ON question_submissions (proposer_user_id, created_at DESC);
+CREATE INDEX question_submissions_claim_expires_idx ON question_submissions (claim_expires_at);
 
 CREATE TABLE question_submission_choices (
   id UUID PRIMARY KEY,
