@@ -71,6 +71,7 @@ export interface AdminQuestionView {
   createdAt: string;
   updatedAt: string;
   publishedAt: string | null;
+  retiredAt: string | null;
   choices: Array<{ id: string; label: string; position: number; isCorrect: boolean }>;
   acceptedAnswers: Array<{
     id: string;
@@ -81,6 +82,16 @@ export interface AdminQuestionView {
 }
 
 type QueryRunner = Pick<DatabaseService, "query"> | PoolClient;
+
+interface ListAdminQuestionsOptions {
+  status?: string;
+  questionType?: string;
+  subjectId?: string;
+  chapterId?: string;
+  createdBy?: string;
+  limit?: number | string;
+  offset?: number | string;
+}
 
 @Injectable()
 export class TrainingsService {
@@ -1090,6 +1101,135 @@ export class TrainingsService {
     return this.loadAdminQuestionView(this.db, questionId);
   }
 
+  async listAdminQuestions(userId: string, options: ListAdminQuestionsOptions) {
+    const status = this.parseAdminStatusFilter(options.status);
+    const questionType = this.parseAdminQuestionTypeFilter(options.questionType);
+    const subjectId = this.parseOptionalUuidFilter(options.subjectId, "subjectId");
+    const chapterId = this.parseOptionalUuidFilter(options.chapterId, "chapterId");
+    const createdBy = options.createdBy === "all" ? "all" : "me";
+    const limit = this.parsePositiveInteger(options.limit, 20, 1, 100, "limit");
+    const offset = this.parsePositiveInteger(options.offset, 0, 0, 10_000, "offset");
+    const userCanAccessAll = this.cfg.trainingContentEditorUserIds.includes(userId);
+    if (createdBy === "all" && !userCanAccessAll) {
+      throw new ForbiddenException({
+        code: "TRAINING_CONTENT_EDITOR_FORBIDDEN",
+        message: "Only content editors can list all questions"
+      });
+    }
+
+    const whereParts: string[] = ["q.question_type IN ('single_choice', 'multi_choice', 'open_text')"];
+    const values: unknown[] = [];
+    let index = 1;
+    if (status) {
+      whereParts.push(`q.status = $${index}`);
+      values.push(status);
+      index += 1;
+    }
+    if (questionType) {
+      whereParts.push(`q.question_type = $${index}`);
+      values.push(questionType);
+      index += 1;
+    }
+    if (subjectId) {
+      whereParts.push(`q.subject_id = $${index}`);
+      values.push(subjectId);
+      index += 1;
+    }
+    if (chapterId) {
+      whereParts.push(`q.chapter_id = $${index}`);
+      values.push(chapterId);
+      index += 1;
+    }
+    if (createdBy === "me" || !userCanAccessAll) {
+      whereParts.push(`q.created_by_user_id = $${index}`);
+      values.push(userId);
+      index += 1;
+    }
+
+    const limitIndex = index;
+    values.push(limit);
+    index += 1;
+    const offsetIndex = index;
+    values.push(offset);
+
+    const result = await this.db.query<{
+      id: string;
+      subject_id: string;
+      chapter_id: string;
+      question_type: string;
+      prompt: string;
+      difficulty: number;
+      status: string;
+      created_by_user_id: string | null;
+      updated_at: string;
+      published_at: string | null;
+      retired_at: string | null;
+      choice_count: string;
+      correct_choice_count: string;
+      accepted_answers_count: string;
+    }>(
+      `
+        SELECT
+          q.id,
+          q.subject_id,
+          q.chapter_id,
+          q.question_type,
+          q.prompt,
+          q.difficulty,
+          q.status,
+          q.created_by_user_id,
+          q.updated_at,
+          q.published_at,
+          q.retired_at,
+          (
+            SELECT COUNT(*)::text
+            FROM question_choices qc
+            WHERE qc.question_id = q.id
+          ) AS choice_count,
+          (
+            SELECT COUNT(*) FILTER (WHERE qc.is_correct)::text
+            FROM question_choices qc
+            WHERE qc.question_id = q.id
+          ) AS correct_choice_count,
+          (
+            SELECT COUNT(*)::text
+            FROM question_open_text_answers qota
+            WHERE qota.question_id = q.id
+          ) AS accepted_answers_count
+        FROM questions q
+        WHERE ${whereParts.join(" AND ")}
+        ORDER BY q.updated_at DESC, q.id DESC
+        LIMIT $${limitIndex}
+        OFFSET $${offsetIndex}
+      `,
+      values
+    );
+
+    return {
+      items: result.rows.map((row) => ({
+        id: row.id,
+        subjectId: row.subject_id,
+        chapterId: row.chapter_id,
+        questionType: row.question_type,
+        promptPreview: row.prompt.length > 180 ? `${row.prompt.slice(0, 177)}...` : row.prompt,
+        difficulty: row.difficulty,
+        status: row.status,
+        createdByUserId: row.created_by_user_id,
+        updatedAt: row.updated_at,
+        publishedAt: row.published_at,
+        retiredAt: row.retired_at,
+        choiceCount: Number(row.choice_count),
+        correctChoiceCount: Number(row.correct_choice_count),
+        acceptedAnswersCount: Number(row.accepted_answers_count)
+      })),
+      page: {
+        limit,
+        offset,
+        hasMore: result.rows.length === limit
+      }
+    };
+  }
+
   async updateAdminQuestion(
     userId: string,
     questionId: string,
@@ -1146,6 +1286,27 @@ export class TrainingsService {
       const context = await this.getQuestionEditorContext(client, questionId, true);
       this.assertCanManageTrainingQuestion(userId, context.created_by_user_id);
       await this.publishQuestionInTransaction(client, questionId, context.question_type, context.status);
+      return this.loadAdminQuestionView(client, questionId);
+    });
+  }
+
+  async retireAdminQuestion(userId: string, questionId: string): Promise<AdminQuestionView> {
+    return this.db.withTransaction(async (client) => {
+      const context = await this.getQuestionEditorContext(client, questionId, true);
+      this.assertCanManageTrainingQuestion(userId, context.created_by_user_id);
+
+      if (context.status !== "retired") {
+        await client.query(
+          `
+            UPDATE questions
+            SET status = 'retired',
+                retired_at = COALESCE(retired_at, NOW())
+            WHERE id = $1
+          `,
+          [questionId]
+        );
+      }
+
       return this.loadAdminQuestionView(client, questionId);
     });
   }
@@ -1652,6 +1813,7 @@ export class TrainingsService {
       created_at: string;
       updated_at: string;
       published_at: string | null;
+      retired_at: string | null;
     }>(
       `
         SELECT
@@ -1667,7 +1829,8 @@ export class TrainingsService {
           created_by_user_id,
           created_at,
           updated_at,
-          published_at
+          published_at,
+          retired_at
         FROM questions
         WHERE id = $1
         LIMIT 1
@@ -1725,6 +1888,7 @@ export class TrainingsService {
       createdAt: question.created_at,
       updatedAt: question.updated_at,
       publishedAt: question.published_at,
+      retiredAt: question.retired_at,
       choices: choicesResult.rows.map((row) => ({
         id: row.id,
         label: row.label,
@@ -1742,6 +1906,71 @@ export class TrainingsService {
 
   private isBoolean(value: unknown): value is boolean {
     return typeof value === "boolean";
+  }
+
+  private parseAdminStatusFilter(value: string | undefined): "draft" | "published" | "retired" | null {
+    if (!value) {
+      return null;
+    }
+    if (value === "draft" || value === "published" || value === "retired") {
+      return value;
+    }
+    throw new BadRequestException({
+      code: "VALIDATION_ERROR",
+      message: "status must be one of: draft, published, retired"
+    });
+  }
+
+  private parseAdminQuestionTypeFilter(
+    value: string | undefined
+  ): "single_choice" | "multi_choice" | "open_text" | null {
+    if (!value) {
+      return null;
+    }
+    if (value === "single_choice" || value === "multi_choice" || value === "open_text") {
+      return value;
+    }
+    throw new BadRequestException({
+      code: "VALIDATION_ERROR",
+      message: "questionType must be one of: single_choice, multi_choice, open_text"
+    });
+  }
+
+  private parseOptionalUuidFilter(value: string | undefined, field: string): string | null {
+    if (!value) {
+      return null;
+    }
+    if (!this.isUuidV4(value)) {
+      throw new BadRequestException({
+        code: "VALIDATION_ERROR",
+        message: `${field} must be a valid UUID v4`
+      });
+    }
+    return value;
+  }
+
+  private parsePositiveInteger(
+    value: number | string | undefined,
+    defaultValue: number,
+    min: number,
+    max: number,
+    field: string
+  ): number {
+    if (value === undefined || value === null || value === "") {
+      return defaultValue;
+    }
+    const parsed = typeof value === "number" ? value : Number(value);
+    if (!Number.isInteger(parsed) || parsed < min || parsed > max) {
+      throw new BadRequestException({
+        code: "VALIDATION_ERROR",
+        message: `${field} must be an integer in range ${min}..${max}`
+      });
+    }
+    return parsed;
+  }
+
+  private isUuidV4(value: string): boolean {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
   }
 
   private async assertCanManageOpenTextQuestion(userId: string, questionId: string): Promise<void> {

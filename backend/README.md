@@ -41,8 +41,10 @@ Protected:
 - `DELETE /trainings/admin/open-text/questions/:questionId/accepted-answers/:answerId`
 - `POST /trainings/admin/questions`
 - `GET /trainings/admin/questions/:questionId`
+- `GET /trainings/admin/questions`
 - `PUT /trainings/admin/questions/:questionId`
 - `POST /trainings/admin/questions/:questionId/publish`
+- `POST /trainings/admin/questions/:questionId/retire`
 - `POST /duels`
 - `GET /duels`
 - `GET /duels/:duelId`

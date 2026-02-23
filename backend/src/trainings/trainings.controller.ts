@@ -112,6 +112,29 @@ export class TrainingsController {
     return { data: result };
   }
 
+  @Get("admin/questions")
+  async listAdminQuestions(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query("status") status?: string,
+    @Query("questionType") questionType?: string,
+    @Query("subjectId") subjectId?: string,
+    @Query("chapterId") chapterId?: string,
+    @Query("createdBy") createdBy?: string,
+    @Query("limit") limit?: string,
+    @Query("offset") offset?: string
+  ) {
+    const result = await this.trainingsService.listAdminQuestions(user.userId, {
+      status,
+      questionType,
+      subjectId,
+      chapterId,
+      createdBy,
+      limit,
+      offset
+    });
+    return { data: result };
+  }
+
   @Put("admin/questions/:questionId")
   async updateAdminQuestion(
     @CurrentUser() user: AuthenticatedUser,
@@ -128,6 +151,15 @@ export class TrainingsController {
     @Param("questionId", new ParseUUIDPipe({ version: "4" })) questionId: string
   ) {
     const result = await this.trainingsService.publishAdminQuestion(user.userId, questionId);
+    return { data: result };
+  }
+
+  @Post("admin/questions/:questionId/retire")
+  async retireAdminQuestion(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("questionId", new ParseUUIDPipe({ version: "4" })) questionId: string
+  ) {
+    const result = await this.trainingsService.retireAdminQuestion(user.userId, questionId);
     return { data: result };
   }
 

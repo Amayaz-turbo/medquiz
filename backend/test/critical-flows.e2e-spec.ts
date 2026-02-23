@@ -757,6 +757,116 @@ describe("Critical integration flows", () => {
     expect(answer.body.data.isCorrect).toBe(true);
   });
 
+  it("lists and retires admin training questions with proper access control", async () => {
+    const owner = await registerUser("Content Retire Owner");
+    const outsider = await registerUser("Content Retire Outsider");
+
+    const chapterRow = await db.query<{ subject_id: string; chapter_id: string }>(
+      `
+        SELECT c.subject_id, c.id AS chapter_id
+        FROM chapters c
+        JOIN subjects s
+          ON s.id = c.subject_id
+        WHERE c.is_active = TRUE
+          AND s.is_active = TRUE
+        ORDER BY s.sort_order ASC, c.sort_order ASC
+        LIMIT 1
+      `
+    );
+    expect(chapterRow.rowCount).toBe(1);
+    const subjectId = chapterRow.rows[0].subject_id;
+    const chapterId = chapterRow.rows[0].chapter_id;
+
+    const created = await request(app.getHttpServer())
+      .post("/v1/trainings/admin/questions")
+      .set("Authorization", `Bearer ${owner.accessToken}`)
+      .send({
+        subjectId,
+        chapterId,
+        questionType: "single_choice",
+        prompt: "Quelle cellule sanguine transporte majoritairement l'oxygène ?",
+        explanation: "Le globule rouge transporte l'oxygène grâce à l'hémoglobine.",
+        difficulty: 2,
+        publishNow: true,
+        choices: [
+          { label: "Globule rouge", isCorrect: true },
+          { label: "Plaquette", isCorrect: false },
+          { label: "Lymphocyte", isCorrect: false },
+          { label: "Neutrophile", isCorrect: false }
+        ]
+      })
+      .expect(201);
+    const questionId = created.body.data.id as string;
+    expect(created.body.data.status).toBe("published");
+
+    const ownerList = await request(app.getHttpServer())
+      .get("/v1/trainings/admin/questions")
+      .set("Authorization", `Bearer ${owner.accessToken}`)
+      .expect(200);
+    expect(
+      (ownerList.body.data.items as Array<{ id: string }>).some((item) => item.id === questionId)
+    ).toBe(true);
+
+    const outsiderListAll = await request(app.getHttpServer())
+      .get("/v1/trainings/admin/questions?createdBy=all")
+      .set("Authorization", `Bearer ${outsider.accessToken}`)
+      .expect(403);
+    expect(outsiderListAll.body.error.code).toBe("TRAINING_CONTENT_EDITOR_FORBIDDEN");
+
+    const outsiderRetire = await request(app.getHttpServer())
+      .post(`/v1/trainings/admin/questions/${questionId}/retire`)
+      .set("Authorization", `Bearer ${outsider.accessToken}`)
+      .expect(403);
+    expect(outsiderRetire.body.error.code).toBe("TRAINING_CONTENT_EDITOR_FORBIDDEN");
+
+    const retired = await request(app.getHttpServer())
+      .post(`/v1/trainings/admin/questions/${questionId}/retire`)
+      .set("Authorization", `Bearer ${owner.accessToken}`)
+      .expect(201);
+    expect(retired.body.data.status).toBe("retired");
+    expect(retired.body.data.retiredAt).toBeTruthy();
+
+    const republishRetired = await request(app.getHttpServer())
+      .post(`/v1/trainings/admin/questions/${questionId}/publish`)
+      .set("Authorization", `Bearer ${owner.accessToken}`)
+      .expect(422);
+    expect(republishRetired.body.error.code).toBe("QUESTION_ALREADY_RETIRED");
+
+    const retiredList = await request(app.getHttpServer())
+      .get("/v1/trainings/admin/questions?status=retired")
+      .set("Authorization", `Bearer ${owner.accessToken}`)
+      .expect(200);
+    expect(
+      (retiredList.body.data.items as Array<{ id: string }>).some((item) => item.id === questionId)
+    ).toBe(true);
+
+    const trainingSession = await request(app.getHttpServer())
+      .post("/v1/trainings/sessions")
+      .set("Authorization", `Bearer ${owner.accessToken}`)
+      .send({
+        mode: "learning",
+        stopRule: "fixed_custom",
+        targetQuestionCount: 1,
+        subjectIds: [subjectId],
+        chapterIds: [chapterId]
+      })
+      .expect(201);
+    const sessionId = trainingSession.body.data.id as string;
+
+    const answerRetired = await request(app.getHttpServer())
+      .post(`/v1/trainings/sessions/${sessionId}/answers`)
+      .set("Authorization", `Bearer ${owner.accessToken}`)
+      .send({
+        questionId,
+        selectedChoiceId:
+          ((retired.body.data.choices as Array<{ id: string; isCorrect: boolean }>).find((item) => item.isCorrect)
+            ?.id as string) ?? randomUUID(),
+        responseTimeMs: 700
+      })
+      .expect(404);
+    expect(answerRetired.body.error.code).toBe("QUESTION_NOT_FOUND");
+  });
+
   it("plays a full duel (5 rounds) to completion", async () => {
     const player1 = await registerUser("Duel Player 1");
     const player2 = await registerUser("Duel Player 2");
