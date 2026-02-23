@@ -15,7 +15,9 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { AuthenticatedUser } from "../auth/interfaces/authenticated-user.interface";
 import { AnswerTrainingQuestionDto } from "./dto/answer-training-question.dto";
 import { AddOpenTextAcceptedAnswerDto } from "./dto/add-open-text-accepted-answer.dto";
+import { CreateQuestionSubmissionDto } from "./dto/create-question-submission.dto";
 import { CreateTrainingSessionDto } from "./dto/create-training-session.dto";
+import { ReviewQuestionSubmissionDto } from "./dto/review-question-submission.dto";
 import { SetChapterProgressDto } from "./dto/set-chapter-progress.dto";
 import { UpsertTrainingQuestionDto } from "./dto/upsert-training-question.dto";
 import { TrainingsService } from "./trainings.service";
@@ -97,6 +99,47 @@ export class TrainingsController {
     return { data: result };
   }
 
+  @Post("submissions")
+  async createQuestionSubmission(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateQuestionSubmissionDto
+  ) {
+    const result = await this.trainingsService.createQuestionSubmission(user.userId, dto);
+    return { data: result };
+  }
+
+  @Get("submissions")
+  async listQuestionSubmissions(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query("status") status?: string,
+    @Query("createdBy") createdBy?: string,
+    @Query("questionType") questionType?: string,
+    @Query("subjectId") subjectId?: string,
+    @Query("chapterId") chapterId?: string,
+    @Query("limit") limit?: string,
+    @Query("offset") offset?: string
+  ) {
+    const result = await this.trainingsService.listQuestionSubmissions(user.userId, {
+      status,
+      createdBy,
+      questionType,
+      subjectId,
+      chapterId,
+      limit,
+      offset
+    });
+    return { data: result };
+  }
+
+  @Get("submissions/:submissionId")
+  async getQuestionSubmission(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("submissionId", new ParseUUIDPipe({ version: "4" })) submissionId: string
+  ) {
+    const result = await this.trainingsService.getQuestionSubmission(user.userId, submissionId);
+    return { data: result };
+  }
+
   @Post("admin/questions")
   async createAdminQuestion(@CurrentUser() user: AuthenticatedUser, @Body() dto: UpsertTrainingQuestionDto) {
     const result = await this.trainingsService.createAdminQuestion(user.userId, dto);
@@ -160,6 +203,16 @@ export class TrainingsController {
     @Param("questionId", new ParseUUIDPipe({ version: "4" })) questionId: string
   ) {
     const result = await this.trainingsService.retireAdminQuestion(user.userId, questionId);
+    return { data: result };
+  }
+
+  @Post("admin/submissions/:submissionId/review")
+  async reviewQuestionSubmission(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("submissionId", new ParseUUIDPipe({ version: "4" })) submissionId: string,
+    @Body() dto: ReviewQuestionSubmissionDto
+  ) {
+    const result = await this.trainingsService.reviewQuestionSubmission(user.userId, submissionId, dto);
     return { data: result };
   }
 

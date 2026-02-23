@@ -172,12 +172,14 @@ CREATE TABLE question_submissions (
   question_type question_type NOT NULL DEFAULT 'single_choice',
   prompt TEXT NOT NULL,
   explanation TEXT NOT NULL,
+  difficulty SMALLINT NOT NULL,
   status submission_status NOT NULL DEFAULT 'pending',
   reviewed_by_user_id UUID REFERENCES users(id),
   review_note TEXT,
   published_question_id UUID REFERENCES questions(id),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   reviewed_at TIMESTAMPTZ,
+  CONSTRAINT question_submissions_difficulty_chk CHECK (difficulty BETWEEN 1 AND 5),
   CONSTRAINT question_submissions_approved_requires_publish_chk CHECK (
     status <> 'approved' OR (
       published_question_id IS NOT NULL
@@ -207,6 +209,20 @@ CREATE TABLE question_submission_choices (
   CONSTRAINT question_submission_choices_position_chk CHECK (position BETWEEN 1 AND 4),
   CONSTRAINT question_submission_choices_submission_position_uniq UNIQUE (submission_id, position)
 );
+
+CREATE TABLE question_submission_open_text_answers (
+  id UUID PRIMARY KEY,
+  submission_id UUID NOT NULL REFERENCES question_submissions(id) ON DELETE CASCADE,
+  accepted_answer_text TEXT NOT NULL,
+  normalized_answer_text TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT question_submission_open_text_answers_accepted_non_empty_chk CHECK (LENGTH(TRIM(accepted_answer_text)) > 0),
+  CONSTRAINT question_submission_open_text_answers_normalized_non_empty_chk CHECK (LENGTH(TRIM(normalized_answer_text)) > 0),
+  CONSTRAINT question_submission_open_text_answers_submission_normalized_uniq UNIQUE (submission_id, normalized_answer_text)
+);
+
+CREATE INDEX question_submission_open_text_answers_submission_idx
+  ON question_submission_open_text_answers (submission_id);
 
 CREATE TABLE question_submission_reviews (
   id UUID PRIMARY KEY,

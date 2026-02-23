@@ -11,7 +11,9 @@ import { PoolClient } from "pg";
 import { DatabaseService } from "../database/database.service";
 import { env } from "../config/env";
 import { AnswerTrainingQuestionDto } from "./dto/answer-training-question.dto";
+import { CreateQuestionSubmissionDto } from "./dto/create-question-submission.dto";
 import { CreateTrainingSessionDto } from "./dto/create-training-session.dto";
+import { ReviewQuestionSubmissionDto } from "./dto/review-question-submission.dto";
 import { UpsertTrainingQuestionDto } from "./dto/upsert-training-question.dto";
 
 interface SessionRow {
@@ -57,6 +59,18 @@ interface NormalizedAdminQuestionPayload {
   acceptedAnswers: Array<{ acceptedAnswerText: string; normalizedAnswerText: string }>;
 }
 
+interface QuestionAuthoringInput {
+  subjectId: string;
+  chapterId: string;
+  questionType: "single_choice" | "multi_choice" | "open_text";
+  prompt: string;
+  explanation: string;
+  difficulty: number;
+  publishNow?: boolean;
+  choices?: Array<{ label: string; isCorrect: boolean }>;
+  acceptedAnswers?: string[];
+}
+
 export interface AdminQuestionView {
   id: string;
   subjectId: string;
@@ -91,6 +105,40 @@ interface ListAdminQuestionsOptions {
   createdBy?: string;
   limit?: number | string;
   offset?: number | string;
+}
+
+interface ListQuestionSubmissionsOptions {
+  status?: string;
+  questionType?: string;
+  subjectId?: string;
+  chapterId?: string;
+  createdBy?: string;
+  limit?: number | string;
+  offset?: number | string;
+}
+
+export interface QuestionSubmissionView {
+  id: string;
+  proposerUserId: string;
+  subjectId: string;
+  chapterId: string;
+  questionType: "single_choice" | "multi_choice" | "open_text";
+  prompt: string;
+  explanation: string;
+  difficulty: number;
+  status: "pending" | "approved" | "rejected";
+  reviewNote: string | null;
+  reviewedByUserId: string | null;
+  reviewedAt: string | null;
+  publishedQuestionId: string | null;
+  createdAt: string;
+  choices: Array<{ id: string; label: string; position: number; isCorrect: boolean }>;
+  acceptedAnswers: Array<{
+    id: string;
+    acceptedAnswerText: string;
+    normalizedAnswerText: string;
+    createdAt: string;
+  }>;
 }
 
 @Injectable()
@@ -1047,9 +1095,307 @@ export class TrainingsService {
     });
   }
 
+  async createQuestionSubmission(
+    userId: string,
+    dto: CreateQuestionSubmissionDto
+  ): Promise<QuestionSubmissionView> {
+    const payload = this.parseQuestionAuthoringPayload({
+      subjectId: dto.subjectId,
+      chapterId: dto.chapterId,
+      questionType: dto.questionType,
+      prompt: dto.prompt,
+      explanation: dto.explanation,
+      difficulty: dto.difficulty,
+      choices: dto.choices,
+      acceptedAnswers: dto.acceptedAnswers
+    });
+
+    return this.db.withTransaction(async (client) => {
+      await this.assertSubjectChapterActive(client, payload.subjectId, payload.chapterId);
+
+      const submissionId = randomUUID();
+      await client.query(
+        `
+          INSERT INTO question_submissions
+            (
+              id,
+              proposer_user_id,
+              subject_id,
+              chapter_id,
+              question_type,
+              prompt,
+              explanation,
+              difficulty,
+              status
+            )
+          VALUES
+            ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')
+        `,
+        [
+          submissionId,
+          userId,
+          payload.subjectId,
+          payload.chapterId,
+          payload.questionType,
+          payload.prompt,
+          payload.explanation,
+          payload.difficulty
+        ]
+      );
+
+      await this.replaceSubmissionContent(client, submissionId, payload);
+      return this.loadQuestionSubmissionView(client, submissionId);
+    });
+  }
+
+  async listQuestionSubmissions(userId: string, options: ListQuestionSubmissionsOptions) {
+    const status = this.parseSubmissionStatusFilter(options.status);
+    const questionType = this.parseAdminQuestionTypeFilter(options.questionType);
+    const subjectId = this.parseOptionalUuidFilter(options.subjectId, "subjectId");
+    const chapterId = this.parseOptionalUuidFilter(options.chapterId, "chapterId");
+    const createdBy = options.createdBy === "all" ? "all" : "me";
+    const limit = this.parsePositiveInteger(options.limit, 20, 1, 100, "limit");
+    const offset = this.parsePositiveInteger(options.offset, 0, 0, 10_000, "offset");
+    const userCanAccessAll = this.canAccessAllSubmissions(userId);
+    if (createdBy === "all" && !userCanAccessAll) {
+      throw new ForbiddenException({
+        code: "TRAINING_SUBMISSION_REVIEW_FORBIDDEN",
+        message: "Only reviewers can list all submissions"
+      });
+    }
+
+    const whereParts: string[] = ["qs.question_type IN ('single_choice', 'multi_choice', 'open_text')"];
+    const values: unknown[] = [];
+    let index = 1;
+
+    if (status) {
+      whereParts.push(`qs.status = $${index}`);
+      values.push(status);
+      index += 1;
+    }
+    if (questionType) {
+      whereParts.push(`qs.question_type = $${index}`);
+      values.push(questionType);
+      index += 1;
+    }
+    if (subjectId) {
+      whereParts.push(`qs.subject_id = $${index}`);
+      values.push(subjectId);
+      index += 1;
+    }
+    if (chapterId) {
+      whereParts.push(`qs.chapter_id = $${index}`);
+      values.push(chapterId);
+      index += 1;
+    }
+    if (createdBy === "me" || !userCanAccessAll) {
+      whereParts.push(`qs.proposer_user_id = $${index}`);
+      values.push(userId);
+      index += 1;
+    }
+
+    const limitIndex = index;
+    values.push(limit);
+    index += 1;
+    const offsetIndex = index;
+    values.push(offset);
+
+    const result = await this.db.query<{
+      id: string;
+      proposer_user_id: string;
+      subject_id: string;
+      chapter_id: string;
+      question_type: "single_choice" | "multi_choice" | "open_text";
+      prompt: string;
+      difficulty: number;
+      status: "pending" | "approved" | "rejected";
+      reviewed_at: string | null;
+      published_question_id: string | null;
+      created_at: string;
+      choice_count: string;
+      accepted_answers_count: string;
+    }>(
+      `
+        SELECT
+          qs.id,
+          qs.proposer_user_id,
+          qs.subject_id,
+          qs.chapter_id,
+          qs.question_type,
+          qs.prompt,
+          qs.difficulty,
+          qs.status,
+          qs.reviewed_at,
+          qs.published_question_id,
+          qs.created_at,
+          (
+            SELECT COUNT(*)::text
+            FROM question_submission_choices qsc
+            WHERE qsc.submission_id = qs.id
+          ) AS choice_count,
+          (
+            SELECT COUNT(*)::text
+            FROM question_submission_open_text_answers qsoa
+            WHERE qsoa.submission_id = qs.id
+          ) AS accepted_answers_count
+        FROM question_submissions qs
+        WHERE ${whereParts.join(" AND ")}
+        ORDER BY qs.created_at DESC, qs.id DESC
+        LIMIT $${limitIndex}
+        OFFSET $${offsetIndex}
+      `,
+      values
+    );
+
+    return {
+      items: result.rows.map((row) => ({
+        id: row.id,
+        proposerUserId: row.proposer_user_id,
+        subjectId: row.subject_id,
+        chapterId: row.chapter_id,
+        questionType: row.question_type,
+        promptPreview: row.prompt.length > 180 ? `${row.prompt.slice(0, 177)}...` : row.prompt,
+        difficulty: row.difficulty,
+        status: row.status,
+        reviewedAt: row.reviewed_at,
+        publishedQuestionId: row.published_question_id,
+        createdAt: row.created_at,
+        choiceCount: Number(row.choice_count),
+        acceptedAnswersCount: Number(row.accepted_answers_count)
+      })),
+      page: {
+        limit,
+        offset,
+        hasMore: result.rows.length === limit
+      }
+    };
+  }
+
+  async getQuestionSubmission(userId: string, submissionId: string): Promise<QuestionSubmissionView> {
+    const context = await this.getQuestionSubmissionContext(this.db, submissionId);
+    if (context.proposer_user_id !== userId && !this.canAccessAllSubmissions(userId)) {
+      throw new ForbiddenException({
+        code: "TRAINING_SUBMISSION_REVIEW_FORBIDDEN",
+        message: "You are not allowed to access this submission"
+      });
+    }
+    return this.loadQuestionSubmissionView(this.db, submissionId);
+  }
+
+  async reviewQuestionSubmission(
+    userId: string,
+    submissionId: string,
+    dto: ReviewQuestionSubmissionDto
+  ): Promise<QuestionSubmissionView> {
+    const decision = dto.decision;
+    const reviewNote = this.normalizeOptionalReviewNote(dto.reviewNote);
+    if (decision === "reject" && !reviewNote) {
+      throw new BadRequestException({
+        code: "VALIDATION_ERROR",
+        message: "reviewNote is required when decision=reject"
+      });
+    }
+
+    return this.db.withTransaction(async (client) => {
+      const context = await this.getQuestionSubmissionContext(client, submissionId, true);
+      this.assertCanReviewSubmission(userId, context.proposer_user_id);
+
+      if (context.status !== "pending") {
+        throw new UnprocessableEntityException({
+          code: "QUESTION_SUBMISSION_NOT_PENDING",
+          message: "Only pending submissions can be reviewed"
+        });
+      }
+
+      if (decision === "reject") {
+        await client.query(
+          `
+            UPDATE question_submissions
+            SET status = 'rejected',
+                reviewed_by_user_id = $2,
+                review_note = $3,
+                reviewed_at = NOW()
+            WHERE id = $1
+          `,
+          [submissionId, userId, reviewNote]
+        );
+        await client.query(
+          `
+            INSERT INTO question_submission_reviews
+              (id, submission_id, reviewer_user_id, action, note)
+            VALUES
+              ($1, $2, $3, 'reject', $4)
+          `,
+          [randomUUID(), submissionId, userId, reviewNote]
+        );
+        return this.loadQuestionSubmissionView(client, submissionId);
+      }
+
+      const payload = await this.loadNormalizedPayloadFromSubmission(client, submissionId);
+      await this.assertSubjectChapterActive(client, payload.subjectId, payload.chapterId);
+
+      const questionId = randomUUID();
+      await client.query(
+        `
+          INSERT INTO questions
+            (
+              id,
+              subject_id,
+              chapter_id,
+              question_type,
+              prompt,
+              explanation,
+              difficulty,
+              status,
+              curriculum_scope,
+              created_by_user_id
+            )
+          VALUES
+            ($1, $2, $3, $4, $5, $6, $7, 'draft', 'national', $8)
+        `,
+        [
+          questionId,
+          payload.subjectId,
+          payload.chapterId,
+          payload.questionType,
+          payload.prompt,
+          payload.explanation,
+          payload.difficulty,
+          context.proposer_user_id
+        ]
+      );
+      await this.replaceQuestionContent(client, questionId, payload);
+      await this.publishQuestionInTransaction(client, questionId, payload.questionType, "draft");
+
+      await client.query(
+        `
+          UPDATE question_submissions
+          SET status = 'approved',
+              reviewed_by_user_id = $2,
+              review_note = $3,
+              reviewed_at = NOW(),
+              published_question_id = $4
+          WHERE id = $1
+        `,
+        [submissionId, userId, reviewNote, questionId]
+      );
+      await client.query(
+        `
+          INSERT INTO question_submission_reviews
+            (id, submission_id, reviewer_user_id, action, note)
+          VALUES
+            ($1, $2, $3, 'approve', $4)
+        `,
+        [randomUUID(), submissionId, userId, reviewNote]
+      );
+
+      return this.loadQuestionSubmissionView(client, submissionId);
+    });
+  }
+
   async createAdminQuestion(userId: string, dto: UpsertTrainingQuestionDto): Promise<AdminQuestionView> {
     this.assertCanCreateTrainingQuestion(userId);
-    const payload = this.parseAdminQuestionPayload(dto);
+    const payload = this.parseQuestionAuthoringPayload(dto);
 
     return this.db.withTransaction(async (client) => {
       await this.assertSubjectChapterActive(client, payload.subjectId, payload.chapterId);
@@ -1235,7 +1581,7 @@ export class TrainingsService {
     questionId: string,
     dto: UpsertTrainingQuestionDto
   ): Promise<AdminQuestionView> {
-    const payload = this.parseAdminQuestionPayload(dto);
+    const payload = this.parseQuestionAuthoringPayload(dto);
 
     return this.db.withTransaction(async (client) => {
       const context = await this.getQuestionEditorContext(client, questionId, true);
@@ -1388,7 +1734,7 @@ export class TrainingsService {
       .trim();
   }
 
-  private parseAdminQuestionPayload(dto: UpsertTrainingQuestionDto): NormalizedAdminQuestionPayload {
+  private parseQuestionAuthoringPayload(dto: QuestionAuthoringInput): NormalizedAdminQuestionPayload {
     const prompt = this.normalizeQuestionText(dto.prompt, "prompt", 12, 2000);
     const explanation = this.normalizeQuestionText(dto.explanation, "explanation", 12, 3000);
     const questionType = dto.questionType;
@@ -1583,6 +1929,29 @@ export class TrainingsService {
     });
   }
 
+  private canAccessAllSubmissions(userId: string): boolean {
+    const allowlist = this.cfg.trainingContentEditorUserIds;
+    if (allowlist.length === 0) {
+      return this.cfg.nodeEnv !== "production";
+    }
+    return allowlist.includes(userId);
+  }
+
+  private assertCanReviewSubmission(userId: string, proposerUserId: string): void {
+    if (!this.canAccessAllSubmissions(userId)) {
+      throw new ForbiddenException({
+        code: "TRAINING_SUBMISSION_REVIEW_FORBIDDEN",
+        message: "You are not allowed to review submissions"
+      });
+    }
+    if (userId === proposerUserId) {
+      throw new ForbiddenException({
+        code: "SUBMISSION_SELF_REVIEW_FORBIDDEN",
+        message: "You cannot review your own submission"
+      });
+    }
+  }
+
   private async getQuestionEditorContext(
     queryRunner: QueryRunner,
     questionId: string,
@@ -1631,6 +2000,109 @@ export class TrainingsService {
       status: row.status,
       created_by_user_id: row.created_by_user_id
     };
+  }
+
+  private async getQuestionSubmissionContext(
+    queryRunner: QueryRunner,
+    submissionId: string,
+    forUpdate = false
+  ): Promise<{
+    id: string;
+    proposer_user_id: string;
+    status: "pending" | "approved" | "rejected";
+  }> {
+    const result = await queryRunner.query<{
+      id: string;
+      proposer_user_id: string;
+      status: "pending" | "approved" | "rejected";
+    }>(
+      `
+        SELECT id, proposer_user_id, status
+        FROM question_submissions
+        WHERE id = $1
+        ${forUpdate ? "FOR UPDATE" : ""}
+        LIMIT 1
+      `,
+      [submissionId]
+    );
+    const row = result.rows[0];
+    if (!row) {
+      throw new NotFoundException({
+        code: "QUESTION_SUBMISSION_NOT_FOUND",
+        message: "Question submission not found"
+      });
+    }
+    return row;
+  }
+
+  private async loadNormalizedPayloadFromSubmission(
+    queryRunner: QueryRunner,
+    submissionId: string
+  ): Promise<NormalizedAdminQuestionPayload> {
+    const submissionResult = await queryRunner.query<{
+      id: string;
+      subject_id: string;
+      chapter_id: string;
+      question_type: "single_choice" | "multi_choice" | "open_text";
+      prompt: string;
+      explanation: string;
+      difficulty: number;
+    }>(
+      `
+        SELECT id, subject_id, chapter_id, question_type, prompt, explanation, difficulty
+        FROM question_submissions
+        WHERE id = $1
+        LIMIT 1
+      `,
+      [submissionId]
+    );
+    const submission = submissionResult.rows[0];
+    if (!submission) {
+      throw new NotFoundException({
+        code: "QUESTION_SUBMISSION_NOT_FOUND",
+        message: "Question submission not found"
+      });
+    }
+
+    const choicesResult = await queryRunner.query<{
+      label: string;
+      is_correct: boolean;
+      position: number;
+    }>(
+      `
+        SELECT label, is_correct, position
+        FROM question_submission_choices
+        WHERE submission_id = $1
+        ORDER BY position ASC
+      `,
+      [submissionId]
+    );
+    const openTextAnswersResult = await queryRunner.query<{
+      accepted_answer_text: string;
+      created_at: string;
+    }>(
+      `
+        SELECT accepted_answer_text, created_at
+        FROM question_submission_open_text_answers
+        WHERE submission_id = $1
+        ORDER BY created_at ASC
+      `,
+      [submissionId]
+    );
+
+    return this.parseQuestionAuthoringPayload({
+      subjectId: submission.subject_id,
+      chapterId: submission.chapter_id,
+      questionType: submission.question_type,
+      prompt: submission.prompt,
+      explanation: submission.explanation,
+      difficulty: submission.difficulty,
+      choices: choicesResult.rows.map((row) => ({
+        label: row.label,
+        isCorrect: row.is_correct
+      })),
+      acceptedAnswers: openTextAnswersResult.rows.map((row) => row.accepted_answer_text)
+    });
   }
 
   private async assertSubjectChapterActive(
@@ -1704,6 +2176,54 @@ export class TrainingsService {
             ($1, $2, $3, $4, $5)
         `,
         [randomUUID(), questionId, choice.label, choice.position, choice.isCorrect]
+      );
+    }
+  }
+
+  private async replaceSubmissionContent(
+    client: PoolClient,
+    submissionId: string,
+    payload: NormalizedAdminQuestionPayload
+  ): Promise<void> {
+    await client.query(
+      `
+        DELETE FROM question_submission_choices
+        WHERE submission_id = $1
+      `,
+      [submissionId]
+    );
+    await client.query(
+      `
+        DELETE FROM question_submission_open_text_answers
+        WHERE submission_id = $1
+      `,
+      [submissionId]
+    );
+
+    if (payload.questionType === "open_text") {
+      for (const item of payload.acceptedAnswers) {
+        await client.query(
+          `
+            INSERT INTO question_submission_open_text_answers
+              (id, submission_id, accepted_answer_text, normalized_answer_text)
+            VALUES
+              ($1, $2, $3, $4)
+          `,
+          [randomUUID(), submissionId, item.acceptedAnswerText, item.normalizedAnswerText]
+        );
+      }
+      return;
+    }
+
+    for (const choice of payload.choices) {
+      await client.query(
+        `
+          INSERT INTO question_submission_choices
+            (id, submission_id, label, position, is_correct)
+          VALUES
+            ($1, $2, $3, $4, $5)
+        `,
+        [randomUUID(), submissionId, choice.label, choice.position, choice.isCorrect]
       );
     }
   }
@@ -1904,6 +2424,115 @@ export class TrainingsService {
     };
   }
 
+  private async loadQuestionSubmissionView(
+    queryRunner: QueryRunner,
+    submissionId: string
+  ): Promise<QuestionSubmissionView> {
+    const submissionResult = await queryRunner.query<{
+      id: string;
+      proposer_user_id: string;
+      subject_id: string;
+      chapter_id: string;
+      question_type: "single_choice" | "multi_choice" | "open_text";
+      prompt: string;
+      explanation: string;
+      difficulty: number;
+      status: "pending" | "approved" | "rejected";
+      review_note: string | null;
+      reviewed_by_user_id: string | null;
+      reviewed_at: string | null;
+      published_question_id: string | null;
+      created_at: string;
+    }>(
+      `
+        SELECT
+          id,
+          proposer_user_id,
+          subject_id,
+          chapter_id,
+          question_type,
+          prompt,
+          explanation,
+          difficulty,
+          status,
+          review_note,
+          reviewed_by_user_id,
+          reviewed_at,
+          published_question_id,
+          created_at
+        FROM question_submissions
+        WHERE id = $1
+        LIMIT 1
+      `,
+      [submissionId]
+    );
+    const submission = submissionResult.rows[0];
+    if (!submission) {
+      throw new NotFoundException({
+        code: "QUESTION_SUBMISSION_NOT_FOUND",
+        message: "Question submission not found"
+      });
+    }
+
+    const choicesResult = await queryRunner.query<{
+      id: string;
+      label: string;
+      position: number;
+      is_correct: boolean;
+    }>(
+      `
+        SELECT id, label, position, is_correct
+        FROM question_submission_choices
+        WHERE submission_id = $1
+        ORDER BY position ASC
+      `,
+      [submissionId]
+    );
+    const acceptedAnswersResult = await queryRunner.query<{
+      id: string;
+      accepted_answer_text: string;
+      normalized_answer_text: string;
+      created_at: string;
+    }>(
+      `
+        SELECT id, accepted_answer_text, normalized_answer_text, created_at
+        FROM question_submission_open_text_answers
+        WHERE submission_id = $1
+        ORDER BY created_at ASC
+      `,
+      [submissionId]
+    );
+
+    return {
+      id: submission.id,
+      proposerUserId: submission.proposer_user_id,
+      subjectId: submission.subject_id,
+      chapterId: submission.chapter_id,
+      questionType: submission.question_type,
+      prompt: submission.prompt,
+      explanation: submission.explanation,
+      difficulty: submission.difficulty,
+      status: submission.status,
+      reviewNote: submission.review_note,
+      reviewedByUserId: submission.reviewed_by_user_id,
+      reviewedAt: submission.reviewed_at,
+      publishedQuestionId: submission.published_question_id,
+      createdAt: submission.created_at,
+      choices: choicesResult.rows.map((row) => ({
+        id: row.id,
+        label: row.label,
+        position: row.position,
+        isCorrect: row.is_correct
+      })),
+      acceptedAnswers: acceptedAnswersResult.rows.map((row) => ({
+        id: row.id,
+        acceptedAnswerText: row.accepted_answer_text,
+        normalizedAnswerText: row.normalized_answer_text,
+        createdAt: row.created_at
+      }))
+    };
+  }
+
   private isBoolean(value: unknown): value is boolean {
     return typeof value === "boolean";
   }
@@ -1918,6 +2547,21 @@ export class TrainingsService {
     throw new BadRequestException({
       code: "VALIDATION_ERROR",
       message: "status must be one of: draft, published, retired"
+    });
+  }
+
+  private parseSubmissionStatusFilter(
+    value: string | undefined
+  ): "pending" | "approved" | "rejected" | null {
+    if (!value) {
+      return null;
+    }
+    if (value === "pending" || value === "approved" || value === "rejected") {
+      return value;
+    }
+    throw new BadRequestException({
+      code: "VALIDATION_ERROR",
+      message: "status must be one of: pending, approved, rejected"
     });
   }
 
@@ -1967,6 +2611,14 @@ export class TrainingsService {
       });
     }
     return parsed;
+  }
+
+  private normalizeOptionalReviewNote(value: unknown): string | null {
+    if (typeof value !== "string") {
+      return null;
+    }
+    const normalized = value.replace(/\s+/g, " ").trim();
+    return normalized.length > 0 ? normalized : null;
   }
 
   private isUuidV4(value: string): boolean {

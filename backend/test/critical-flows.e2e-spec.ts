@@ -867,6 +867,130 @@ describe("Critical integration flows", () => {
     expect(answerRetired.body.error.code).toBe("QUESTION_NOT_FOUND");
   });
 
+  it("runs question submission workflow (submit, reject, approve)", async () => {
+    const proposer = await registerUser("Submission Proposer");
+    const reviewer = await registerUser("Submission Reviewer");
+
+    const chapterRow = await db.query<{ subject_id: string; chapter_id: string }>(
+      `
+        SELECT c.subject_id, c.id AS chapter_id
+        FROM chapters c
+        JOIN subjects s
+          ON s.id = c.subject_id
+        WHERE c.is_active = TRUE
+          AND s.is_active = TRUE
+        ORDER BY s.sort_order ASC, c.sort_order ASC
+        LIMIT 1
+      `
+    );
+    expect(chapterRow.rowCount).toBe(1);
+    const subjectId = chapterRow.rows[0].subject_id;
+    const chapterId = chapterRow.rows[0].chapter_id;
+
+    const firstSubmission = await request(app.getHttpServer())
+      .post("/v1/trainings/submissions")
+      .set("Authorization", `Bearer ${proposer.accessToken}`)
+      .send({
+        subjectId,
+        chapterId,
+        questionType: "single_choice",
+        prompt: "Quelle cellule produit principalement les anticorps ?",
+        explanation: "Les plasmocytes dérivés des lymphocytes B produisent les anticorps.",
+        difficulty: 3,
+        choices: [
+          { label: "Plasmocyte", isCorrect: true },
+          { label: "Neutrophile", isCorrect: false },
+          { label: "Hématie", isCorrect: false },
+          { label: "Plaquette", isCorrect: false }
+        ]
+      })
+      .expect(201);
+    const firstSubmissionId = firstSubmission.body.data.id as string;
+    expect(firstSubmission.body.data.status).toBe("pending");
+
+    await request(app.getHttpServer())
+      .get(`/v1/trainings/submissions/${firstSubmissionId}`)
+      .set("Authorization", `Bearer ${proposer.accessToken}`)
+      .expect(200);
+
+    const selfReview = await request(app.getHttpServer())
+      .post(`/v1/trainings/admin/submissions/${firstSubmissionId}/review`)
+      .set("Authorization", `Bearer ${proposer.accessToken}`)
+      .send({ decision: "reject", reviewNote: "auto review forbidden" })
+      .expect(403);
+    expect(selfReview.body.error.code).toBe("SUBMISSION_SELF_REVIEW_FORBIDDEN");
+
+    const rejectWithoutNote = await request(app.getHttpServer())
+      .post(`/v1/trainings/admin/submissions/${firstSubmissionId}/review`)
+      .set("Authorization", `Bearer ${reviewer.accessToken}`)
+      .send({ decision: "reject" })
+      .expect(400);
+    expect(rejectWithoutNote.body.error.code).toBe("VALIDATION_ERROR");
+
+    const rejected = await request(app.getHttpServer())
+      .post(`/v1/trainings/admin/submissions/${firstSubmissionId}/review`)
+      .set("Authorization", `Bearer ${reviewer.accessToken}`)
+      .send({ decision: "reject", reviewNote: "Proposition trop imprécise" })
+      .expect(201);
+    expect(rejected.body.data.status).toBe("rejected");
+    expect(rejected.body.data.reviewNote).toContain("imprécise");
+
+    const secondSubmission = await request(app.getHttpServer())
+      .post("/v1/trainings/submissions")
+      .set("Authorization", `Bearer ${proposer.accessToken}`)
+      .send({
+        subjectId,
+        chapterId,
+        questionType: "open_text",
+        prompt: "Quelle est la principale molécule énergétique immédiate de la cellule ?",
+        explanation: "L'ATP est la principale molécule énergétique immédiate.",
+        difficulty: 2,
+        acceptedAnswers: ["ATP", "Adénosine triphosphate"]
+      })
+      .expect(201);
+    const secondSubmissionId = secondSubmission.body.data.id as string;
+
+    const approved = await request(app.getHttpServer())
+      .post(`/v1/trainings/admin/submissions/${secondSubmissionId}/review`)
+      .set("Authorization", `Bearer ${reviewer.accessToken}`)
+      .send({ decision: "approve", reviewNote: "Valide pour publication" })
+      .expect(201);
+    expect(approved.body.data.status).toBe("approved");
+    const publishedQuestionId = approved.body.data.publishedQuestionId as string;
+    expect(publishedQuestionId).toBeTruthy();
+
+    const approvedList = await request(app.getHttpServer())
+      .get("/v1/trainings/submissions?status=approved&createdBy=all")
+      .set("Authorization", `Bearer ${reviewer.accessToken}`)
+      .expect(200);
+    expect(
+      (approvedList.body.data.items as Array<{ id: string }>).some((item) => item.id === secondSubmissionId)
+    ).toBe(true);
+
+    const trainingSession = await request(app.getHttpServer())
+      .post("/v1/trainings/sessions")
+      .set("Authorization", `Bearer ${proposer.accessToken}`)
+      .send({
+        mode: "learning",
+        stopRule: "fixed_custom",
+        targetQuestionCount: 1,
+        subjectIds: [subjectId],
+        chapterIds: [chapterId]
+      })
+      .expect(201);
+
+    const answer = await request(app.getHttpServer())
+      .post(`/v1/trainings/sessions/${trainingSession.body.data.id as string}/answers`)
+      .set("Authorization", `Bearer ${proposer.accessToken}`)
+      .send({
+        questionId: publishedQuestionId,
+        openTextAnswer: " atp ",
+        responseTimeMs: 720
+      })
+      .expect(201);
+    expect(answer.body.data.isCorrect).toBe(true);
+  });
+
   it("plays a full duel (5 rounds) to completion", async () => {
     const player1 = await registerUser("Duel Player 1");
     const player2 = await registerUser("Duel Player 2");
