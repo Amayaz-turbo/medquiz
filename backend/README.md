@@ -49,6 +49,7 @@ Protected:
 - `POST /trainings/admin/questions/:questionId/publish`
 - `POST /trainings/admin/questions/:questionId/retire`
 - `POST /trainings/admin/submissions/:submissionId/review`
+- `GET /trainings/admin/submissions/review-queue`
 - `POST /duels`
 - `GET /duels`
 - `GET /duels/:duelId`

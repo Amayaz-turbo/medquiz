@@ -117,6 +117,10 @@ interface ListQuestionSubmissionsOptions {
   offset?: number | string;
 }
 
+interface ListSubmissionReviewQueueOptions {
+  limit?: number | string;
+}
+
 export interface QuestionSubmissionView {
   id: string;
   proposerUserId: string;
@@ -138,6 +142,27 @@ export interface QuestionSubmissionView {
     acceptedAnswerText: string;
     normalizedAnswerText: string;
     createdAt: string;
+  }>;
+}
+
+export interface SubmissionReviewQueueItem {
+  id: string;
+  proposerUserId: string;
+  subjectId: string;
+  chapterId: string;
+  questionType: "single_choice" | "multi_choice" | "open_text";
+  promptPreview: string;
+  difficulty: number;
+  createdAt: string;
+  qualityScore: number;
+  queueScore: number;
+  flags: string[];
+  duplicateCandidates: Array<{
+    sourceType: "question" | "submission";
+    sourceId: string;
+    similarityScore: number;
+    status: string;
+    promptPreview: string;
   }>;
 }
 
@@ -1269,6 +1294,206 @@ export class TrainingsService {
         hasMore: result.rows.length === limit
       }
     };
+  }
+
+  async listSubmissionReviewQueue(userId: string, options: ListSubmissionReviewQueueOptions) {
+    if (!this.canAccessAllSubmissions(userId)) {
+      throw new ForbiddenException({
+        code: "TRAINING_SUBMISSION_REVIEW_FORBIDDEN",
+        message: "You are not allowed to access review queue"
+      });
+    }
+    const limit = this.parsePositiveInteger(options.limit, 20, 1, 100, "limit");
+
+    const pendingResult = await this.db.query<{
+      id: string;
+      proposer_user_id: string;
+      subject_id: string;
+      chapter_id: string;
+      question_type: "single_choice" | "multi_choice" | "open_text";
+      prompt: string;
+      explanation: string;
+      difficulty: number;
+      created_at: string;
+      choice_count: string;
+      accepted_answers_count: string;
+    }>(
+      `
+        SELECT
+          qs.id,
+          qs.proposer_user_id,
+          qs.subject_id,
+          qs.chapter_id,
+          qs.question_type,
+          qs.prompt,
+          qs.explanation,
+          qs.difficulty,
+          qs.created_at,
+          (
+            SELECT COUNT(*)::text
+            FROM question_submission_choices qsc
+            WHERE qsc.submission_id = qs.id
+          ) AS choice_count,
+          (
+            SELECT COUNT(*)::text
+            FROM question_submission_open_text_answers qsoa
+            WHERE qsoa.submission_id = qs.id
+          ) AS accepted_answers_count
+        FROM question_submissions qs
+        WHERE qs.status = 'pending'
+        ORDER BY qs.created_at ASC
+        LIMIT 200
+      `
+    );
+
+    if (pendingResult.rowCount === 0) {
+      return { items: [] as SubmissionReviewQueueItem[] };
+    }
+
+    const subjectIds = [...new Set(pendingResult.rows.map((row) => row.subject_id))];
+    const chapterIds = [...new Set(pendingResult.rows.map((row) => row.chapter_id))];
+
+    const candidateQuestions = await this.db.query<{
+      id: string;
+      subject_id: string;
+      chapter_id: string;
+      question_type: "single_choice" | "multi_choice" | "open_text";
+      status: "draft" | "published" | "retired";
+      prompt: string;
+    }>(
+      `
+        SELECT id, subject_id, chapter_id, question_type, status, prompt
+        FROM questions
+        WHERE subject_id = ANY($1::uuid[])
+          AND chapter_id = ANY($2::uuid[])
+          AND question_type IN ('single_choice', 'multi_choice', 'open_text')
+      `,
+      [subjectIds, chapterIds]
+    );
+    const candidateSubmissions = await this.db.query<{
+      id: string;
+      subject_id: string;
+      chapter_id: string;
+      question_type: "single_choice" | "multi_choice" | "open_text";
+      status: "pending" | "approved" | "rejected";
+      prompt: string;
+    }>(
+      `
+        SELECT id, subject_id, chapter_id, question_type, status, prompt
+        FROM question_submissions
+        WHERE subject_id = ANY($1::uuid[])
+          AND chapter_id = ANY($2::uuid[])
+          AND status IN ('pending', 'approved')
+      `,
+      [subjectIds, chapterIds]
+    );
+
+    const pendingItems = pendingResult.rows.map((submission) => {
+      const normalizedPrompt = this.normalizeOpenTextValue(submission.prompt);
+      const promptTokens = this.promptTokens(normalizedPrompt);
+      const duplicateCandidates = [
+        ...candidateQuestions.rows
+          .filter(
+            (candidate) =>
+              candidate.subject_id === submission.subject_id && candidate.chapter_id === submission.chapter_id
+          )
+          .map((candidate) => {
+            const similarityScore = this.promptSimilarity(normalizedPrompt, promptTokens, candidate.prompt);
+            return {
+              sourceType: "question" as const,
+              sourceId: candidate.id,
+              similarityScore,
+              status: candidate.status,
+              promptPreview: this.promptPreview(candidate.prompt, 140)
+            };
+          }),
+        ...candidateSubmissions.rows
+          .filter(
+            (candidate) =>
+              candidate.id !== submission.id &&
+              candidate.subject_id === submission.subject_id &&
+              candidate.chapter_id === submission.chapter_id
+          )
+          .map((candidate) => {
+            const similarityScore = this.promptSimilarity(normalizedPrompt, promptTokens, candidate.prompt);
+            return {
+              sourceType: "submission" as const,
+              sourceId: candidate.id,
+              similarityScore,
+              status: candidate.status,
+              promptPreview: this.promptPreview(candidate.prompt, 140)
+            };
+          })
+      ]
+        .filter((candidate) => candidate.similarityScore >= 0.55)
+        .sort((a, b) => b.similarityScore - a.similarityScore)
+        .slice(0, 3);
+
+      const flags: string[] = [];
+      if (duplicateCandidates.length > 0) {
+        flags.push("potential_duplicate");
+      }
+      if (submission.prompt.replace(/\s+/g, " ").trim().length < 40) {
+        flags.push("short_prompt");
+      }
+      if (submission.explanation.replace(/\s+/g, " ").trim().length < 70) {
+        flags.push("short_explanation");
+      }
+      if (submission.question_type === "open_text" && Number(submission.accepted_answers_count) < 2) {
+        flags.push("narrow_open_text_answers");
+      }
+      if (
+        (submission.question_type === "single_choice" || submission.question_type === "multi_choice") &&
+        Number(submission.choice_count) !== 4
+      ) {
+        flags.push("invalid_choice_count");
+      }
+
+      const qualityScore = this.computeSubmissionQualityScore({
+        prompt: submission.prompt,
+        explanation: submission.explanation,
+        questionType: submission.question_type,
+        choiceCount: Number(submission.choice_count),
+        acceptedAnswersCount: Number(submission.accepted_answers_count),
+        duplicateTopScore: duplicateCandidates[0]?.similarityScore ?? 0
+      });
+      const ageHours = Math.max(
+        0,
+        (Date.now() - new Date(submission.created_at).getTime()) / (1000 * 60 * 60)
+      );
+      const queueScore = Math.round(
+        ((duplicateCandidates[0]?.similarityScore ?? 0) * 60 +
+          Math.min(ageHours, 72) * 0.6 +
+          (100 - qualityScore) * 0.4) *
+          100
+      ) / 100;
+
+      return {
+        id: submission.id,
+        proposerUserId: submission.proposer_user_id,
+        subjectId: submission.subject_id,
+        chapterId: submission.chapter_id,
+        questionType: submission.question_type,
+        promptPreview: this.promptPreview(submission.prompt, 180),
+        difficulty: submission.difficulty,
+        createdAt: submission.created_at,
+        qualityScore,
+        queueScore,
+        flags,
+        duplicateCandidates
+      } satisfies SubmissionReviewQueueItem;
+    });
+
+    const items = pendingItems
+      .sort((a, b) => {
+        if (b.queueScore !== a.queueScore) {
+          return b.queueScore - a.queueScore;
+        }
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      })
+      .slice(0, limit);
+
+    return { items };
   }
 
   async getQuestionSubmission(userId: string, submissionId: string): Promise<QuestionSubmissionView> {
@@ -2619,6 +2844,104 @@ export class TrainingsService {
     }
     const normalized = value.replace(/\s+/g, " ").trim();
     return normalized.length > 0 ? normalized : null;
+  }
+
+  private promptPreview(value: string, maxLength: number): string {
+    const collapsed = value.replace(/\s+/g, " ").trim();
+    if (collapsed.length <= maxLength) {
+      return collapsed;
+    }
+    return `${collapsed.slice(0, maxLength - 3)}...`;
+  }
+
+  private promptTokens(normalizedPrompt: string): Set<string> {
+    return new Set(normalizedPrompt.split(" ").filter((token) => token.length >= 3));
+  }
+
+  private promptSimilarity(
+    baseNormalizedPrompt: string,
+    baseTokens: Set<string>,
+    candidatePrompt: string
+  ): number {
+    const candidateNormalized = this.normalizeOpenTextValue(candidatePrompt);
+    if (candidateNormalized.length === 0 || baseNormalizedPrompt.length === 0) {
+      return 0;
+    }
+    if (candidateNormalized === baseNormalizedPrompt) {
+      return 1;
+    }
+
+    const candidateTokens = this.promptTokens(candidateNormalized);
+    if (baseTokens.size === 0 || candidateTokens.size === 0) {
+      return 0;
+    }
+    let intersection = 0;
+    for (const token of baseTokens) {
+      if (candidateTokens.has(token)) {
+        intersection += 1;
+      }
+    }
+    const union = baseTokens.size + candidateTokens.size - intersection;
+    if (union <= 0) {
+      return 0;
+    }
+
+    const jaccard = intersection / union;
+    const prefixMatch =
+      candidateNormalized.startsWith(baseNormalizedPrompt.slice(0, Math.min(20, baseNormalizedPrompt.length))) ||
+      baseNormalizedPrompt.startsWith(candidateNormalized.slice(0, Math.min(20, candidateNormalized.length)))
+        ? 0.08
+        : 0;
+    return Math.min(1, jaccard + prefixMatch);
+  }
+
+  private computeSubmissionQualityScore(input: {
+    prompt: string;
+    explanation: string;
+    questionType: "single_choice" | "multi_choice" | "open_text";
+    choiceCount: number;
+    acceptedAnswersCount: number;
+    duplicateTopScore: number;
+  }): number {
+    let score = 100;
+    const promptLength = input.prompt.replace(/\s+/g, " ").trim().length;
+    const explanationLength = input.explanation.replace(/\s+/g, " ").trim().length;
+
+    if (promptLength < 40) {
+      score -= 15;
+    } else if (promptLength < 70) {
+      score -= 7;
+    } else if (promptLength > 140) {
+      score += 2;
+    }
+
+    if (explanationLength < 70) {
+      score -= 18;
+    } else if (explanationLength < 120) {
+      score -= 8;
+    } else if (explanationLength > 200) {
+      score += 3;
+    }
+
+    if (input.questionType === "open_text") {
+      if (input.acceptedAnswersCount <= 1) {
+        score -= 12;
+      } else if (input.acceptedAnswersCount >= 3) {
+        score += 3;
+      }
+    } else if (input.choiceCount !== 4) {
+      score -= 25;
+    }
+
+    if (input.duplicateTopScore >= 0.9) {
+      score -= 35;
+    } else if (input.duplicateTopScore >= 0.75) {
+      score -= 20;
+    } else if (input.duplicateTopScore >= 0.6) {
+      score -= 10;
+    }
+
+    return Math.max(0, Math.min(100, Math.round(score)));
   }
 
   private isUuidV4(value: string): boolean {

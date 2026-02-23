@@ -991,6 +991,88 @@ describe("Critical integration flows", () => {
     expect(answer.body.data.isCorrect).toBe(true);
   });
 
+  it("builds a prioritized review queue with duplicate detection hints", async () => {
+    const proposer = await registerUser("Queue Proposer");
+    const reviewer = await registerUser("Queue Reviewer");
+
+    const chapterRow = await db.query<{ subject_id: string; chapter_id: string }>(
+      `
+        SELECT c.subject_id, c.id AS chapter_id
+        FROM chapters c
+        JOIN subjects s
+          ON s.id = c.subject_id
+        WHERE c.is_active = TRUE
+          AND s.is_active = TRUE
+        ORDER BY s.sort_order ASC, c.sort_order ASC
+        LIMIT 1
+      `
+    );
+    expect(chapterRow.rowCount).toBe(1);
+    const subjectId = chapterRow.rows[0].subject_id;
+    const chapterId = chapterRow.rows[0].chapter_id;
+
+    const basePrompt = "Quel nerf innerve principalement le diaphragme ?";
+    await request(app.getHttpServer())
+      .post("/v1/trainings/admin/questions")
+      .set("Authorization", `Bearer ${reviewer.accessToken}`)
+      .send({
+        subjectId,
+        chapterId,
+        questionType: "single_choice",
+        prompt: basePrompt,
+        explanation: "Le nerf phrénique innerve principalement le diaphragme.",
+        difficulty: 2,
+        publishNow: true,
+        choices: [
+          { label: "Nerf phrénique", isCorrect: true },
+          { label: "Nerf vague", isCorrect: false },
+          { label: "Nerf radial", isCorrect: false },
+          { label: "Nerf ulnaire", isCorrect: false }
+        ]
+      })
+      .expect(201);
+
+    const submission = await request(app.getHttpServer())
+      .post("/v1/trainings/submissions")
+      .set("Authorization", `Bearer ${proposer.accessToken}`)
+      .send({
+        subjectId,
+        chapterId,
+        questionType: "single_choice",
+        prompt: basePrompt,
+        explanation: "Le nerf phrénique est le principal nerf moteur du diaphragme.",
+        difficulty: 2,
+        choices: [
+          { label: "Nerf phrénique", isCorrect: true },
+          { label: "Nerf médian", isCorrect: false },
+          { label: "Nerf sciatique", isCorrect: false },
+          { label: "Nerf fémoral", isCorrect: false }
+        ]
+      })
+      .expect(201);
+    const submissionId = submission.body.data.id as string;
+
+    const queue = await request(app.getHttpServer())
+      .get("/v1/trainings/admin/submissions/review-queue?limit=10")
+      .set("Authorization", `Bearer ${reviewer.accessToken}`)
+      .expect(200);
+
+    const item = (queue.body.data.items as Array<{
+      id: string;
+      qualityScore: number;
+      queueScore: number;
+      flags: string[];
+      duplicateCandidates: Array<{ sourceType: string; similarityScore: number }>;
+    }>).find((entry) => entry.id === submissionId);
+    expect(item).toBeDefined();
+    expect(item?.qualityScore).toBeGreaterThanOrEqual(0);
+    expect(item?.queueScore).toBeGreaterThanOrEqual(0);
+    expect(item?.flags).toContain("potential_duplicate");
+    expect((item?.duplicateCandidates.length ?? 0)).toBeGreaterThan(0);
+    expect(item?.duplicateCandidates[0].sourceType).toBe("question");
+    expect(item?.duplicateCandidates[0].similarityScore).toBeGreaterThanOrEqual(0.9);
+  });
+
   it("plays a full duel (5 rounds) to completion", async () => {
     const player1 = await registerUser("Duel Player 1");
     const player2 = await registerUser("Duel Player 2");

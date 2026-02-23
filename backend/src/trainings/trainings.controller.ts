@@ -131,6 +131,15 @@ export class TrainingsController {
     return { data: result };
   }
 
+  @Get("admin/submissions/review-queue")
+  async listSubmissionReviewQueue(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query("limit") limit?: string
+  ) {
+    const result = await this.trainingsService.listSubmissionReviewQueue(user.userId, { limit });
+    return { data: result };
+  }
+
   @Get("submissions/:submissionId")
   async getQuestionSubmission(
     @CurrentUser() user: AuthenticatedUser,
