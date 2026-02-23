@@ -290,6 +290,15 @@ CREATE TABLE quiz_answers (
 CREATE INDEX quiz_answers_user_question_answered_idx ON quiz_answers (user_id, question_id, answered_at DESC);
 CREATE INDEX quiz_answers_session_idx ON quiz_answers (session_id);
 
+CREATE TABLE quiz_answer_multi_choices (
+  answer_id UUID NOT NULL REFERENCES quiz_answers(id) ON DELETE CASCADE,
+  choice_id UUID NOT NULL REFERENCES question_choices(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (answer_id, choice_id)
+);
+
+CREATE INDEX quiz_answer_multi_choices_choice_idx ON quiz_answer_multi_choices (choice_id);
+
 CREATE TABLE user_question_stats (
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   question_id UUID NOT NULL REFERENCES questions(id) ON DELETE CASCADE,

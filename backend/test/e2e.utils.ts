@@ -134,6 +134,49 @@ export async function seedPublishedSingleChoiceQuestions(databaseUrl: string): P
             [questionId]
           );
         }
+
+        const multiQuestionId = randomUUID();
+        await client.query(
+          `
+            INSERT INTO questions
+              (id, subject_id, chapter_id, question_type, prompt, explanation, difficulty, status)
+            VALUES
+              ($1, $2, $3, 'multi_choice', $4, $5, 3, 'draft')
+          `,
+          [
+            multiQuestionId,
+            subjectId,
+            chapterId,
+            `${subject.name} question multi`,
+            `${subject.name} explication multi`
+          ]
+        );
+
+        for (let position = 1; position <= 4; position += 1) {
+          await client.query(
+            `
+              INSERT INTO question_choices (id, question_id, label, position, is_correct)
+              VALUES ($1, $2, $3, $4, $5)
+            `,
+            [
+              randomUUID(),
+              multiQuestionId,
+              `${subject.code} multi option ${position}`,
+              position,
+              position === 1 || position === 3
+            ]
+          );
+        }
+
+        await client.query(
+          `
+            UPDATE questions
+            SET status = 'published',
+                published_at = NOW()
+            WHERE id = $1
+          `,
+          [multiQuestionId]
+        );
       }
 
       await client.query("COMMIT");

@@ -279,10 +279,10 @@ export class TrainingsService {
         });
       }
 
-      if (question.question_type !== "single_choice") {
+      if (question.question_type !== "single_choice" && question.question_type !== "multi_choice") {
         throw new UnprocessableEntityException({
           code: "UNSUPPORTED_QUESTION_TYPE",
-          message: "Only single_choice is supported in v1 answer endpoint"
+          message: "Only single_choice and multi_choice are supported in v1 answer endpoint"
         });
       }
 
@@ -305,27 +305,62 @@ export class TrainingsService {
         });
       }
 
-      const choiceResult = await client.query<{ is_correct: boolean }>(
+      const choicesResult = await client.query<{ id: string; is_correct: boolean }>(
         `
-          SELECT is_correct
+          SELECT id, is_correct
           FROM question_choices
           WHERE question_id = $1
-            AND id = $2
-          LIMIT 1
         `,
-        [dto.questionId, dto.selectedChoiceId]
+        [dto.questionId]
       );
-      const selected = choiceResult.rows[0];
-      if (!selected) {
-        throw new BadRequestException({
-          code: "QUESTION_CHOICE_INVALID",
-          message: "Selected choice does not belong to question"
+      if (choicesResult.rowCount === 0) {
+        throw new UnprocessableEntityException({
+          code: "QUESTION_CONFIGURATION_INVALID",
+          message: "Question has no available choices"
         });
       }
 
-      const isCorrect = selected.is_correct;
+      const selectedChoiceIds =
+        question.question_type === "single_choice"
+          ? this.normalizeSingleChoiceSelection(dto)
+          : this.normalizeMultiChoiceSelection(dto);
+
+      const choiceMap = new Map(choicesResult.rows.map((choice) => [choice.id, choice.is_correct]));
+      for (const choiceId of selectedChoiceIds) {
+        if (!choiceMap.has(choiceId)) {
+          throw new BadRequestException({
+            code: "QUESTION_CHOICE_INVALID",
+            message: "Selected choice does not belong to question"
+          });
+        }
+      }
+
+      let isCorrect = false;
+      if (question.question_type === "single_choice") {
+        isCorrect = choiceMap.get(selectedChoiceIds[0]) ?? false;
+      } else {
+        const correctChoiceIds = choicesResult.rows
+          .filter((choice) => choice.is_correct)
+          .map((choice) => choice.id)
+          .sort();
+        if (correctChoiceIds.length === 0) {
+          throw new UnprocessableEntityException({
+            code: "QUESTION_CONFIGURATION_INVALID",
+            message: "Question has no correct choices configured"
+          });
+        }
+
+        const normalizedSelected = [...selectedChoiceIds].sort();
+        isCorrect =
+          normalizedSelected.length === correctChoiceIds.length &&
+          normalizedSelected.every((choiceId, index) => choiceId === correctChoiceIds[index]);
+      }
+
       const hit = isCorrect ? "1" : "0";
       const answerOrder = answeredCount + 1;
+      const answerId = randomUUID();
+      const selectedChoiceIdForAnswer =
+        question.question_type === "single_choice" ? selectedChoiceIds[0] : null;
 
       await client.query(
         `
@@ -335,16 +370,30 @@ export class TrainingsService {
             ($1, $2, $3, $4, $5, $6, $7, $8)
         `,
         [
-          randomUUID(),
+          answerId,
           sessionId,
           userId,
           dto.questionId,
-          dto.selectedChoiceId,
+          selectedChoiceIdForAnswer,
           isCorrect,
           dto.responseTimeMs ?? null,
           answerOrder
         ]
       );
+
+      if (question.question_type === "multi_choice") {
+        for (const choiceId of selectedChoiceIds) {
+          await client.query(
+            `
+              INSERT INTO quiz_answer_multi_choices
+                (answer_id, choice_id)
+              VALUES
+                ($1, $2)
+            `,
+            [answerId, choiceId]
+          );
+        }
+      }
 
       const previousStats = await client.query<{ attempts_count: string }>(
         `
@@ -603,7 +652,7 @@ export class TrainingsService {
             FROM questions q
             WHERE q.subject_id = s.id
               AND q.status = 'published'
-              AND q.question_type = 'single_choice'
+              AND q.question_type IN ('single_choice', 'multi_choice')
           ) AS published_question_count,
           COALESCE(uss.attempts_count, 0)::text AS attempts_count,
           COALESCE(uss.correct_count, 0)::text AS correct_count,
@@ -677,7 +726,7 @@ export class TrainingsService {
             FROM questions q
             WHERE q.chapter_id = c.id
               AND q.status = 'published'
-              AND q.question_type = 'single_choice'
+              AND q.question_type IN ('single_choice', 'multi_choice')
           ) AS published_question_count
         FROM chapters c
         LEFT JOIN user_chapter_progress ucp
@@ -743,6 +792,42 @@ export class TrainingsService {
       subjectId: chapter.subject_id,
       declaredProgressPct
     };
+  }
+
+  private normalizeSingleChoiceSelection(dto: AnswerTrainingQuestionDto): string[] {
+    const combined = [
+      ...(dto.selectedChoiceId ? [dto.selectedChoiceId] : []),
+      ...(dto.selectedChoiceIds ?? [])
+    ];
+    const unique = [...new Set(combined)];
+    if (unique.length !== 1) {
+      throw new BadRequestException({
+        code: "VALIDATION_ERROR",
+        message: "single_choice requires exactly one selected choice"
+      });
+    }
+    return unique;
+  }
+
+  private normalizeMultiChoiceSelection(dto: AnswerTrainingQuestionDto): string[] {
+    const combined = [
+      ...(dto.selectedChoiceId ? [dto.selectedChoiceId] : []),
+      ...(dto.selectedChoiceIds ?? [])
+    ];
+    const unique = [...new Set(combined)];
+    if (unique.length === 0) {
+      throw new BadRequestException({
+        code: "VALIDATION_ERROR",
+        message: "multi_choice requires at least one selected choice"
+      });
+    }
+    if (unique.length > 4) {
+      throw new BadRequestException({
+        code: "VALIDATION_ERROR",
+        message: "multi_choice supports at most four selected choices"
+      });
+    }
+    return unique;
   }
 
   private getSubjectMomentumLabel(subject: SubjectStateView): string {
@@ -857,7 +942,7 @@ export class TrainingsService {
   private buildSessionQuestionWhereParts(mode: SessionRow["mode"]): string[] {
     const whereParts: string[] = [
       "q.status = 'published'",
-      "q.question_type = 'single_choice'",
+      "q.question_type IN ('single_choice', 'multi_choice')",
       "$2::uuid IS NOT NULL",
       `(
         NOT EXISTS (SELECT 1 FROM quiz_session_subject_filters ssf WHERE ssf.session_id = $1)

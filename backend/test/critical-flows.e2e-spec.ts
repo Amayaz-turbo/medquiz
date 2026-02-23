@@ -221,19 +221,43 @@ describe("Critical integration flows", () => {
 
     const question = nextQuestion.body.data.item as {
       id: string;
+      questionType: "single_choice" | "multi_choice";
       choices: Array<{ id: string }>;
     } | null;
     expect(question).not.toBeNull();
     expect(question?.choices.length).toBeGreaterThan(0);
 
+    const answerPayload: {
+      questionId: string;
+      selectedChoiceId?: string;
+      selectedChoiceIds?: string[];
+      responseTimeMs: number;
+    } = {
+      questionId: question?.id as string,
+      responseTimeMs: 1200
+    };
+
+    if (question?.questionType === "multi_choice") {
+      const correctChoices = await db.query<{ id: string }>(
+        `
+          SELECT id
+          FROM question_choices
+          WHERE question_id = $1
+            AND is_correct = TRUE
+          ORDER BY position ASC
+        `,
+        [question.id]
+      );
+      expect(correctChoices.rowCount).toBeGreaterThan(0);
+      answerPayload.selectedChoiceIds = correctChoices.rows.map((row) => row.id);
+    } else {
+      answerPayload.selectedChoiceId = question?.choices[0].id;
+    }
+
     await request(app.getHttpServer())
       .post(`/v1/trainings/sessions/${sessionId}/answers`)
       .set("Authorization", `Bearer ${trainee.accessToken}`)
-      .send({
-        questionId: question?.id,
-        selectedChoiceId: question?.choices[0].id,
-        responseTimeMs: 1200
-      })
+      .send(answerPayload)
       .expect(201);
 
     const session = await request(app.getHttpServer())
@@ -330,6 +354,90 @@ describe("Critical integration flows", () => {
       .expect(422);
 
     expect(rejected.body.error.code).toBe("QUESTION_NOT_ELIGIBLE_FOR_SESSION");
+  });
+
+  it("scores multi_choice training answers with exact-match rule", async () => {
+    const trainee = await registerUser("Training Multi Choice");
+
+    const multiQuestion = await db.query<{
+      subject_id: string;
+      question_id: string;
+      correct_choice_ids: string[];
+      incorrect_choice_id: string;
+    }>(
+      `
+        SELECT
+          q.subject_id,
+          q.id AS question_id,
+          ARRAY(
+            SELECT qc.id
+            FROM question_choices qc
+            WHERE qc.question_id = q.id
+              AND qc.is_correct = TRUE
+            ORDER BY qc.position ASC
+          ) AS correct_choice_ids,
+          (
+            SELECT qc.id
+            FROM question_choices qc
+            WHERE qc.question_id = q.id
+              AND qc.is_correct = FALSE
+            ORDER BY qc.position ASC
+            LIMIT 1
+          ) AS incorrect_choice_id
+        FROM questions q
+        WHERE q.question_type = 'multi_choice'
+          AND q.status = 'published'
+        ORDER BY q.created_at ASC
+        LIMIT 1
+      `
+    );
+    expect(multiQuestion.rowCount).toBe(1);
+    const question = multiQuestion.rows[0];
+    expect(question.correct_choice_ids.length).toBeGreaterThan(1);
+
+    const correctSession = await request(app.getHttpServer())
+      .post("/v1/trainings/sessions")
+      .set("Authorization", `Bearer ${trainee.accessToken}`)
+      .send({
+        mode: "learning",
+        stopRule: "fixed_custom",
+        targetQuestionCount: 1,
+        subjectIds: [question.subject_id]
+      })
+      .expect(201);
+
+    const correctAnswer = await request(app.getHttpServer())
+      .post(`/v1/trainings/sessions/${correctSession.body.data.id as string}/answers`)
+      .set("Authorization", `Bearer ${trainee.accessToken}`)
+      .send({
+        questionId: question.question_id,
+        selectedChoiceIds: question.correct_choice_ids,
+        responseTimeMs: 850
+      })
+      .expect(201);
+    expect(correctAnswer.body.data.isCorrect).toBe(true);
+
+    const wrongSession = await request(app.getHttpServer())
+      .post("/v1/trainings/sessions")
+      .set("Authorization", `Bearer ${trainee.accessToken}`)
+      .send({
+        mode: "learning",
+        stopRule: "fixed_custom",
+        targetQuestionCount: 1,
+        subjectIds: [question.subject_id]
+      })
+      .expect(201);
+
+    const wrongAnswer = await request(app.getHttpServer())
+      .post(`/v1/trainings/sessions/${wrongSession.body.data.id as string}/answers`)
+      .set("Authorization", `Bearer ${trainee.accessToken}`)
+      .send({
+        questionId: question.question_id,
+        selectedChoiceIds: [question.correct_choice_ids[0], question.incorrect_choice_id],
+        responseTimeMs: 900
+      })
+      .expect(201);
+    expect(wrongAnswer.body.data.isCorrect).toBe(false);
   });
 
   it("plays a full duel (5 rounds) to completion", async () => {
