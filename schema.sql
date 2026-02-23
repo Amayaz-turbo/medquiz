@@ -278,6 +278,8 @@ CREATE TABLE quiz_answers (
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   question_id UUID NOT NULL REFERENCES questions(id),
   selected_choice_id UUID REFERENCES question_choices(id),
+  open_text_answer TEXT,
+  open_text_answer_normalized TEXT,
   is_correct BOOLEAN NOT NULL,
   response_time_ms INTEGER,
   answer_order SMALLINT NOT NULL,
@@ -289,6 +291,19 @@ CREATE TABLE quiz_answers (
 
 CREATE INDEX quiz_answers_user_question_answered_idx ON quiz_answers (user_id, question_id, answered_at DESC);
 CREATE INDEX quiz_answers_session_idx ON quiz_answers (session_id);
+
+CREATE TABLE question_open_text_answers (
+  id UUID PRIMARY KEY,
+  question_id UUID NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+  accepted_answer_text TEXT NOT NULL,
+  normalized_answer_text TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT question_open_text_answers_accepted_non_empty_chk CHECK (LENGTH(TRIM(accepted_answer_text)) > 0),
+  CONSTRAINT question_open_text_answers_normalized_non_empty_chk CHECK (LENGTH(TRIM(normalized_answer_text)) > 0),
+  CONSTRAINT question_open_text_answers_question_normalized_uniq UNIQUE (question_id, normalized_answer_text)
+);
+
+CREATE INDEX question_open_text_answers_question_idx ON question_open_text_answers (question_id);
 
 CREATE TABLE quiz_answer_multi_choices (
   answer_id UUID NOT NULL REFERENCES quiz_answers(id) ON DELETE CASCADE,

@@ -279,10 +279,14 @@ export class TrainingsService {
         });
       }
 
-      if (question.question_type !== "single_choice" && question.question_type !== "multi_choice") {
+      if (
+        question.question_type !== "single_choice" &&
+        question.question_type !== "multi_choice" &&
+        question.question_type !== "open_text"
+      ) {
         throw new UnprocessableEntityException({
           code: "UNSUPPORTED_QUESTION_TYPE",
-          message: "Only single_choice and multi_choice are supported in v1 answer endpoint"
+          message: "Only single_choice, multi_choice and open_text are supported in v1 answer endpoint"
         });
       }
 
@@ -305,55 +309,84 @@ export class TrainingsService {
         });
       }
 
-      const choicesResult = await client.query<{ id: string; is_correct: boolean }>(
-        `
-          SELECT id, is_correct
-          FROM question_choices
-          WHERE question_id = $1
-        `,
-        [dto.questionId]
-      );
-      if (choicesResult.rowCount === 0) {
-        throw new UnprocessableEntityException({
-          code: "QUESTION_CONFIGURATION_INVALID",
-          message: "Question has no available choices"
-        });
-      }
-
-      const selectedChoiceIds =
-        question.question_type === "single_choice"
-          ? this.normalizeSingleChoiceSelection(dto)
-          : this.normalizeMultiChoiceSelection(dto);
-
-      const choiceMap = new Map(choicesResult.rows.map((choice) => [choice.id, choice.is_correct]));
-      for (const choiceId of selectedChoiceIds) {
-        if (!choiceMap.has(choiceId)) {
-          throw new BadRequestException({
-            code: "QUESTION_CHOICE_INVALID",
-            message: "Selected choice does not belong to question"
-          });
-        }
-      }
-
       let isCorrect = false;
-      if (question.question_type === "single_choice") {
-        isCorrect = choiceMap.get(selectedChoiceIds[0]) ?? false;
-      } else {
-        const correctChoiceIds = choicesResult.rows
-          .filter((choice) => choice.is_correct)
-          .map((choice) => choice.id)
-          .sort();
-        if (correctChoiceIds.length === 0) {
+      let selectedChoiceIds: string[] = [];
+      let openTextAnswer: string | null = null;
+      let normalizedOpenTextAnswer: string | null = null;
+
+      if (question.question_type === "open_text") {
+        openTextAnswer = this.normalizeOpenTextAnswer(dto);
+        normalizedOpenTextAnswer = this.normalizeOpenTextValue(openTextAnswer);
+
+        const acceptedAnswersResult = await client.query<{ normalized_answer_text: string }>(
+          `
+            SELECT normalized_answer_text
+            FROM question_open_text_answers
+            WHERE question_id = $1
+          `,
+          [dto.questionId]
+        );
+        if (acceptedAnswersResult.rowCount === 0) {
           throw new UnprocessableEntityException({
             code: "QUESTION_CONFIGURATION_INVALID",
-            message: "Question has no correct choices configured"
+            message: "Question has no accepted open-text answers configured"
           });
         }
 
-        const normalizedSelected = [...selectedChoiceIds].sort();
-        isCorrect =
-          normalizedSelected.length === correctChoiceIds.length &&
-          normalizedSelected.every((choiceId, index) => choiceId === correctChoiceIds[index]);
+        const accepted = new Set(
+          acceptedAnswersResult.rows.map((row) => this.normalizeOpenTextValue(row.normalized_answer_text))
+        );
+        isCorrect = accepted.has(normalizedOpenTextAnswer);
+      } else {
+        const choicesResult = await client.query<{ id: string; is_correct: boolean }>(
+          `
+            SELECT id, is_correct
+            FROM question_choices
+            WHERE question_id = $1
+          `,
+          [dto.questionId]
+        );
+        if (choicesResult.rowCount === 0) {
+          throw new UnprocessableEntityException({
+            code: "QUESTION_CONFIGURATION_INVALID",
+            message: "Question has no available choices"
+          });
+        }
+
+        selectedChoiceIds =
+          question.question_type === "single_choice"
+            ? this.normalizeSingleChoiceSelection(dto)
+            : this.normalizeMultiChoiceSelection(dto);
+
+        const choiceMap = new Map(choicesResult.rows.map((choice) => [choice.id, choice.is_correct]));
+        for (const choiceId of selectedChoiceIds) {
+          if (!choiceMap.has(choiceId)) {
+            throw new BadRequestException({
+              code: "QUESTION_CHOICE_INVALID",
+              message: "Selected choice does not belong to question"
+            });
+          }
+        }
+
+        if (question.question_type === "single_choice") {
+          isCorrect = choiceMap.get(selectedChoiceIds[0]) ?? false;
+        } else {
+          const correctChoiceIds = choicesResult.rows
+            .filter((choice) => choice.is_correct)
+            .map((choice) => choice.id)
+            .sort();
+          if (correctChoiceIds.length === 0) {
+            throw new UnprocessableEntityException({
+              code: "QUESTION_CONFIGURATION_INVALID",
+              message: "Question has no correct choices configured"
+            });
+          }
+
+          const normalizedSelected = [...selectedChoiceIds].sort();
+          isCorrect =
+            normalizedSelected.length === correctChoiceIds.length &&
+            normalizedSelected.every((choiceId, index) => choiceId === correctChoiceIds[index]);
+        }
       }
 
       const hit = isCorrect ? "1" : "0";
@@ -365,9 +398,20 @@ export class TrainingsService {
       await client.query(
         `
           INSERT INTO quiz_answers
-            (id, session_id, user_id, question_id, selected_choice_id, is_correct, response_time_ms, answer_order)
+            (
+              id,
+              session_id,
+              user_id,
+              question_id,
+              selected_choice_id,
+              open_text_answer,
+              open_text_answer_normalized,
+              is_correct,
+              response_time_ms,
+              answer_order
+            )
           VALUES
-            ($1, $2, $3, $4, $5, $6, $7, $8)
+            ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         `,
         [
           answerId,
@@ -375,6 +419,8 @@ export class TrainingsService {
           userId,
           dto.questionId,
           selectedChoiceIdForAnswer,
+          openTextAnswer,
+          normalizedOpenTextAnswer,
           isCorrect,
           dto.responseTimeMs ?? null,
           answerOrder
@@ -652,7 +698,7 @@ export class TrainingsService {
             FROM questions q
             WHERE q.subject_id = s.id
               AND q.status = 'published'
-              AND q.question_type IN ('single_choice', 'multi_choice')
+              AND q.question_type IN ('single_choice', 'multi_choice', 'open_text')
           ) AS published_question_count,
           COALESCE(uss.attempts_count, 0)::text AS attempts_count,
           COALESCE(uss.correct_count, 0)::text AS correct_count,
@@ -726,7 +772,7 @@ export class TrainingsService {
             FROM questions q
             WHERE q.chapter_id = c.id
               AND q.status = 'published'
-              AND q.question_type IN ('single_choice', 'multi_choice')
+              AND q.question_type IN ('single_choice', 'multi_choice', 'open_text')
           ) AS published_question_count
         FROM chapters c
         LEFT JOIN user_chapter_progress ucp
@@ -795,6 +841,12 @@ export class TrainingsService {
   }
 
   private normalizeSingleChoiceSelection(dto: AnswerTrainingQuestionDto): string[] {
+    if (dto.openTextAnswer !== undefined) {
+      throw new BadRequestException({
+        code: "VALIDATION_ERROR",
+        message: "single_choice does not accept openTextAnswer"
+      });
+    }
     const combined = [
       ...(dto.selectedChoiceId ? [dto.selectedChoiceId] : []),
       ...(dto.selectedChoiceIds ?? [])
@@ -810,6 +862,12 @@ export class TrainingsService {
   }
 
   private normalizeMultiChoiceSelection(dto: AnswerTrainingQuestionDto): string[] {
+    if (dto.openTextAnswer !== undefined) {
+      throw new BadRequestException({
+        code: "VALIDATION_ERROR",
+        message: "multi_choice does not accept openTextAnswer"
+      });
+    }
     const combined = [
       ...(dto.selectedChoiceId ? [dto.selectedChoiceId] : []),
       ...(dto.selectedChoiceIds ?? [])
@@ -828,6 +886,35 @@ export class TrainingsService {
       });
     }
     return unique;
+  }
+
+  private normalizeOpenTextAnswer(dto: AnswerTrainingQuestionDto): string {
+    if (dto.selectedChoiceId || (dto.selectedChoiceIds?.length ?? 0) > 0) {
+      throw new BadRequestException({
+        code: "VALIDATION_ERROR",
+        message: "open_text does not accept selected choices"
+      });
+    }
+
+    const raw = dto.openTextAnswer ?? "";
+    const collapsed = raw.replace(/\s+/g, " ").trim();
+    if (collapsed.length === 0) {
+      throw new BadRequestException({
+        code: "VALIDATION_ERROR",
+        message: "open_text requires a non-empty answer"
+      });
+    }
+    return collapsed;
+  }
+
+  private normalizeOpenTextValue(value: string): string {
+    return value
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s]/gu, " ")
+      .replace(/\s+/g, " ")
+      .trim();
   }
 
   private getSubjectMomentumLabel(subject: SubjectStateView): string {
@@ -942,7 +1029,7 @@ export class TrainingsService {
   private buildSessionQuestionWhereParts(mode: SessionRow["mode"]): string[] {
     const whereParts: string[] = [
       "q.status = 'published'",
-      "q.question_type IN ('single_choice', 'multi_choice')",
+      "q.question_type IN ('single_choice', 'multi_choice', 'open_text')",
       "$2::uuid IS NOT NULL",
       `(
         NOT EXISTS (SELECT 1 FROM quiz_session_subject_filters ssf WHERE ssf.session_id = $1)

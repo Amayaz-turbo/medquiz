@@ -101,5 +101,5 @@ The internal duel timeout worker is enabled by default (`DUEL_EXPIRATION_JOB_ENA
 ## Important scope notes
 
 - Duel timeout worker (`expire_duel_turns`) is not yet wired as cron/worker in this checkpoint.
-- Open-text training answers are not yet enabled (single-choice and multi-choice are supported).
+- Open-text training answers are enabled with normalized exact-match scoring.
 - OAuth Google/Apple endpoints from API spec are not yet implemented in this checkpoint.

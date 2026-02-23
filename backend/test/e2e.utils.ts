@@ -177,6 +177,51 @@ export async function seedPublishedSingleChoiceQuestions(databaseUrl: string): P
           `,
           [multiQuestionId]
         );
+
+        const openTextQuestionId = randomUUID();
+        await client.query(
+          `
+            INSERT INTO questions
+              (id, subject_id, chapter_id, question_type, prompt, explanation, difficulty, status)
+            VALUES
+              ($1, $2, $3, 'open_text', $4, $5, 2, 'draft')
+          `,
+          [
+            openTextQuestionId,
+            subjectId,
+            chapterId,
+            `${subject.name} question ouverte`,
+            `${subject.name} explication ouverte`
+          ]
+        );
+
+        const acceptedAnswers = ["ATP", "adénosine triphosphate"];
+        for (const acceptedAnswerText of acceptedAnswers) {
+          await client.query(
+            `
+              INSERT INTO question_open_text_answers
+                (id, question_id, accepted_answer_text, normalized_answer_text)
+              VALUES
+                ($1, $2, $3, $4)
+            `,
+            [
+              randomUUID(),
+              openTextQuestionId,
+              acceptedAnswerText,
+              normalizeOpenTextValue(acceptedAnswerText)
+            ]
+          );
+        }
+
+        await client.query(
+          `
+            UPDATE questions
+            SET status = 'published',
+                published_at = NOW()
+            WHERE id = $1
+          `,
+          [openTextQuestionId]
+        );
       }
 
       await client.query("COMMIT");
@@ -204,4 +249,14 @@ function replaceDatabaseName(baseConnectionString: string, databaseName: string)
   const parsed = new URL(baseConnectionString);
   parsed.pathname = `/${databaseName}`;
   return parsed.toString();
+}
+
+function normalizeOpenTextValue(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }

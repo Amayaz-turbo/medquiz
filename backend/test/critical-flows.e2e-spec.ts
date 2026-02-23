@@ -221,7 +221,7 @@ describe("Critical integration flows", () => {
 
     const question = nextQuestion.body.data.item as {
       id: string;
-      questionType: "single_choice" | "multi_choice";
+      questionType: "single_choice" | "multi_choice" | "open_text";
       choices: Array<{ id: string }>;
     } | null;
     expect(question).not.toBeNull();
@@ -231,13 +231,16 @@ describe("Critical integration flows", () => {
       questionId: string;
       selectedChoiceId?: string;
       selectedChoiceIds?: string[];
+      openTextAnswer?: string;
       responseTimeMs: number;
     } = {
       questionId: question?.id as string,
       responseTimeMs: 1200
     };
 
-    if (question?.questionType === "multi_choice") {
+    if (question?.questionType === "open_text") {
+      answerPayload.openTextAnswer = "Atp";
+    } else if (question?.questionType === "multi_choice") {
       const correctChoices = await db.query<{ id: string }>(
         `
           SELECT id
@@ -435,6 +438,77 @@ describe("Critical integration flows", () => {
         questionId: question.question_id,
         selectedChoiceIds: [question.correct_choice_ids[0], question.incorrect_choice_id],
         responseTimeMs: 900
+      })
+      .expect(201);
+    expect(wrongAnswer.body.data.isCorrect).toBe(false);
+  });
+
+  it("scores open_text training answers with normalized exact match", async () => {
+    const trainee = await registerUser("Training Open Text");
+
+    const openQuestion = await db.query<{
+      subject_id: string;
+      question_id: string;
+      accepted_answer_text: string;
+    }>(
+      `
+        SELECT
+          q.subject_id,
+          q.id AS question_id,
+          qota.accepted_answer_text
+        FROM questions q
+        JOIN question_open_text_answers qota
+          ON qota.question_id = q.id
+        WHERE q.question_type = 'open_text'
+          AND q.status = 'published'
+        ORDER BY q.created_at ASC, qota.created_at ASC
+        LIMIT 1
+      `
+    );
+    expect(openQuestion.rowCount).toBe(1);
+    const question = openQuestion.rows[0];
+
+    const correctSession = await request(app.getHttpServer())
+      .post("/v1/trainings/sessions")
+      .set("Authorization", `Bearer ${trainee.accessToken}`)
+      .send({
+        mode: "learning",
+        stopRule: "fixed_custom",
+        targetQuestionCount: 1,
+        subjectIds: [question.subject_id]
+      })
+      .expect(201);
+
+    const variantAnswer = `  ${question.accepted_answer_text.toUpperCase()} !!! `;
+    const correctAnswer = await request(app.getHttpServer())
+      .post(`/v1/trainings/sessions/${correctSession.body.data.id as string}/answers`)
+      .set("Authorization", `Bearer ${trainee.accessToken}`)
+      .send({
+        questionId: question.question_id,
+        openTextAnswer: variantAnswer,
+        responseTimeMs: 780
+      })
+      .expect(201);
+    expect(correctAnswer.body.data.isCorrect).toBe(true);
+
+    const wrongSession = await request(app.getHttpServer())
+      .post("/v1/trainings/sessions")
+      .set("Authorization", `Bearer ${trainee.accessToken}`)
+      .send({
+        mode: "learning",
+        stopRule: "fixed_custom",
+        targetQuestionCount: 1,
+        subjectIds: [question.subject_id]
+      })
+      .expect(201);
+
+    const wrongAnswer = await request(app.getHttpServer())
+      .post(`/v1/trainings/sessions/${wrongSession.body.data.id as string}/answers`)
+      .set("Authorization", `Bearer ${trainee.accessToken}`)
+      .send({
+        questionId: question.question_id,
+        openTextAnswer: "réponse totalement fausse",
+        responseTimeMs: 810
       })
       .expect(201);
     expect(wrongAnswer.body.data.isCorrect).toBe(false);

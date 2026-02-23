@@ -5,7 +5,9 @@ import {
   IsArray,
   IsInt,
   IsOptional,
+  IsString,
   IsUUID,
+  MaxLength,
   Max,
   Min
 } from "class-validator";
@@ -25,6 +27,11 @@ export class AnswerTrainingQuestionDto {
   @ArrayMaxSize(4)
   @IsUUID("4", { each: true })
   selectedChoiceIds?: string[];
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  openTextAnswer?: string;
 
   @IsOptional()
   @IsInt()
