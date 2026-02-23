@@ -1073,6 +1073,123 @@ describe("Critical integration flows", () => {
     expect(item?.duplicateCandidates[0].similarityScore).toBeGreaterThanOrEqual(0.9);
   });
 
+  it("exposes submission review dashboard with SLA and backlog distributions", async () => {
+    const proposer = await registerUser("Dashboard Proposer");
+    const reviewer = await registerUser("Dashboard Reviewer");
+
+    const chapterRow = await db.query<{ subject_id: string; chapter_id: string }>(
+      `
+        SELECT c.subject_id, c.id AS chapter_id
+        FROM chapters c
+        JOIN subjects s
+          ON s.id = c.subject_id
+        WHERE c.is_active = TRUE
+          AND s.is_active = TRUE
+        ORDER BY s.sort_order ASC, c.sort_order ASC
+        LIMIT 1
+      `
+    );
+    expect(chapterRow.rowCount).toBe(1);
+    const subjectId = chapterRow.rows[0].subject_id;
+    const chapterId = chapterRow.rows[0].chapter_id;
+
+    const oldPending = await request(app.getHttpServer())
+      .post("/v1/trainings/submissions")
+      .set("Authorization", `Bearer ${proposer.accessToken}`)
+      .send({
+        subjectId,
+        chapterId,
+        questionType: "single_choice",
+        prompt: "Quel organe assure principalement la filtration du sang ?",
+        explanation: "Le rein filtre le sang et participe à l'homéostasie.",
+        difficulty: 2,
+        choices: [
+          { label: "Rein", isCorrect: true },
+          { label: "Foie", isCorrect: false },
+          { label: "Poumon", isCorrect: false },
+          { label: "Pancréas", isCorrect: false }
+        ]
+      })
+      .expect(201);
+    const oldPendingId = oldPending.body.data.id as string;
+    await db.query(
+      `
+        UPDATE question_submissions
+        SET created_at = NOW() - INTERVAL '55 hours'
+        WHERE id = $1
+      `,
+      [oldPendingId]
+    );
+
+    const toApprove = await request(app.getHttpServer())
+      .post("/v1/trainings/submissions")
+      .set("Authorization", `Bearer ${proposer.accessToken}`)
+      .send({
+        subjectId,
+        chapterId,
+        questionType: "open_text",
+        prompt: "Quelle est la molécule énergétique immédiate majeure ?",
+        explanation: "L'ATP est la molécule énergétique immédiate de référence.",
+        difficulty: 2,
+        acceptedAnswers: ["ATP", "Adénosine triphosphate"]
+      })
+      .expect(201);
+    const toApproveId = toApprove.body.data.id as string;
+
+    const toReject = await request(app.getHttpServer())
+      .post("/v1/trainings/submissions")
+      .set("Authorization", `Bearer ${proposer.accessToken}`)
+      .send({
+        subjectId,
+        chapterId,
+        questionType: "single_choice",
+        prompt: "Question volontairement faible pour test dashboard",
+        explanation: "Explication volontairement insuffisante.",
+        difficulty: 1,
+        choices: [
+          { label: "Option A", isCorrect: true },
+          { label: "Option B", isCorrect: false },
+          { label: "Option C", isCorrect: false },
+          { label: "Option D", isCorrect: false }
+        ]
+      })
+      .expect(201);
+    const toRejectId = toReject.body.data.id as string;
+
+    await request(app.getHttpServer())
+      .post(`/v1/trainings/admin/submissions/${toApproveId}/review`)
+      .set("Authorization", `Bearer ${reviewer.accessToken}`)
+      .send({ decision: "approve", reviewNote: "Valide pour publication" })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post(`/v1/trainings/admin/submissions/${toRejectId}/review`)
+      .set("Authorization", `Bearer ${reviewer.accessToken}`)
+      .send({ decision: "reject", reviewNote: "Insuffisamment précis" })
+      .expect(201);
+
+    const dashboard = await request(app.getHttpServer())
+      .get("/v1/trainings/admin/submissions/dashboard")
+      .set("Authorization", `Bearer ${reviewer.accessToken}`)
+      .expect(200);
+
+    expect(dashboard.body.data.sla.targetHours).toBe(48);
+    expect(dashboard.body.data.sla.pending.totalCount).toBeGreaterThanOrEqual(1);
+    expect(dashboard.body.data.sla.pending.overSlaCount).toBeGreaterThanOrEqual(1);
+    expect(dashboard.body.data.sla.pending.oldestPendingHours).toBeGreaterThanOrEqual(50);
+    expect(dashboard.body.data.sla.reviewLast7d.reviewedCount).toBeGreaterThanOrEqual(2);
+    expect(dashboard.body.data.sla.reviewLast7d.approvedCount).toBeGreaterThanOrEqual(1);
+    expect(dashboard.body.data.sla.reviewLast7d.rejectedCount).toBeGreaterThanOrEqual(1);
+
+    const pendingSubject = (dashboard.body.data.pendingBySubject as Array<{ subjectId: string; pendingCount: number }>).find(
+      (item) => item.subjectId === subjectId
+    );
+    expect(pendingSubject).toBeDefined();
+    expect((pendingSubject?.pendingCount ?? 0)).toBeGreaterThanOrEqual(1);
+    expect((dashboard.body.data.pendingDistribution.byQuestionType as unknown[]).length).toBeGreaterThan(0);
+    expect((dashboard.body.data.pendingDistribution.byDifficulty as unknown[]).length).toBeGreaterThan(0);
+  });
+
   it("plays a full duel (5 rounds) to completion", async () => {
     const player1 = await registerUser("Duel Player 1");
     const player2 = await registerUser("Duel Player 2");

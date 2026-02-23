@@ -140,6 +140,12 @@ export class TrainingsController {
     return { data: result };
   }
 
+  @Get("admin/submissions/dashboard")
+  async getSubmissionReviewDashboard(@CurrentUser() user: AuthenticatedUser) {
+    const result = await this.trainingsService.getSubmissionReviewDashboard(user.userId);
+    return { data: result };
+  }
+
   @Get("submissions/:submissionId")
   async getQuestionSubmission(
     @CurrentUser() user: AuthenticatedUser,

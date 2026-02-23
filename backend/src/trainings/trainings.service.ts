@@ -166,6 +166,44 @@ export interface SubmissionReviewQueueItem {
   }>;
 }
 
+export interface SubmissionReviewDashboard {
+  snapshotAt: string;
+  sla: {
+    targetHours: number;
+    pending: {
+      totalCount: number;
+      overSlaCount: number;
+      withinSlaPct: number;
+      oldestPendingHours: number;
+    };
+    reviewLast7d: {
+      reviewedCount: number;
+      approvedCount: number;
+      rejectedCount: number;
+      withinSlaPct: number | null;
+      avgReviewHours: number | null;
+      p50ReviewHours: number | null;
+    };
+  };
+  pendingBySubject: Array<{
+    subjectId: string;
+    subjectName: string;
+    pendingCount: number;
+    overSlaCount: number;
+    oldestPendingHours: number;
+  }>;
+  pendingDistribution: {
+    byQuestionType: Array<{
+      questionType: "single_choice" | "multi_choice" | "open_text";
+      count: number;
+    }>;
+    byDifficulty: Array<{
+      difficulty: number;
+      count: number;
+    }>;
+  };
+}
+
 @Injectable()
 export class TrainingsService {
   private readonly cfg = env();
@@ -1494,6 +1532,181 @@ export class TrainingsService {
       .slice(0, limit);
 
     return { items };
+  }
+
+  async getSubmissionReviewDashboard(userId: string): Promise<SubmissionReviewDashboard> {
+    if (!this.canAccessAllSubmissions(userId)) {
+      throw new ForbiddenException({
+        code: "TRAINING_SUBMISSION_REVIEW_FORBIDDEN",
+        message: "You are not allowed to access review dashboard"
+      });
+    }
+
+    const targetHours = 48;
+    const [pendingStatsResult, reviewStatsResult, pendingBySubjectResult, byTypeResult, byDifficultyResult] =
+      await Promise.all([
+        this.db.query<{
+          pending_count: string;
+          pending_over_sla_count: string;
+          oldest_pending_hours: number | string | null;
+        }>(
+          `
+            SELECT
+              COUNT(*)::text AS pending_count,
+              COUNT(*) FILTER (
+                WHERE NOW() - qs.created_at > make_interval(hours => $1)
+              )::text AS pending_over_sla_count,
+              COALESCE(
+                MAX(EXTRACT(EPOCH FROM (NOW() - qs.created_at)) / 3600),
+                0
+              ) AS oldest_pending_hours
+            FROM question_submissions qs
+            WHERE qs.status = 'pending'
+          `,
+          [targetHours]
+        ),
+        this.db.query<{
+          reviewed_count: string;
+          approved_count: string;
+          rejected_count: string;
+          reviewed_within_sla_count: string;
+          avg_review_hours: number | string | null;
+          p50_review_hours: number | string | null;
+        }>(
+          `
+            SELECT
+              COUNT(*)::text AS reviewed_count,
+              COUNT(*) FILTER (WHERE qs.status = 'approved')::text AS approved_count,
+              COUNT(*) FILTER (WHERE qs.status = 'rejected')::text AS rejected_count,
+              COUNT(*) FILTER (
+                WHERE (qs.reviewed_at - qs.created_at) <= make_interval(hours => $1)
+              )::text AS reviewed_within_sla_count,
+              AVG(EXTRACT(EPOCH FROM (qs.reviewed_at - qs.created_at)) / 3600) AS avg_review_hours,
+              percentile_cont(0.5) WITHIN GROUP (
+                ORDER BY EXTRACT(EPOCH FROM (qs.reviewed_at - qs.created_at)) / 3600
+              ) AS p50_review_hours
+            FROM question_submissions qs
+            WHERE qs.reviewed_at IS NOT NULL
+              AND qs.status IN ('approved', 'rejected')
+              AND qs.reviewed_at >= NOW() - INTERVAL '7 days'
+          `,
+          [targetHours]
+        ),
+        this.db.query<{
+          subject_id: string;
+          subject_name: string;
+          pending_count: string;
+          over_sla_count: string;
+          oldest_pending_hours: number | string | null;
+        }>(
+          `
+            SELECT
+              s.id AS subject_id,
+              s.name AS subject_name,
+              COUNT(*)::text AS pending_count,
+              COUNT(*) FILTER (
+                WHERE NOW() - qs.created_at > make_interval(hours => $1)
+              )::text AS over_sla_count,
+              COALESCE(
+                MAX(EXTRACT(EPOCH FROM (NOW() - qs.created_at)) / 3600),
+                0
+              ) AS oldest_pending_hours
+            FROM question_submissions qs
+            JOIN subjects s
+              ON s.id = qs.subject_id
+            WHERE qs.status = 'pending'
+            GROUP BY s.id, s.name
+            ORDER BY COUNT(*) DESC, s.name ASC
+            LIMIT 12
+          `,
+          [targetHours]
+        ),
+        this.db.query<{
+          question_type: "single_choice" | "multi_choice" | "open_text";
+          count: string;
+        }>(
+          `
+            SELECT
+              qs.question_type,
+              COUNT(*)::text AS count
+            FROM question_submissions qs
+            WHERE qs.status = 'pending'
+            GROUP BY qs.question_type
+            ORDER BY COUNT(*) DESC, qs.question_type ASC
+          `
+        ),
+        this.db.query<{ difficulty: number; count: string }>(
+          `
+            SELECT
+              qs.difficulty,
+              COUNT(*)::text AS count
+            FROM question_submissions qs
+            WHERE qs.status = 'pending'
+            GROUP BY qs.difficulty
+            ORDER BY qs.difficulty ASC
+          `
+        )
+      ]);
+
+    const pendingStats = pendingStatsResult.rows[0];
+    const reviewStats = reviewStatsResult.rows[0];
+
+    const pendingCount = Number(pendingStats?.pending_count ?? 0);
+    const pendingOverSlaCount = Number(pendingStats?.pending_over_sla_count ?? 0);
+    const oldestPendingHours = this.toRoundedNumber(pendingStats?.oldest_pending_hours, 2);
+    const pendingWithinSlaPct =
+      pendingCount > 0
+        ? this.toRoundedNumber(((pendingCount - pendingOverSlaCount) / pendingCount) * 100, 1)
+        : 100;
+
+    const reviewedCount = Number(reviewStats?.reviewed_count ?? 0);
+    const approvedCount = Number(reviewStats?.approved_count ?? 0);
+    const rejectedCount = Number(reviewStats?.rejected_count ?? 0);
+    const reviewedWithinSlaCount = Number(reviewStats?.reviewed_within_sla_count ?? 0);
+    const reviewedWithinSlaPct =
+      reviewedCount > 0
+        ? this.toRoundedNumber((reviewedWithinSlaCount / reviewedCount) * 100, 1)
+        : null;
+
+    return {
+      snapshotAt: new Date().toISOString(),
+      sla: {
+        targetHours,
+        pending: {
+          totalCount: pendingCount,
+          overSlaCount: pendingOverSlaCount,
+          withinSlaPct: pendingWithinSlaPct,
+          oldestPendingHours
+        },
+        reviewLast7d: {
+          reviewedCount,
+          approvedCount,
+          rejectedCount,
+          withinSlaPct: reviewedWithinSlaPct,
+          avgReviewHours:
+            reviewedCount > 0 ? this.toRoundedNumber(reviewStats?.avg_review_hours, 2) : null,
+          p50ReviewHours:
+            reviewedCount > 0 ? this.toRoundedNumber(reviewStats?.p50_review_hours, 2) : null
+        }
+      },
+      pendingBySubject: pendingBySubjectResult.rows.map((row) => ({
+        subjectId: row.subject_id,
+        subjectName: row.subject_name,
+        pendingCount: Number(row.pending_count),
+        overSlaCount: Number(row.over_sla_count),
+        oldestPendingHours: this.toRoundedNumber(row.oldest_pending_hours, 2)
+      })),
+      pendingDistribution: {
+        byQuestionType: byTypeResult.rows.map((row) => ({
+          questionType: row.question_type,
+          count: Number(row.count)
+        })),
+        byDifficulty: byDifficultyResult.rows.map((row) => ({
+          difficulty: row.difficulty,
+          count: Number(row.count)
+        }))
+      }
+    };
   }
 
   async getQuestionSubmission(userId: string, submissionId: string): Promise<QuestionSubmissionView> {
@@ -2942,6 +3155,15 @@ export class TrainingsService {
     }
 
     return Math.max(0, Math.min(100, Math.round(score)));
+  }
+
+  private toRoundedNumber(value: unknown, decimals: number): number {
+    const parsed = typeof value === "number" ? value : Number(value ?? 0);
+    if (!Number.isFinite(parsed)) {
+      return 0;
+    }
+    const factor = 10 ** decimals;
+    return Math.round(parsed * factor) / factor;
   }
 
   private isUuidV4(value: string): boolean {
