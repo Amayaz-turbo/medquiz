@@ -490,6 +490,11 @@ describe("Critical integration flows", () => {
       })
       .expect(201);
     expect(correctAnswer.body.data.isCorrect).toBe(true);
+    expect(correctAnswer.body.data.correction).toBeTruthy();
+    expect(correctAnswer.body.data.correction.questionType).toBe("open_text");
+    expect(correctAnswer.body.data.correction.evaluationRule).toBe("normalized_exact_match");
+    expect(correctAnswer.body.data.correction.submittedAnswer).toBe(variantAnswer.replace(/\s+/g, " ").trim());
+    expect(correctAnswer.body.data.correction.expectedAnswers).toContain(question.accepted_answer_text);
 
     const wrongSession = await request(app.getHttpServer())
       .post("/v1/trainings/sessions")
@@ -512,6 +517,8 @@ describe("Critical integration flows", () => {
       })
       .expect(201);
     expect(wrongAnswer.body.data.isCorrect).toBe(false);
+    expect(wrongAnswer.body.data.correction.questionType).toBe("open_text");
+    expect((wrongAnswer.body.data.correction.expectedAnswers as unknown[]).length).toBeGreaterThan(0);
   });
 
   it("plays a full duel (5 rounds) to completion", async () => {

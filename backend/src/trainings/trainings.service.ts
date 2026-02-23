@@ -313,16 +313,21 @@ export class TrainingsService {
       let selectedChoiceIds: string[] = [];
       let openTextAnswer: string | null = null;
       let normalizedOpenTextAnswer: string | null = null;
+      let openTextExpectedAnswers: string[] = [];
 
       if (question.question_type === "open_text") {
         openTextAnswer = this.normalizeOpenTextAnswer(dto);
         normalizedOpenTextAnswer = this.normalizeOpenTextValue(openTextAnswer);
 
-        const acceptedAnswersResult = await client.query<{ normalized_answer_text: string }>(
+        const acceptedAnswersResult = await client.query<{
+          accepted_answer_text: string;
+          normalized_answer_text: string;
+        }>(
           `
-            SELECT normalized_answer_text
+            SELECT accepted_answer_text, normalized_answer_text
             FROM question_open_text_answers
             WHERE question_id = $1
+            ORDER BY created_at ASC
           `,
           [dto.questionId]
         );
@@ -333,6 +338,7 @@ export class TrainingsService {
           });
         }
 
+        openTextExpectedAnswers = acceptedAnswersResult.rows.map((row) => row.accepted_answer_text);
         const accepted = new Set(
           acceptedAnswersResult.rows.map((row) => this.normalizeOpenTextValue(row.normalized_answer_text))
         );
@@ -523,7 +529,16 @@ export class TrainingsService {
       );
       return {
         isCorrect,
-        explanation: question.explanation
+        explanation: question.explanation,
+        correction:
+          question.question_type === "open_text"
+            ? {
+                questionType: "open_text",
+                evaluationRule: "normalized_exact_match",
+                submittedAnswer: openTextAnswer,
+                expectedAnswers: openTextExpectedAnswers
+              }
+            : null
       };
     });
   }
