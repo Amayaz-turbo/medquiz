@@ -17,6 +17,7 @@ import { AnswerTrainingQuestionDto } from "./dto/answer-training-question.dto";
 import { AddOpenTextAcceptedAnswerDto } from "./dto/add-open-text-accepted-answer.dto";
 import { CreateTrainingSessionDto } from "./dto/create-training-session.dto";
 import { SetChapterProgressDto } from "./dto/set-chapter-progress.dto";
+import { UpsertTrainingQuestionDto } from "./dto/upsert-training-question.dto";
 import { TrainingsService } from "./trainings.service";
 
 @Controller(["trainings", "quiz"])
@@ -93,6 +94,40 @@ export class TrainingsController {
       questionId,
       answerId
     );
+    return { data: result };
+  }
+
+  @Post("admin/questions")
+  async createAdminQuestion(@CurrentUser() user: AuthenticatedUser, @Body() dto: UpsertTrainingQuestionDto) {
+    const result = await this.trainingsService.createAdminQuestion(user.userId, dto);
+    return { data: result };
+  }
+
+  @Get("admin/questions/:questionId")
+  async getAdminQuestion(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("questionId", new ParseUUIDPipe({ version: "4" })) questionId: string
+  ) {
+    const result = await this.trainingsService.getAdminQuestion(user.userId, questionId);
+    return { data: result };
+  }
+
+  @Put("admin/questions/:questionId")
+  async updateAdminQuestion(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("questionId", new ParseUUIDPipe({ version: "4" })) questionId: string,
+    @Body() dto: UpsertTrainingQuestionDto
+  ) {
+    const result = await this.trainingsService.updateAdminQuestion(user.userId, questionId, dto);
+    return { data: result };
+  }
+
+  @Post("admin/questions/:questionId/publish")
+  async publishAdminQuestion(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("questionId", new ParseUUIDPipe({ version: "4" })) questionId: string
+  ) {
+    const result = await this.trainingsService.publishAdminQuestion(user.userId, questionId);
     return { data: result };
   }
 

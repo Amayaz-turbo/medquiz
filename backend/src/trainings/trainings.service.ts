@@ -12,6 +12,7 @@ import { DatabaseService } from "../database/database.service";
 import { env } from "../config/env";
 import { AnswerTrainingQuestionDto } from "./dto/answer-training-question.dto";
 import { CreateTrainingSessionDto } from "./dto/create-training-session.dto";
+import { UpsertTrainingQuestionDto } from "./dto/upsert-training-question.dto";
 
 interface SessionRow {
   id: string;
@@ -43,6 +44,43 @@ interface DashboardSuggestedAction {
   mode: "learning" | "discovery" | "review" | "par_coeur" | "rattrapage";
   label: string;
 }
+
+interface NormalizedAdminQuestionPayload {
+  subjectId: string;
+  chapterId: string;
+  questionType: "single_choice" | "multi_choice" | "open_text";
+  prompt: string;
+  explanation: string;
+  difficulty: number;
+  publishNow: boolean;
+  choices: Array<{ position: number; label: string; isCorrect: boolean }>;
+  acceptedAnswers: Array<{ acceptedAnswerText: string; normalizedAnswerText: string }>;
+}
+
+export interface AdminQuestionView {
+  id: string;
+  subjectId: string;
+  chapterId: string;
+  questionType: "single_choice" | "multi_choice" | "open_text";
+  prompt: string;
+  explanation: string;
+  difficulty: number;
+  status: string;
+  curriculumScope: string;
+  createdByUserId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  publishedAt: string | null;
+  choices: Array<{ id: string; label: string; position: number; isCorrect: boolean }>;
+  acceptedAnswers: Array<{
+    id: string;
+    acceptedAnswerText: string;
+    normalizedAnswerText: string;
+    createdAt: string;
+  }>;
+}
+
+type QueryRunner = Pick<DatabaseService, "query"> | PoolClient;
 
 @Injectable()
 export class TrainingsService {
@@ -998,6 +1036,120 @@ export class TrainingsService {
     });
   }
 
+  async createAdminQuestion(userId: string, dto: UpsertTrainingQuestionDto): Promise<AdminQuestionView> {
+    this.assertCanCreateTrainingQuestion(userId);
+    const payload = this.parseAdminQuestionPayload(dto);
+
+    return this.db.withTransaction(async (client) => {
+      await this.assertSubjectChapterActive(client, payload.subjectId, payload.chapterId);
+
+      const questionId = randomUUID();
+      await client.query(
+        `
+          INSERT INTO questions
+            (
+              id,
+              subject_id,
+              chapter_id,
+              question_type,
+              prompt,
+              explanation,
+              difficulty,
+              status,
+              curriculum_scope,
+              created_by_user_id
+            )
+          VALUES
+            ($1, $2, $3, $4, $5, $6, $7, 'draft', 'national', $8)
+        `,
+        [
+          questionId,
+          payload.subjectId,
+          payload.chapterId,
+          payload.questionType,
+          payload.prompt,
+          payload.explanation,
+          payload.difficulty,
+          userId
+        ]
+      );
+
+      await this.replaceQuestionContent(client, questionId, payload);
+
+      if (payload.publishNow) {
+        await this.publishQuestionInTransaction(client, questionId, payload.questionType, "draft");
+      }
+
+      return this.loadAdminQuestionView(client, questionId);
+    });
+  }
+
+  async getAdminQuestion(userId: string, questionId: string): Promise<AdminQuestionView> {
+    const context = await this.getQuestionEditorContext(this.db, questionId);
+    this.assertCanManageTrainingQuestion(userId, context.created_by_user_id);
+    return this.loadAdminQuestionView(this.db, questionId);
+  }
+
+  async updateAdminQuestion(
+    userId: string,
+    questionId: string,
+    dto: UpsertTrainingQuestionDto
+  ): Promise<AdminQuestionView> {
+    const payload = this.parseAdminQuestionPayload(dto);
+
+    return this.db.withTransaction(async (client) => {
+      const context = await this.getQuestionEditorContext(client, questionId, true);
+      this.assertCanManageTrainingQuestion(userId, context.created_by_user_id);
+
+      if (payload.questionType !== context.question_type) {
+        throw new UnprocessableEntityException({
+          code: "QUESTION_TYPE_IMMUTABLE",
+          message: "questionType cannot be changed once the question exists"
+        });
+      }
+
+      await this.assertSubjectChapterActive(client, payload.subjectId, payload.chapterId);
+
+      await client.query(
+        `
+          UPDATE questions
+          SET subject_id = $2,
+              chapter_id = $3,
+              prompt = $4,
+              explanation = $5,
+              difficulty = $6,
+              curriculum_scope = 'national'
+          WHERE id = $1
+        `,
+        [
+          questionId,
+          payload.subjectId,
+          payload.chapterId,
+          payload.prompt,
+          payload.explanation,
+          payload.difficulty
+        ]
+      );
+
+      await this.replaceQuestionContent(client, questionId, payload);
+
+      if (payload.publishNow && context.status !== "published") {
+        await this.publishQuestionInTransaction(client, questionId, context.question_type, context.status);
+      }
+
+      return this.loadAdminQuestionView(client, questionId);
+    });
+  }
+
+  async publishAdminQuestion(userId: string, questionId: string): Promise<AdminQuestionView> {
+    return this.db.withTransaction(async (client) => {
+      const context = await this.getQuestionEditorContext(client, questionId, true);
+      this.assertCanManageTrainingQuestion(userId, context.created_by_user_id);
+      await this.publishQuestionInTransaction(client, questionId, context.question_type, context.status);
+      return this.loadAdminQuestionView(client, questionId);
+    });
+  }
+
   private normalizeSingleChoiceSelection(dto: AnswerTrainingQuestionDto): string[] {
     if (dto.openTextAnswer !== undefined) {
       throw new BadRequestException({
@@ -1073,6 +1225,523 @@ export class TrainingsService {
       .replace(/[^\p{L}\p{N}\s]/gu, " ")
       .replace(/\s+/g, " ")
       .trim();
+  }
+
+  private parseAdminQuestionPayload(dto: UpsertTrainingQuestionDto): NormalizedAdminQuestionPayload {
+    const prompt = this.normalizeQuestionText(dto.prompt, "prompt", 12, 2000);
+    const explanation = this.normalizeQuestionText(dto.explanation, "explanation", 12, 3000);
+    const questionType = dto.questionType;
+    const publishNow = dto.publishNow === true;
+
+    const rawChoices = Array.isArray(dto.choices) ? dto.choices : [];
+    const rawAcceptedAnswers = Array.isArray(dto.acceptedAnswers) ? dto.acceptedAnswers : [];
+
+    if (questionType === "open_text") {
+      if (rawChoices.length > 0) {
+        throw new BadRequestException({
+          code: "VALIDATION_ERROR",
+          message: "open_text question does not accept choices"
+        });
+      }
+
+      if (rawAcceptedAnswers.length === 0) {
+        throw new BadRequestException({
+          code: "VALIDATION_ERROR",
+          message: "open_text question requires at least one accepted answer"
+        });
+      }
+
+      const acceptedAnswers = rawAcceptedAnswers.map((value, index) => {
+        const text = typeof value === "string" ? value : "";
+        const acceptedAnswerText = text.replace(/\s+/g, " ").trim();
+        if (acceptedAnswerText.length === 0) {
+          throw new BadRequestException({
+            code: "VALIDATION_ERROR",
+            message: `acceptedAnswers[${index}] must not be empty`
+          });
+        }
+        const normalizedAnswerText = this.normalizeOpenTextValue(acceptedAnswerText);
+        if (normalizedAnswerText.length === 0) {
+          throw new BadRequestException({
+            code: "VALIDATION_ERROR",
+            message: `acceptedAnswers[${index}] must contain letters or numbers`
+          });
+        }
+        return { acceptedAnswerText, normalizedAnswerText };
+      });
+
+      const uniqueNormalized = new Set(acceptedAnswers.map((item) => item.normalizedAnswerText));
+      if (uniqueNormalized.size !== acceptedAnswers.length) {
+        throw new BadRequestException({
+          code: "VALIDATION_ERROR",
+          message: "acceptedAnswers must be unique after normalization"
+        });
+      }
+
+      return {
+        subjectId: dto.subjectId,
+        chapterId: dto.chapterId,
+        questionType,
+        prompt,
+        explanation,
+        difficulty: dto.difficulty,
+        publishNow,
+        choices: [],
+        acceptedAnswers
+      };
+    }
+
+    if (rawAcceptedAnswers.length > 0) {
+      throw new BadRequestException({
+        code: "VALIDATION_ERROR",
+        message: "Choice-based questions do not accept acceptedAnswers"
+      });
+    }
+    if (rawChoices.length !== 4) {
+      throw new BadRequestException({
+        code: "VALIDATION_ERROR",
+        message: "Choice-based questions require exactly 4 choices"
+      });
+    }
+
+    const choices = rawChoices.map((choice, index) => {
+      const label = this.normalizeChoiceLabel(choice?.label, index + 1);
+      if (!this.isBoolean(choice?.isCorrect)) {
+        throw new BadRequestException({
+          code: "VALIDATION_ERROR",
+          message: `choices[${index}].isCorrect must be boolean`
+        });
+      }
+      return {
+        position: index + 1,
+        label,
+        isCorrect: choice.isCorrect
+      };
+    });
+
+    const uniqueLabels = new Set(choices.map((choice) => this.normalizeOpenTextValue(choice.label)));
+    if (uniqueLabels.size !== choices.length) {
+      throw new BadRequestException({
+        code: "VALIDATION_ERROR",
+        message: "choices labels must be unique"
+      });
+    }
+
+    const correctCount = choices.filter((choice) => choice.isCorrect).length;
+    if (questionType === "single_choice" && correctCount !== 1) {
+      throw new BadRequestException({
+        code: "VALIDATION_ERROR",
+        message: "single_choice requires exactly 1 correct choice"
+      });
+    }
+    if (questionType === "multi_choice" && (correctCount < 2 || correctCount > 3)) {
+      throw new BadRequestException({
+        code: "VALIDATION_ERROR",
+        message: "multi_choice requires 2 or 3 correct choices"
+      });
+    }
+
+    return {
+      subjectId: dto.subjectId,
+      chapterId: dto.chapterId,
+      questionType,
+      prompt,
+      explanation,
+      difficulty: dto.difficulty,
+      publishNow,
+      choices,
+      acceptedAnswers: []
+    };
+  }
+
+  private normalizeQuestionText(value: unknown, field: string, minLength: number, maxLength: number): string {
+    const raw = typeof value === "string" ? value : "";
+    const normalized = raw.replace(/\s+/g, " ").trim();
+    if (normalized.length < minLength) {
+      throw new BadRequestException({
+        code: "VALIDATION_ERROR",
+        message: `${field} must be at least ${minLength} characters`
+      });
+    }
+    if (normalized.length > maxLength) {
+      throw new BadRequestException({
+        code: "VALIDATION_ERROR",
+        message: `${field} must be at most ${maxLength} characters`
+      });
+    }
+    return normalized;
+  }
+
+  private normalizeChoiceLabel(value: unknown, position: number): string {
+    const raw = typeof value === "string" ? value : "";
+    const normalized = raw.replace(/\s+/g, " ").trim();
+    if (normalized.length === 0) {
+      throw new BadRequestException({
+        code: "VALIDATION_ERROR",
+        message: `choices[${position - 1}].label must not be empty`
+      });
+    }
+    if (normalized.length > 280) {
+      throw new BadRequestException({
+        code: "VALIDATION_ERROR",
+        message: `choices[${position - 1}].label must be at most 280 characters`
+      });
+    }
+    return normalized;
+  }
+
+  private assertCanCreateTrainingQuestion(userId: string): void {
+    const allowlist = this.cfg.trainingContentEditorUserIds;
+    if (allowlist.length === 0) {
+      if (this.cfg.nodeEnv === "production") {
+        throw new ForbiddenException({
+          code: "TRAINING_CONTENT_EDITORS_NOT_CONFIGURED",
+          message: "Training content editor allowlist is required in production"
+        });
+      }
+      return;
+    }
+    if (!allowlist.includes(userId)) {
+      throw new ForbiddenException({
+        code: "TRAINING_CONTENT_EDITOR_FORBIDDEN",
+        message: "You are not allowed to create training questions"
+      });
+    }
+  }
+
+  private assertCanManageTrainingQuestion(userId: string, createdByUserId: string | null): void {
+    if (this.cfg.trainingContentEditorUserIds.includes(userId)) {
+      return;
+    }
+    if (createdByUserId === userId) {
+      return;
+    }
+    throw new ForbiddenException({
+      code: "TRAINING_CONTENT_EDITOR_FORBIDDEN",
+      message: "You are not allowed to manage this training question"
+    });
+  }
+
+  private async getQuestionEditorContext(
+    queryRunner: QueryRunner,
+    questionId: string,
+    forUpdate = false
+  ): Promise<{
+    id: string;
+    question_type: "single_choice" | "multi_choice" | "open_text";
+    status: string;
+    created_by_user_id: string | null;
+  }> {
+    const result = await queryRunner.query<{
+      id: string;
+      question_type: string;
+      status: string;
+      created_by_user_id: string | null;
+    }>(
+      `
+        SELECT id, question_type, status, created_by_user_id
+        FROM questions
+        WHERE id = $1
+        ${forUpdate ? "FOR UPDATE" : ""}
+        LIMIT 1
+      `,
+      [questionId]
+    );
+    const row = result.rows[0];
+    if (!row) {
+      throw new NotFoundException({
+        code: "QUESTION_NOT_FOUND",
+        message: "Question not found"
+      });
+    }
+    if (
+      row.question_type !== "single_choice" &&
+      row.question_type !== "multi_choice" &&
+      row.question_type !== "open_text"
+    ) {
+      throw new UnprocessableEntityException({
+        code: "UNSUPPORTED_QUESTION_TYPE",
+        message: "Question type is not supported"
+      });
+    }
+    return {
+      id: row.id,
+      question_type: row.question_type,
+      status: row.status,
+      created_by_user_id: row.created_by_user_id
+    };
+  }
+
+  private async assertSubjectChapterActive(
+    queryRunner: QueryRunner,
+    subjectId: string,
+    chapterId: string
+  ): Promise<void> {
+    const result = await queryRunner.query<{ id: string }>(
+      `
+        SELECT c.id
+        FROM chapters c
+        JOIN subjects s
+          ON s.id = c.subject_id
+        WHERE c.id = $1
+          AND c.subject_id = $2
+          AND c.is_active = TRUE
+          AND s.is_active = TRUE
+        LIMIT 1
+      `,
+      [chapterId, subjectId]
+    );
+    if (result.rowCount === 0) {
+      throw new BadRequestException({
+        code: "VALIDATION_ERROR",
+        message: "subjectId/chapterId pair is invalid or inactive"
+      });
+    }
+  }
+
+  private async replaceQuestionContent(
+    client: PoolClient,
+    questionId: string,
+    payload: NormalizedAdminQuestionPayload
+  ): Promise<void> {
+    await client.query(
+      `
+        DELETE FROM question_choices
+        WHERE question_id = $1
+      `,
+      [questionId]
+    );
+    await client.query(
+      `
+        DELETE FROM question_open_text_answers
+        WHERE question_id = $1
+      `,
+      [questionId]
+    );
+
+    if (payload.questionType === "open_text") {
+      for (const item of payload.acceptedAnswers) {
+        await client.query(
+          `
+            INSERT INTO question_open_text_answers
+              (id, question_id, accepted_answer_text, normalized_answer_text)
+            VALUES
+              ($1, $2, $3, $4)
+          `,
+          [randomUUID(), questionId, item.acceptedAnswerText, item.normalizedAnswerText]
+        );
+      }
+      return;
+    }
+
+    for (const choice of payload.choices) {
+      await client.query(
+        `
+          INSERT INTO question_choices
+            (id, question_id, label, position, is_correct)
+          VALUES
+            ($1, $2, $3, $4, $5)
+        `,
+        [randomUUID(), questionId, choice.label, choice.position, choice.isCorrect]
+      );
+    }
+  }
+
+  private async publishQuestionInTransaction(
+    client: PoolClient,
+    questionId: string,
+    questionType: "single_choice" | "multi_choice" | "open_text",
+    currentStatus: string
+  ): Promise<void> {
+    if (currentStatus === "published") {
+      return;
+    }
+    if (currentStatus === "retired") {
+      throw new UnprocessableEntityException({
+        code: "QUESTION_ALREADY_RETIRED",
+        message: "Retired question cannot be published"
+      });
+    }
+
+    await this.assertQuestionPublishable(client, questionId, questionType);
+
+    await client.query(
+      `
+        UPDATE questions
+        SET status = 'published',
+            published_at = COALESCE(published_at, NOW()),
+            retired_at = NULL
+        WHERE id = $1
+      `,
+      [questionId]
+    );
+  }
+
+  private async assertQuestionPublishable(
+    queryRunner: QueryRunner,
+    questionId: string,
+    questionType: "single_choice" | "multi_choice" | "open_text"
+  ): Promise<void> {
+    if (questionType === "open_text") {
+      const answers = await queryRunner.query<{ c: string }>(
+        `
+          SELECT COUNT(*)::text AS c
+          FROM question_open_text_answers
+          WHERE question_id = $1
+        `,
+        [questionId]
+      );
+      const count = Number(answers.rows[0]?.c ?? 0);
+      if (count < 1) {
+        throw new UnprocessableEntityException({
+          code: "QUESTION_CONFIGURATION_INVALID",
+          message: "open_text question must define at least one accepted answer"
+        });
+      }
+      return;
+    }
+
+    const choices = await queryRunner.query<{ total: string; correct: string }>(
+      `
+        SELECT
+          COUNT(*)::text AS total,
+          COUNT(*) FILTER (WHERE is_correct)::text AS correct
+        FROM question_choices
+        WHERE question_id = $1
+      `,
+      [questionId]
+    );
+    const total = Number(choices.rows[0]?.total ?? 0);
+    const correct = Number(choices.rows[0]?.correct ?? 0);
+    if (total !== 4) {
+      throw new UnprocessableEntityException({
+        code: "QUESTION_CONFIGURATION_INVALID",
+        message: "Choice-based question must have exactly 4 choices"
+      });
+    }
+
+    if (questionType === "single_choice" && correct !== 1) {
+      throw new UnprocessableEntityException({
+        code: "QUESTION_CONFIGURATION_INVALID",
+        message: "single_choice question must have exactly one correct choice"
+      });
+    }
+    if (questionType === "multi_choice" && (correct < 2 || correct > 3)) {
+      throw new UnprocessableEntityException({
+        code: "QUESTION_CONFIGURATION_INVALID",
+        message: "multi_choice question must have 2 or 3 correct choices"
+      });
+    }
+  }
+
+  private async loadAdminQuestionView(
+    queryRunner: QueryRunner,
+    questionId: string
+  ): Promise<AdminQuestionView> {
+    const questionResult = await queryRunner.query<{
+      id: string;
+      subject_id: string;
+      chapter_id: string;
+      question_type: "single_choice" | "multi_choice" | "open_text";
+      prompt: string;
+      explanation: string;
+      difficulty: number;
+      status: string;
+      curriculum_scope: string;
+      created_by_user_id: string | null;
+      created_at: string;
+      updated_at: string;
+      published_at: string | null;
+    }>(
+      `
+        SELECT
+          id,
+          subject_id,
+          chapter_id,
+          question_type,
+          prompt,
+          explanation,
+          difficulty,
+          status,
+          curriculum_scope,
+          created_by_user_id,
+          created_at,
+          updated_at,
+          published_at
+        FROM questions
+        WHERE id = $1
+        LIMIT 1
+      `,
+      [questionId]
+    );
+    const question = questionResult.rows[0];
+    if (!question) {
+      throw new NotFoundException({
+        code: "QUESTION_NOT_FOUND",
+        message: "Question not found"
+      });
+    }
+
+    const choicesResult = await queryRunner.query<{
+      id: string;
+      label: string;
+      position: number;
+      is_correct: boolean;
+    }>(
+      `
+        SELECT id, label, position, is_correct
+        FROM question_choices
+        WHERE question_id = $1
+        ORDER BY position ASC
+      `,
+      [questionId]
+    );
+    const acceptedAnswersResult = await queryRunner.query<{
+      id: string;
+      accepted_answer_text: string;
+      normalized_answer_text: string;
+      created_at: string;
+    }>(
+      `
+        SELECT id, accepted_answer_text, normalized_answer_text, created_at
+        FROM question_open_text_answers
+        WHERE question_id = $1
+        ORDER BY created_at ASC
+      `,
+      [questionId]
+    );
+
+    return {
+      id: question.id,
+      subjectId: question.subject_id,
+      chapterId: question.chapter_id,
+      questionType: question.question_type,
+      prompt: question.prompt,
+      explanation: question.explanation,
+      difficulty: question.difficulty,
+      status: question.status,
+      curriculumScope: question.curriculum_scope,
+      createdByUserId: question.created_by_user_id,
+      createdAt: question.created_at,
+      updatedAt: question.updated_at,
+      publishedAt: question.published_at,
+      choices: choicesResult.rows.map((row) => ({
+        id: row.id,
+        label: row.label,
+        position: row.position,
+        isCorrect: row.is_correct
+      })),
+      acceptedAnswers: acceptedAnswersResult.rows.map((row) => ({
+        id: row.id,
+        acceptedAnswerText: row.accepted_answer_text,
+        normalizedAnswerText: row.normalized_answer_text,
+        createdAt: row.created_at
+      }))
+    };
+  }
+
+  private isBoolean(value: unknown): value is boolean {
+    return typeof value === "boolean";
   }
 
   private async assertCanManageOpenTextQuestion(userId: string, questionId: string): Promise<void> {

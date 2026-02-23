@@ -73,6 +73,7 @@ describe("Critical integration flows", () => {
     process.env.SLO_WINDOW_DAYS = "30";
     process.env.HEALTH_DB_TIMEOUT_MS = "1500";
     process.env.OPEN_TEXT_EDITOR_USER_IDS = "";
+    process.env.TRAINING_CONTENT_EDITOR_USER_IDS = "";
 
     const { AppModule } = await import("../src/app.module");
     const { DuelsService } = await import("../src/duels/duels.service");
@@ -627,6 +628,133 @@ describe("Critical integration flows", () => {
       .set("Authorization", `Bearer ${owner.accessToken}`)
       .expect(422);
     expect(deleteLast.body.error.code).toBe("OPEN_TEXT_MIN_ANSWERS_REQUIRED");
+  });
+
+  it("creates, updates and publishes admin training question with ownership guard", async () => {
+    const owner = await registerUser("Content Owner");
+    const outsider = await registerUser("Content Outsider");
+
+    const chapterRow = await db.query<{ subject_id: string; chapter_id: string }>(
+      `
+        SELECT c.subject_id, c.id AS chapter_id
+        FROM chapters c
+        JOIN subjects s
+          ON s.id = c.subject_id
+        WHERE c.is_active = TRUE
+          AND s.is_active = TRUE
+        ORDER BY s.sort_order ASC, c.sort_order ASC
+        LIMIT 1
+      `
+    );
+    expect(chapterRow.rowCount).toBe(1);
+    const subjectId = chapterRow.rows[0].subject_id;
+    const chapterId = chapterRow.rows[0].chapter_id;
+
+    const createQuestion = await request(app.getHttpServer())
+      .post("/v1/trainings/admin/questions")
+      .set("Authorization", `Bearer ${owner.accessToken}`)
+      .send({
+        subjectId,
+        chapterId,
+        questionType: "single_choice",
+        prompt: "Quelle molécule transporte principalement l'oxygène dans le sang humain ?",
+        explanation: "L'hémoglobine des globules rouges transporte l'oxygène.",
+        difficulty: 2,
+        publishNow: false,
+        choices: [
+          { label: "Hémoglobine", isCorrect: true },
+          { label: "Albumine", isCorrect: false },
+          { label: "Fibrinogène", isCorrect: false },
+          { label: "Transferrine", isCorrect: false }
+        ]
+      })
+      .expect(201);
+    const questionId = createQuestion.body.data.id as string;
+    expect(createQuestion.body.data.status).toBe("draft");
+    expect((createQuestion.body.data.choices as unknown[]).length).toBe(4);
+
+    await request(app.getHttpServer())
+      .get(`/v1/trainings/admin/questions/${questionId}`)
+      .set("Authorization", `Bearer ${owner.accessToken}`)
+      .expect(200);
+
+    const outsiderUpdate = await request(app.getHttpServer())
+      .put(`/v1/trainings/admin/questions/${questionId}`)
+      .set("Authorization", `Bearer ${outsider.accessToken}`)
+      .send({
+        subjectId,
+        chapterId,
+        questionType: "single_choice",
+        prompt: "Prompt outsider",
+        explanation: "Explication outsider",
+        difficulty: 2,
+        choices: [
+          { label: "A", isCorrect: true },
+          { label: "B", isCorrect: false },
+          { label: "C", isCorrect: false },
+          { label: "D", isCorrect: false }
+        ]
+      })
+      .expect(403);
+    expect(outsiderUpdate.body.error.code).toBe("TRAINING_CONTENT_EDITOR_FORBIDDEN");
+
+    const updated = await request(app.getHttpServer())
+      .put(`/v1/trainings/admin/questions/${questionId}`)
+      .set("Authorization", `Bearer ${owner.accessToken}`)
+      .send({
+        subjectId,
+        chapterId,
+        questionType: "single_choice",
+        prompt: "Quelle protéine transporte principalement l'oxygène dans le sang ? (version mise à jour)",
+        explanation: "L'hémoglobine fixe l'oxygène et assure son transport sanguin.",
+        difficulty: 3,
+        choices: [
+          { label: "Hémoglobine", isCorrect: true },
+          { label: "Albumine", isCorrect: false },
+          { label: "Myoglobine", isCorrect: false },
+          { label: "Ferritine", isCorrect: false }
+        ]
+      })
+      .expect(200);
+    expect(updated.body.data.prompt).toContain("mise à jour");
+
+    const published = await request(app.getHttpServer())
+      .post(`/v1/trainings/admin/questions/${questionId}/publish`)
+      .set("Authorization", `Bearer ${owner.accessToken}`)
+      .expect(201);
+    expect(published.body.data.status).toBe("published");
+    expect(published.body.data.publishedAt).toBeTruthy();
+
+    const publishedChoices = published.body.data.choices as Array<{
+      id: string;
+      isCorrect: boolean;
+    }>;
+    const correctChoiceId = publishedChoices.find((choice) => choice.isCorrect)?.id;
+    expect(correctChoiceId).toBeDefined();
+
+    const createdSession = await request(app.getHttpServer())
+      .post("/v1/trainings/sessions")
+      .set("Authorization", `Bearer ${owner.accessToken}`)
+      .send({
+        mode: "learning",
+        stopRule: "fixed_custom",
+        targetQuestionCount: 1,
+        subjectIds: [subjectId],
+        chapterIds: [chapterId]
+      })
+      .expect(201);
+    const sessionId = createdSession.body.data.id as string;
+
+    const answer = await request(app.getHttpServer())
+      .post(`/v1/trainings/sessions/${sessionId}/answers`)
+      .set("Authorization", `Bearer ${owner.accessToken}`)
+      .send({
+        questionId,
+        selectedChoiceId: correctChoiceId,
+        responseTimeMs: 640
+      })
+      .expect(201);
+    expect(answer.body.data.isCorrect).toBe(true);
   });
 
   it("plays a full duel (5 rounds) to completion", async () => {

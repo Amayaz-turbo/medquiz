@@ -16,6 +16,7 @@ export interface AppConfig {
   sloWindowDays: number;
   healthDbTimeoutMs: number;
   openTextEditorUserIds: string[];
+  trainingContentEditorUserIds: string[];
 }
 
 export function getAppConfig(): AppConfig {
@@ -89,6 +90,15 @@ export function getAppConfig(): AppConfig {
       throw new Error("OPEN_TEXT_EDITOR_USER_IDS must contain valid UUID v4 values");
     }
   }
+  const trainingContentEditorUserIds = (process.env.TRAINING_CONTENT_EDITOR_USER_IDS ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+  for (const userId of trainingContentEditorUserIds) {
+    if (!uuidV4Regex.test(userId)) {
+      throw new Error("TRAINING_CONTENT_EDITOR_USER_IDS must contain valid UUID v4 values");
+    }
+  }
 
   return {
     nodeEnv,
@@ -107,6 +117,7 @@ export function getAppConfig(): AppConfig {
     sloP95LatencyMs,
     sloWindowDays,
     healthDbTimeoutMs,
-    openTextEditorUserIds
+    openTextEditorUserIds,
+    trainingContentEditorUserIds
   };
 }
