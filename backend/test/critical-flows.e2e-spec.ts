@@ -395,6 +395,84 @@ describe("Critical integration flows", () => {
     expect(grantedItem?.acquiredSource).toBe("rewarded");
   });
 
+  it("lists notifications with cursor pagination and marks notification as read", async () => {
+    const user = await registerUser("Notif User");
+    const otherUser = await registerUser("Notif Other");
+
+    const now = new Date();
+    const n1 = randomUUID();
+    const n2 = randomUUID();
+    const n3 = randomUUID();
+
+    await db.query(
+      `
+        INSERT INTO notifications (id, user_id, type, payload, status, created_at, sent_at)
+        VALUES
+          ($1, $2, 'duel_turn', '{"duelId":"d1","reason":"turn"}'::jsonb, 'pending', $3, NULL),
+          ($4, $2, 'duel_finished', '{"duelId":"d2","reason":"finished"}'::jsonb, 'sent', $5, $5),
+          ($6, $2, 'review_reminder', '{"submissionId":"s1"}'::jsonb, 'pending', $7, NULL)
+      `,
+      [
+        n1,
+        user.userId,
+        new Date(now.getTime() - 1_000).toISOString(),
+        n2,
+        new Date(now.getTime() - 2_000).toISOString(),
+        n3,
+        new Date(now.getTime() - 3_000).toISOString()
+      ]
+    );
+
+    await db.query(
+      `
+        INSERT INTO notifications (id, user_id, type, payload, status)
+        VALUES ($1, $2, 'duel_turn', '{"duelId":"other"}'::jsonb, 'pending')
+      `,
+      [randomUUID(), otherUser.userId]
+    );
+
+    const page1 = await request(app.getHttpServer())
+      .get("/v1/notifications?limit=2")
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .expect(200);
+    const page1Items = page1.body.data.items as Array<{ id: string; status: string }>;
+    expect(page1Items).toHaveLength(2);
+    expect(page1Items[0].id).toBe(n1);
+    expect(page1Items[1].id).toBe(n2);
+    const cursor = page1.body.data.meta.nextCursor as string;
+    expect(typeof cursor).toBe("string");
+    expect(cursor.length).toBeGreaterThan(8);
+
+    const page2 = await request(app.getHttpServer())
+      .get(`/v1/notifications?limit=2&cursor=${encodeURIComponent(cursor)}`)
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .expect(200);
+    const page2Items = page2.body.data.items as Array<{ id: string }>;
+    expect(page2Items).toHaveLength(1);
+    expect(page2Items[0].id).toBe(n3);
+    expect(page2.body.data.meta.nextCursor).toBeNull();
+
+    const readMarked = await request(app.getHttpServer())
+      .post(`/v1/notifications/${n1}/read`)
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .expect(201);
+    expect(readMarked.body.data.id).toBe(n1);
+    expect(readMarked.body.data.status).toBe("read");
+    expect(readMarked.body.data.readAt).toBeTruthy();
+
+    const readOnlyList = await request(app.getHttpServer())
+      .get("/v1/notifications?status=read")
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .expect(200);
+    const readIds = (readOnlyList.body.data.items as Array<{ id: string }>).map((item) => item.id);
+    expect(readIds).toContain(n1);
+
+    await request(app.getHttpServer())
+      .post(`/v1/notifications/${n2}/read`)
+      .set("Authorization", `Bearer ${otherUser.accessToken}`)
+      .expect(404);
+  });
+
   it("exposes avatar progression, inventory, equipment and specialty stage gate", async () => {
     const player = await registerUser("Avatar Player");
 

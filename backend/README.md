@@ -32,6 +32,8 @@ Protected:
 - `GET /ads/eligibility`
 - `POST /ads/impressions`
 - `POST /ads/reward-grants`
+- `GET /notifications`
+- `POST /notifications/:notificationId/read`
 - `GET /avatar/stages`
 - `GET /avatar/specialties`
 - `GET /me/avatar`
