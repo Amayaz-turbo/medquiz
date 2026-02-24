@@ -1280,6 +1280,124 @@ describe("Critical integration flows", () => {
     expect(submissionAfter.body.data.claim.claimedByUserId).toBeNull();
   });
 
+  it("lists reviewer active claims and releases only own claims in bulk", async () => {
+    const proposer = await registerUser("Bulk Claim Proposer");
+    const reviewer1 = await registerUser("Bulk Claim Reviewer 1");
+    const reviewer2 = await registerUser("Bulk Claim Reviewer 2");
+
+    const chapterRow = await db.query<{ subject_id: string; chapter_id: string }>(
+      `
+        SELECT c.subject_id, c.id AS chapter_id
+        FROM chapters c
+        JOIN subjects s
+          ON s.id = c.subject_id
+        WHERE c.is_active = TRUE
+          AND s.is_active = TRUE
+        ORDER BY s.sort_order ASC, c.sort_order ASC
+        LIMIT 1
+      `
+    );
+    expect(chapterRow.rowCount).toBe(1);
+    const subjectId = chapterRow.rows[0].subject_id;
+    const chapterId = chapterRow.rows[0].chapter_id;
+
+    const createSubmission = async (prompt: string): Promise<string> => {
+      const submission = await request(app.getHttpServer())
+        .post("/v1/trainings/submissions")
+        .set("Authorization", `Bearer ${proposer.accessToken}`)
+        .send({
+          subjectId,
+          chapterId,
+          questionType: "single_choice",
+          prompt,
+          explanation: "Explication de validation pour le workflow de claim.",
+          difficulty: 2,
+          choices: [
+            { label: "Bonne réponse", isCorrect: true },
+            { label: "Distracteur 1", isCorrect: false },
+            { label: "Distracteur 2", isCorrect: false },
+            { label: "Distracteur 3", isCorrect: false }
+          ]
+        })
+        .expect(201);
+      return submission.body.data.id as string;
+    };
+
+    const submissionOneId = await createSubmission("Question claim lot A");
+    const submissionTwoId = await createSubmission("Question claim lot B");
+    const submissionThreeId = await createSubmission("Question claim lot C");
+
+    await request(app.getHttpServer())
+      .post(`/v1/trainings/admin/submissions/${submissionOneId}/claim`)
+      .set("Authorization", `Bearer ${reviewer1.accessToken}`)
+      .expect(201);
+    await request(app.getHttpServer())
+      .post(`/v1/trainings/admin/submissions/${submissionTwoId}/claim`)
+      .set("Authorization", `Bearer ${reviewer1.accessToken}`)
+      .expect(201);
+    await request(app.getHttpServer())
+      .post(`/v1/trainings/admin/submissions/${submissionThreeId}/claim`)
+      .set("Authorization", `Bearer ${reviewer2.accessToken}`)
+      .expect(201);
+
+    const reviewer1ClaimsBefore = await request(app.getHttpServer())
+      .get("/v1/trainings/admin/submissions/my-claims?limit=10")
+      .set("Authorization", `Bearer ${reviewer1.accessToken}`)
+      .expect(200);
+    const reviewer1ClaimItems = reviewer1ClaimsBefore.body.data.items as Array<{
+      submissionId: string;
+      claim: { claimedByUserId: string; remainingMinutes: number };
+    }>;
+    expect(reviewer1ClaimItems).toHaveLength(2);
+    expect(reviewer1ClaimItems.map((item) => item.submissionId)).toEqual(
+      expect.arrayContaining([submissionOneId, submissionTwoId])
+    );
+    expect(reviewer1ClaimItems.every((item) => item.claim.claimedByUserId === reviewer1.userId)).toBe(true);
+    expect(reviewer1ClaimItems.every((item) => item.claim.remainingMinutes > 0)).toBe(true);
+
+    const reviewer2ClaimsBefore = await request(app.getHttpServer())
+      .get("/v1/trainings/admin/submissions/my-claims")
+      .set("Authorization", `Bearer ${reviewer2.accessToken}`)
+      .expect(200);
+    const reviewer2ClaimItemsBefore = reviewer2ClaimsBefore.body.data.items as Array<{ submissionId: string }>;
+    expect(reviewer2ClaimItemsBefore).toHaveLength(1);
+    expect(reviewer2ClaimItemsBefore[0].submissionId).toBe(submissionThreeId);
+
+    const releaseAllReviewer1 = await request(app.getHttpServer())
+      .post("/v1/trainings/admin/submissions/release-all-claims")
+      .set("Authorization", `Bearer ${reviewer1.accessToken}`)
+      .expect(201);
+    expect(releaseAllReviewer1.body.data.releasedCount).toBe(2);
+    expect(releaseAllReviewer1.body.data.submissionIds as string[]).toEqual(
+      expect.arrayContaining([submissionOneId, submissionTwoId])
+    );
+
+    const reviewer1ClaimsAfter = await request(app.getHttpServer())
+      .get("/v1/trainings/admin/submissions/my-claims")
+      .set("Authorization", `Bearer ${reviewer1.accessToken}`)
+      .expect(200);
+    expect((reviewer1ClaimsAfter.body.data.items as unknown[]).length).toBe(0);
+
+    const reviewer2ClaimsAfter = await request(app.getHttpServer())
+      .get("/v1/trainings/admin/submissions/my-claims")
+      .set("Authorization", `Bearer ${reviewer2.accessToken}`)
+      .expect(200);
+    const reviewer2ClaimItemsAfter = reviewer2ClaimsAfter.body.data.items as Array<{ submissionId: string }>;
+    expect(reviewer2ClaimItemsAfter).toHaveLength(1);
+    expect(reviewer2ClaimItemsAfter[0].submissionId).toBe(submissionThreeId);
+
+    await request(app.getHttpServer())
+      .post(`/v1/trainings/admin/submissions/${submissionOneId}/claim`)
+      .set("Authorization", `Bearer ${reviewer2.accessToken}`)
+      .expect(201);
+
+    const claimStillLockedForReviewer1 = await request(app.getHttpServer())
+      .post(`/v1/trainings/admin/submissions/${submissionThreeId}/claim`)
+      .set("Authorization", `Bearer ${reviewer1.accessToken}`)
+      .expect(409);
+    expect(claimStillLockedForReviewer1.body.error.code).toBe("SUBMISSION_ALREADY_CLAIMED");
+  });
+
   it("claims next pending submission while skipping active claims from others", async () => {
     const proposer = await registerUser("Next Claim Proposer");
     const reviewer1 = await registerUser("Next Claim Reviewer 1");

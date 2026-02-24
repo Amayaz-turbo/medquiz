@@ -152,6 +152,15 @@ export class TrainingsController {
     return { data: result };
   }
 
+  @Get("admin/submissions/my-claims")
+  async listMySubmissionClaims(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query("limit") limit?: string
+  ) {
+    const result = await this.trainingsService.listMyActiveSubmissionClaims(user.userId, { limit });
+    return { data: result };
+  }
+
   @Post("admin/submissions/:submissionId/claim")
   async claimQuestionSubmission(
     @CurrentUser() user: AuthenticatedUser,
@@ -167,6 +176,12 @@ export class TrainingsController {
     @Param("submissionId", new ParseUUIDPipe({ version: "4" })) submissionId: string
   ) {
     const result = await this.trainingsService.releaseQuestionSubmissionClaim(user.userId, submissionId);
+    return { data: result };
+  }
+
+  @Post("admin/submissions/release-all-claims")
+  async releaseAllSubmissionClaims(@CurrentUser() user: AuthenticatedUser) {
+    const result = await this.trainingsService.releaseAllMySubmissionClaims(user.userId);
     return { data: result };
   }
 

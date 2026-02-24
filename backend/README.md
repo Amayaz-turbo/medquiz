@@ -54,6 +54,8 @@ Protected:
 - `POST /trainings/admin/submissions/:submissionId/claim`
 - `POST /trainings/admin/submissions/claim-next`
 - `POST /trainings/admin/submissions/:submissionId/release-claim`
+- `GET /trainings/admin/submissions/my-claims`
+- `POST /trainings/admin/submissions/release-all-claims`
 - `POST /duels`
 - `GET /duels`
 - `GET /duels/:duelId`

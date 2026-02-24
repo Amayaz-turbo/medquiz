@@ -121,6 +121,25 @@ interface ListSubmissionReviewQueueOptions {
   limit?: number | string;
 }
 
+interface ListMySubmissionClaimsOptions {
+  limit?: number | string;
+}
+
+export interface ReviewerSubmissionClaimItem {
+  submissionId: string;
+  subjectId: string;
+  chapterId: string;
+  questionType: "single_choice" | "multi_choice" | "open_text";
+  promptPreview: string;
+  difficulty: number;
+  claim: {
+    claimedByUserId: string;
+    claimedAt: string;
+    claimExpiresAt: string;
+    remainingMinutes: number;
+  };
+}
+
 export interface QuestionSubmissionView {
   id: string;
   proposerUserId: string;
@@ -1765,6 +1784,93 @@ export class TrainingsService {
         released: true
       };
     });
+  }
+
+  async listMyActiveSubmissionClaims(userId: string, options: ListMySubmissionClaimsOptions) {
+    if (!this.canAccessAllSubmissions(userId)) {
+      throw new ForbiddenException({
+        code: "TRAINING_SUBMISSION_REVIEW_FORBIDDEN",
+        message: "You are not allowed to access submission claims"
+      });
+    }
+    const limit = this.parsePositiveInteger(options.limit, 20, 1, 100, "limit");
+
+    const result = await this.db.query<{
+      submission_id: string;
+      subject_id: string;
+      chapter_id: string;
+      question_type: "single_choice" | "multi_choice" | "open_text";
+      prompt: string;
+      difficulty: number;
+      claimed_by_user_id: string;
+      claimed_at: string;
+      claim_expires_at: string;
+    }>(
+      `
+        SELECT
+          qs.id AS submission_id,
+          qs.subject_id,
+          qs.chapter_id,
+          qs.question_type,
+          qs.prompt,
+          qs.difficulty,
+          qs.claimed_by_user_id,
+          qs.claimed_at,
+          qs.claim_expires_at
+        FROM question_submissions qs
+        WHERE qs.status = 'pending'
+          AND qs.claimed_by_user_id = $1
+          AND qs.claim_expires_at IS NOT NULL
+          AND qs.claim_expires_at > NOW()
+        ORDER BY qs.claim_expires_at ASC, qs.created_at ASC, qs.id ASC
+        LIMIT $2
+      `,
+      [userId, limit]
+    );
+
+    return {
+      items: result.rows.map((row) => ({
+        submissionId: row.submission_id,
+        subjectId: row.subject_id,
+        chapterId: row.chapter_id,
+        questionType: row.question_type,
+        promptPreview: this.promptPreview(row.prompt, 160),
+        difficulty: row.difficulty,
+        claim: {
+          claimedByUserId: row.claimed_by_user_id,
+          claimedAt: row.claimed_at,
+          claimExpiresAt: row.claim_expires_at,
+          remainingMinutes: this.computeRemainingMinutes(row.claim_expires_at)
+        }
+      } satisfies ReviewerSubmissionClaimItem))
+    };
+  }
+
+  async releaseAllMySubmissionClaims(userId: string) {
+    if (!this.canAccessAllSubmissions(userId)) {
+      throw new ForbiddenException({
+        code: "TRAINING_SUBMISSION_REVIEW_FORBIDDEN",
+        message: "You are not allowed to release submission claims"
+      });
+    }
+
+    const released = await this.db.query<{ id: string }>(
+      `
+        UPDATE question_submissions
+        SET claimed_by_user_id = NULL,
+            claimed_at = NULL,
+            claim_expires_at = NULL
+        WHERE status = 'pending'
+          AND claimed_by_user_id = $1
+        RETURNING id
+      `,
+      [userId]
+    );
+
+    return {
+      releasedCount: released.rowCount,
+      submissionIds: released.rows.map((row) => row.id)
+    };
   }
 
   async getSubmissionReviewDashboard(userId: string): Promise<SubmissionReviewDashboard> {
@@ -3439,6 +3545,18 @@ export class TrainingsService {
     }
     const factor = 10 ** decimals;
     return Math.round(parsed * factor) / factor;
+  }
+
+  private computeRemainingMinutes(claimExpiresAt: string): number {
+    const expiresAt = new Date(claimExpiresAt).getTime();
+    if (!Number.isFinite(expiresAt)) {
+      return 0;
+    }
+    const diffMs = expiresAt - Date.now();
+    if (diffMs <= 0) {
+      return 0;
+    }
+    return Math.ceil(diffMs / 60_000);
   }
 
   private isSubmissionClaimActive(claimExpiresAt: string | null): boolean {
