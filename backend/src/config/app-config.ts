@@ -15,6 +15,12 @@ export interface AppConfig {
   sloP95LatencyMs: number;
   sloWindowDays: number;
   healthDbTimeoutMs: number;
+  pushNotificationsJobEnabled: boolean;
+  pushNotificationsIntervalSeconds: number;
+  pushNotificationsBatchSize: number;
+  pushNotificationsWebhookUrl: string | null;
+  pushNotificationsWebhookToken: string | null;
+  pushNotificationsWebhookTimeoutMs: number;
   openTextEditorUserIds: string[];
   trainingContentEditorUserIds: string[];
 }
@@ -60,6 +66,26 @@ export function getAppConfig(): AppConfig {
   if (!Number.isFinite(healthDbTimeoutMs) || healthDbTimeoutMs < 100 || healthDbTimeoutMs > 15_000) {
     throw new Error("HEALTH_DB_TIMEOUT_MS must be in range 100..15000");
   }
+  const pushNotificationsIntervalSeconds = Number(process.env.PUSH_NOTIFICATIONS_INTERVAL_SECONDS ?? "30");
+  if (
+    !Number.isFinite(pushNotificationsIntervalSeconds) ||
+    pushNotificationsIntervalSeconds < 5 ||
+    pushNotificationsIntervalSeconds > 3600
+  ) {
+    throw new Error("PUSH_NOTIFICATIONS_INTERVAL_SECONDS must be in range 5..3600");
+  }
+  const pushNotificationsBatchSize = Number(process.env.PUSH_NOTIFICATIONS_BATCH_SIZE ?? "100");
+  if (!Number.isFinite(pushNotificationsBatchSize) || pushNotificationsBatchSize < 1 || pushNotificationsBatchSize > 500) {
+    throw new Error("PUSH_NOTIFICATIONS_BATCH_SIZE must be in range 1..500");
+  }
+  const pushNotificationsWebhookTimeoutMs = Number(process.env.PUSH_NOTIFICATIONS_WEBHOOK_TIMEOUT_MS ?? "2500");
+  if (
+    !Number.isFinite(pushNotificationsWebhookTimeoutMs) ||
+    pushNotificationsWebhookTimeoutMs < 100 ||
+    pushNotificationsWebhookTimeoutMs > 15000
+  ) {
+    throw new Error("PUSH_NOTIFICATIONS_WEBHOOK_TIMEOUT_MS must be in range 100..15000");
+  }
 
   const databaseUrl = process.env.DATABASE_URL;
   const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET;
@@ -80,6 +106,22 @@ export function getAppConfig(): AppConfig {
   }
   if (metricsEnabled && nodeEnv === "production" && !metricsAuthToken) {
     throw new Error("METRICS_AUTH_TOKEN is required in production when metrics are enabled");
+  }
+  const pushNotificationsWebhookUrlRaw = process.env.PUSH_NOTIFICATIONS_WEBHOOK_URL?.trim() ?? "";
+  let pushNotificationsWebhookUrl: string | null = null;
+  if (pushNotificationsWebhookUrlRaw.length > 0) {
+    try {
+      const parsed = new URL(pushNotificationsWebhookUrlRaw);
+      pushNotificationsWebhookUrl = parsed.toString();
+    } catch {
+      throw new Error("PUSH_NOTIFICATIONS_WEBHOOK_URL must be a valid URL");
+    }
+  }
+  const pushNotificationsWebhookTokenRaw = process.env.PUSH_NOTIFICATIONS_WEBHOOK_TOKEN?.trim() ?? "";
+  const pushNotificationsWebhookToken =
+    pushNotificationsWebhookTokenRaw.length > 0 ? pushNotificationsWebhookTokenRaw : null;
+  if (pushNotificationsWebhookToken && pushNotificationsWebhookToken.length < 16) {
+    throw new Error("PUSH_NOTIFICATIONS_WEBHOOK_TOKEN must be at least 16 characters when set");
   }
   const openTextEditorUserIds = (process.env.OPEN_TEXT_EDITOR_USER_IDS ?? "")
     .split(",")
@@ -117,6 +159,12 @@ export function getAppConfig(): AppConfig {
     sloP95LatencyMs,
     sloWindowDays,
     healthDbTimeoutMs,
+    pushNotificationsJobEnabled: (process.env.PUSH_NOTIFICATIONS_JOB_ENABLED ?? "true").toLowerCase() !== "false",
+    pushNotificationsIntervalSeconds,
+    pushNotificationsBatchSize,
+    pushNotificationsWebhookUrl,
+    pushNotificationsWebhookToken,
+    pushNotificationsWebhookTimeoutMs,
     openTextEditorUserIds,
     trainingContentEditorUserIds
   };

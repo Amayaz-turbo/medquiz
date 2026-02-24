@@ -52,6 +52,9 @@ describe("Critical integration flows", () => {
   let app: NestFastifyApplication;
   let db: DatabaseService;
   let duelsService: { expireDueTurns: (limit?: number) => Promise<{ processed: number }> };
+  let notificationPushDispatchService: {
+    dispatchPending: (limit?: number) => Promise<{ processed: number; sent: number; failed: number }>;
+  };
   let isolatedDb: IsolatedTestDatabase;
 
   beforeAll(async () => {
@@ -72,11 +75,20 @@ describe("Critical integration flows", () => {
     process.env.SLO_P95_LATENCY_MS = "300";
     process.env.SLO_WINDOW_DAYS = "30";
     process.env.HEALTH_DB_TIMEOUT_MS = "1500";
+    process.env.PUSH_NOTIFICATIONS_JOB_ENABLED = "false";
+    process.env.PUSH_NOTIFICATIONS_INTERVAL_SECONDS = "30";
+    process.env.PUSH_NOTIFICATIONS_BATCH_SIZE = "100";
+    process.env.PUSH_NOTIFICATIONS_WEBHOOK_URL = "";
+    process.env.PUSH_NOTIFICATIONS_WEBHOOK_TOKEN = "";
+    process.env.PUSH_NOTIFICATIONS_WEBHOOK_TIMEOUT_MS = "2500";
     process.env.OPEN_TEXT_EDITOR_USER_IDS = "";
     process.env.TRAINING_CONTENT_EDITOR_USER_IDS = "";
 
     const { AppModule } = await import("../src/app.module");
     const { DuelsService } = await import("../src/duels/duels.service");
+    const { NotificationPushDispatchService } = await import(
+      "../src/notifications/notification-push-dispatch.service"
+    );
 
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule]
@@ -99,6 +111,7 @@ describe("Critical integration flows", () => {
 
     db = app.get(DatabaseService);
     duelsService = app.get(DuelsService);
+    notificationPushDispatchService = app.get(NotificationPushDispatchService);
 
     await seedPublishedSingleChoiceQuestions(isolatedDb.databaseUrl);
   });
@@ -549,6 +562,58 @@ describe("Critical integration flows", () => {
       .post(`/v1/notifications/${n2}/read`)
       .set("Authorization", `Bearer ${otherUser.accessToken}`)
       .expect(404);
+  });
+
+  it("dispatches pending notifications and updates status based on push token availability", async () => {
+    const tokenUser = await registerUser("Notif Dispatch Token User");
+    const noTokenUser = await registerUser("Notif Dispatch No Token User");
+    const pushToken = `dispatch-token-${randomUUID()}-aaaaaaaaaaaaaaaaaaaa`;
+
+    await request(app.getHttpServer())
+      .put("/v1/me/push-token")
+      .set("Authorization", `Bearer ${tokenUser.accessToken}`)
+      .send({
+        platform: "ios",
+        pushToken
+      })
+      .expect(200);
+
+    const sentNotification1 = randomUUID();
+    const sentNotification2 = randomUUID();
+    const failedNotification = randomUUID();
+
+    await db.query(
+      `
+        INSERT INTO notifications (id, user_id, type, payload, status, created_at)
+        VALUES
+          ($1, $2, 'duel_turn', '{"duelId":"dispatch-1"}'::jsonb, 'pending', '2000-01-01T00:00:01.000Z'),
+          ($3, $2, 'duel_finished', '{"duelId":"dispatch-2"}'::jsonb, 'pending', '2000-01-01T00:00:02.000Z'),
+          ($4, $5, 'review_reminder', '{"submissionId":"dispatch-3"}'::jsonb, 'pending', '2000-01-01T00:00:03.000Z')
+      `,
+      [sentNotification1, tokenUser.userId, sentNotification2, failedNotification, noTokenUser.userId]
+    );
+
+    const dispatch = await notificationPushDispatchService.dispatchPending(3);
+    expect(dispatch.processed).toBe(3);
+    expect(dispatch.sent).toBe(2);
+    expect(dispatch.failed).toBe(1);
+
+    const rows = await db.query<{ id: string; status: string; sent_at: string | null }>(
+      `
+        SELECT id, status, sent_at
+        FROM notifications
+        WHERE id = ANY($1::uuid[])
+      `,
+      [[sentNotification1, sentNotification2, failedNotification]]
+    );
+
+    const byId = new Map(rows.rows.map((row) => [row.id, row]));
+    expect(byId.get(sentNotification1)?.status).toBe("sent");
+    expect(byId.get(sentNotification2)?.status).toBe("sent");
+    expect(byId.get(failedNotification)?.status).toBe("failed");
+    expect(byId.get(sentNotification1)?.sent_at).toBeTruthy();
+    expect(byId.get(sentNotification2)?.sent_at).toBeTruthy();
+    expect(byId.get(failedNotification)?.sent_at).toBeNull();
   });
 
   it("returns current subscription and creates checkout payloads", async () => {

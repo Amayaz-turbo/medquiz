@@ -106,7 +106,9 @@ npm run start:dev
 ```
 
 Server will run on `PORT` (default `8080`), base prefix `/v1`.
-The internal duel timeout worker is enabled by default (`DUEL_EXPIRATION_JOB_ENABLED=true`).
+Background workers enabled by default:
+- duel turn expiration worker (`DUEL_EXPIRATION_JOB_ENABLED=true`)
+- push notifications dispatch worker (`PUSH_NOTIFICATIONS_JOB_ENABLED=true`)
 
 ## Observability / SLO
 
@@ -136,6 +138,7 @@ The internal duel timeout worker is enabled by default (`DUEL_EXPIRATION_JOB_ENA
 
 ## Important scope notes
 
-- Duel timeout worker (`expire_duel_turns`) is not yet wired as cron/worker in this checkpoint.
+- Duel timeout worker (`expire_duel_turns`) is wired and configurable via env.
+- Push notifications dispatch worker is wired; it processes pending rows in `notifications` and sends to `user_push_tokens`.
 - Open-text training answers are enabled with normalized exact-match scoring.
 - OAuth Google/Apple endpoints from API spec are not yet implemented in this checkpoint.
