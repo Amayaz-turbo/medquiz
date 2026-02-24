@@ -1,48 +1,40 @@
-import { Controller, Get, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Patch, UseGuards } from "@nestjs/common";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
-import { DatabaseService } from "../database/database.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { AuthenticatedUser } from "../auth/interfaces/authenticated-user.interface";
+import { MeService } from "./me.service";
+import { UpdateProfileDto } from "./dto/update-profile.dto";
+import { UpdateProfileCustomizationDto } from "./dto/update-profile-customization.dto";
 
 @Controller("me")
 @UseGuards(JwtAuthGuard)
 export class MeController {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(private readonly meService: MeService) {}
 
   @Get()
   async getMe(@CurrentUser() user: AuthenticatedUser) {
-    const profileResult = await this.db.query<{
-      id: string;
-      email: string;
-      display_name: string;
-      study_track: string | null;
-      year_label: string | null;
-    }>(
-      `
-        SELECT
-          u.id,
-          u.email,
-          u.display_name,
-          up.study_track,
-          up.year_label
-        FROM users u
-        LEFT JOIN user_profiles up
-          ON up.user_id = u.id
-        WHERE u.id = $1
-        LIMIT 1
-      `,
-      [user.userId]
-    );
-
-    const me = profileResult.rows[0];
+    const me = await this.meService.getMe(user.userId, user.email);
     return {
-      data: {
-        id: me?.id ?? user.userId,
-        email: me?.email ?? user.email,
-        displayName: me?.display_name ?? "",
-        studyTrack: me?.study_track ?? null,
-        yearLabel: me?.year_label ?? null
-      }
+      data: me
+    };
+  }
+
+  @Patch("profile")
+  async updateProfile(@CurrentUser() user: AuthenticatedUser, @Body() dto: UpdateProfileDto) {
+    const me = await this.meService.updateProfile(user.userId, dto, user.email);
+    return {
+      data: me
+    };
+  }
+
+  @Patch("profile/customization")
+  async updateProfileCustomization(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateProfileCustomizationDto
+  ) {
+    const me = await this.meService.updateProfileCustomization(user.userId, dto, user.email);
+    return {
+      data: me
     };
   }
 }

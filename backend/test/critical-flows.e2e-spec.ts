@@ -181,6 +181,75 @@ describe("Critical integration flows", () => {
     expect(meResponse.body.data.email).toBe(registered.email);
   });
 
+  it("updates me profile and customization with strict validation", async () => {
+    const user = await registerUser("Me Profile Runner");
+
+    const meBefore = await request(app.getHttpServer())
+      .get("/v1/me")
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .expect(200);
+    expect(meBefore.body.data.displayName).toBe("Me Profile Runner");
+    expect(meBefore.body.data.subscription.plan).toBe("free");
+    expect(meBefore.body.data.subscription.status).toBe("active");
+
+    const emptyProfilePatch = await request(app.getHttpServer())
+      .patch("/v1/me/profile")
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .send({})
+      .expect(400);
+    expect(emptyProfilePatch.body.error.code).toBe("VALIDATION_ERROR");
+
+    const profilePatched = await request(app.getHttpServer())
+      .patch("/v1/me/profile")
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .send({
+        displayName: "  Me Runner Prime  ",
+        studyTrack: "  PASS/LAS  ",
+        yearLabel: "  DFGSM2  ",
+        uxTone: "  positive  "
+      })
+      .expect(200);
+    expect(profilePatched.body.data.displayName).toBe("Me Runner Prime");
+    expect(profilePatched.body.data.studyTrack).toBe("PASS/LAS");
+    expect(profilePatched.body.data.yearLabel).toBe("DFGSM2");
+    expect(profilePatched.body.data.uxTone).toBe("positive");
+
+    const customPatched = await request(app.getHttpServer())
+      .patch("/v1/me/profile/customization")
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .send({
+        publicAlias: "  QuizMaster  ",
+        profileColor: "  #1E90FF  ",
+        bio: "  Revision every day  ",
+        visibility: "public"
+      })
+      .expect(200);
+    expect(customPatched.body.data.publicAlias).toBe("QuizMaster");
+    expect(customPatched.body.data.profileColor).toBe("#1E90FF");
+    expect(customPatched.body.data.bio).toBe("Revision every day");
+    expect(customPatched.body.data.visibility).toBe("public");
+
+    const clearCustomFields = await request(app.getHttpServer())
+      .patch("/v1/me/profile/customization")
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .send({
+        publicAlias: "   ",
+        bio: "   "
+      })
+      .expect(200);
+    expect(clearCustomFields.body.data.publicAlias).toBeNull();
+    expect(clearCustomFields.body.data.bio).toBeNull();
+
+    const invalidName = await request(app.getHttpServer())
+      .patch("/v1/me/profile")
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .send({
+        displayName: "  "
+      })
+      .expect(400);
+    expect(invalidName.body.error.code).toBe("VALIDATION_ERROR");
+  });
+
   it("exposes avatar progression, inventory, equipment and specialty stage gate", async () => {
     const player = await registerUser("Avatar Player");
 

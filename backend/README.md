@@ -27,6 +27,8 @@ Public:
 
 Protected:
 - `GET /me`
+- `PATCH /me/profile`
+- `PATCH /me/profile/customization`
 - `GET /avatar/stages`
 - `GET /avatar/specialties`
 - `GET /me/avatar`
