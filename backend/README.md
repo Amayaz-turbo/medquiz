@@ -29,6 +29,7 @@ Protected:
 - `GET /me`
 - `PATCH /me/profile`
 - `PATCH /me/profile/customization`
+- `PUT /me/push-token`
 - `GET /ads/eligibility`
 - `POST /ads/impressions`
 - `POST /ads/reward-grants`

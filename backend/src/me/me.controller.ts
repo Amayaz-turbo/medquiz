@@ -1,10 +1,11 @@
-import { Body, Controller, Get, Patch, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Patch, Put, UseGuards } from "@nestjs/common";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { AuthenticatedUser } from "../auth/interfaces/authenticated-user.interface";
 import { MeService } from "./me.service";
 import { UpdateProfileDto } from "./dto/update-profile.dto";
 import { UpdateProfileCustomizationDto } from "./dto/update-profile-customization.dto";
+import { RegisterPushTokenDto } from "./dto/register-push-token.dto";
 
 @Controller("me")
 @UseGuards(JwtAuthGuard)
@@ -35,6 +36,14 @@ export class MeController {
     const me = await this.meService.updateProfileCustomization(user.userId, dto, user.email);
     return {
       data: me
+    };
+  }
+
+  @Put("push-token")
+  async registerPushToken(@CurrentUser() user: AuthenticatedUser, @Body() dto: RegisterPushTokenDto) {
+    const result = await this.meService.registerPushToken(user.userId, dto);
+    return {
+      data: result
     };
   }
 }

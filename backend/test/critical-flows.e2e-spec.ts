@@ -250,6 +250,84 @@ describe("Critical integration flows", () => {
     expect(invalidName.body.error.code).toBe("VALIDATION_ERROR");
   });
 
+  it("registers push token with idempotency and ownership transfer", async () => {
+    const user1 = await registerUser("Push User 1");
+    const user2 = await registerUser("Push User 2");
+    const tokenA = `push-token-${randomUUID()}-aaaaaaaaaaaaaaaaaaaa`;
+    const tokenB = `push-token-${randomUUID()}-bbbbbbbbbbbbbbbbbbbb`;
+
+    const firstRegister = await request(app.getHttpServer())
+      .put("/v1/me/push-token")
+      .set("Authorization", `Bearer ${user1.accessToken}`)
+      .send({
+        platform: "ios",
+        pushToken: tokenA
+      })
+      .expect(200);
+    expect(firstRegister.body.data.platform).toBe("ios");
+    expect(firstRegister.body.data.pushToken).toBe(tokenA);
+
+    const sameRegister = await request(app.getHttpServer())
+      .put("/v1/me/push-token")
+      .set("Authorization", `Bearer ${user1.accessToken}`)
+      .send({
+        platform: "ios",
+        pushToken: tokenA
+      })
+      .expect(200);
+    expect(sameRegister.body.data.id).toBe(firstRegister.body.data.id);
+
+    await request(app.getHttpServer())
+      .put("/v1/me/push-token")
+      .set("Authorization", `Bearer ${user1.accessToken}`)
+      .send({
+        platform: "ios",
+        pushToken: tokenB
+      })
+      .expect(200);
+
+    const user1IosCount = await db.query<{ c: string }>(
+      `
+        SELECT COUNT(*)::text AS c
+        FROM user_push_tokens
+        WHERE user_id = $1
+          AND platform = 'ios'
+      `,
+      [user1.userId]
+    );
+    expect(Number(user1IosCount.rows[0]?.c ?? 0)).toBe(1);
+
+    await request(app.getHttpServer())
+      .put("/v1/me/push-token")
+      .set("Authorization", `Bearer ${user2.accessToken}`)
+      .send({
+        platform: "ios",
+        pushToken: tokenB
+      })
+      .expect(200);
+
+    const ownerOfTokenB = await db.query<{ user_id: string }>(
+      `
+        SELECT user_id
+        FROM user_push_tokens
+        WHERE platform = 'ios'
+          AND push_token = $1
+        LIMIT 1
+      `,
+      [tokenB]
+    );
+    expect(ownerOfTokenB.rows[0]?.user_id).toBe(user2.userId);
+
+    await request(app.getHttpServer())
+      .put("/v1/me/push-token")
+      .set("Authorization", `Bearer ${user1.accessToken}`)
+      .send({
+        platform: "web",
+        pushToken: "short"
+      })
+      .expect(400);
+  });
+
   it("handles rewarded ads flow with free-window and avatar cosmetic grants", async () => {
     const user = await registerUser("Ads Reward Runner");
 

@@ -3,6 +3,7 @@ import { PoolClient } from "pg";
 import { DatabaseService } from "../database/database.service";
 import { UpdateProfileCustomizationDto } from "./dto/update-profile-customization.dto";
 import { UpdateProfileDto } from "./dto/update-profile.dto";
+import { RegisterPushTokenDto } from "./dto/register-push-token.dto";
 
 interface MeRow {
   id: string;
@@ -202,6 +203,52 @@ export class MeService {
     return this.getMe(userId, fallbackEmail);
   }
 
+  async registerPushToken(userId: string, dto: RegisterPushTokenDto) {
+    const pushToken = this.normalizePushToken(dto.pushToken);
+
+    return this.db.withTransaction(async (client) => {
+      await client.query(
+        `
+          DELETE FROM user_push_tokens
+          WHERE user_id = $1
+            AND platform = $2
+            AND push_token <> $3
+        `,
+        [userId, dto.platform, pushToken]
+      );
+
+      const saved = await client.query<{
+        id: string;
+        platform: "ios" | "android" | "web";
+        push_token: string;
+        last_seen_at: string;
+      }>(
+        `
+          INSERT INTO user_push_tokens
+            (id, user_id, platform, push_token, last_seen_at)
+          VALUES
+            (gen_random_uuid(), $1, $2, $3, NOW())
+          ON CONFLICT (platform, push_token)
+          DO UPDATE
+          SET
+            user_id = EXCLUDED.user_id,
+            last_seen_at = NOW(),
+            updated_at = NOW()
+          RETURNING id, platform, push_token, last_seen_at
+        `,
+        [userId, dto.platform, pushToken]
+      );
+
+      const row = saved.rows[0];
+      return {
+        id: row.id,
+        platform: row.platform,
+        pushToken: row.push_token,
+        lastSeenAt: row.last_seen_at
+      };
+    });
+  }
+
   private async ensureProfileRow(userId: string, client?: PoolClient): Promise<void> {
     const runner = client ?? this.db;
     await runner.query(
@@ -268,6 +315,17 @@ export class MeService {
       throw new BadRequestException({
         code: "VALIDATION_ERROR",
         message: `${field} must be at most ${maxLength} characters`
+      });
+    }
+    return normalized;
+  }
+
+  private normalizePushToken(value: string): string {
+    const normalized = value.trim();
+    if (normalized.length < 20 || normalized.length > 512) {
+      throw new BadRequestException({
+        code: "VALIDATION_ERROR",
+        message: "pushToken must be between 20 and 512 characters"
       });
     }
     return normalized;
