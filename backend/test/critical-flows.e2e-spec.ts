@@ -473,6 +473,81 @@ describe("Critical integration flows", () => {
       .expect(404);
   });
 
+  it("returns current subscription and creates checkout payloads", async () => {
+    const user = await registerUser("Billing User");
+
+    const before = await request(app.getHttpServer())
+      .get("/v1/billing/subscription")
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .expect(200);
+    expect(before.body.data.plan).toBe("free");
+    expect(before.body.data.status).toBe("active");
+    expect(before.body.data.provider).toBe("none");
+
+    const freeCheckout = await request(app.getHttpServer())
+      .post("/v1/billing/checkout-session")
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .send({
+        provider: "stripe",
+        plan: "free"
+      })
+      .expect(422);
+    expect(freeCheckout.body.error.code).toBe("BILLING_CHECKOUT_PLAN_UNSUPPORTED");
+
+    const stripeCheckout = await request(app.getHttpServer())
+      .post("/v1/billing/checkout-session")
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .send({
+        provider: "stripe",
+        plan: "premium"
+      })
+      .expect(201);
+    expect(stripeCheckout.body.data.provider).toBe("stripe");
+    expect(typeof stripeCheckout.body.data.checkoutUrl).toBe("string");
+    expect(stripeCheckout.body.data.checkoutUrl).toContain("https://checkout.medquiz.local/stripe/");
+    expect(stripeCheckout.body.data.clientSecret).toBeNull();
+
+    const appleCheckout = await request(app.getHttpServer())
+      .post("/v1/billing/checkout-session")
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .send({
+        provider: "apple",
+        plan: "premium"
+      })
+      .expect(201);
+    expect(appleCheckout.body.data.provider).toBe("apple");
+    expect(appleCheckout.body.data.checkoutUrl).toBeNull();
+    expect(appleCheckout.body.data.clientSecret).toContain("mock_apple_");
+
+    await db.query(
+      `
+        INSERT INTO subscriptions
+          (id, user_id, plan, status, provider, external_ref, started_at)
+        VALUES
+          ($1, $2, 'premium', 'active', 'stripe', $3, NOW())
+      `,
+      [randomUUID(), user.userId, `sub_test_${randomUUID()}`]
+    );
+
+    const after = await request(app.getHttpServer())
+      .get("/v1/billing/subscription")
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .expect(200);
+    expect(after.body.data.plan).toBe("premium");
+    expect(after.body.data.status).toBe("active");
+    expect(after.body.data.provider).toBe("stripe");
+
+    const alreadyActiveCheckout = await request(app.getHttpServer())
+      .post("/v1/billing/checkout-session")
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .send({
+        provider: "google",
+        plan: "premium"
+      })
+      .expect(422);
+    expect(alreadyActiveCheckout.body.error.code).toBe("SUBSCRIPTION_ALREADY_ACTIVE");
+  });
+
   it("exposes avatar progression, inventory, equipment and specialty stage gate", async () => {
     const player = await registerUser("Avatar Player");
 

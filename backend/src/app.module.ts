@@ -12,6 +12,7 @@ import { ObservabilityModule } from "./observability/observability.module";
 import { AvatarModule } from "./avatar/avatar.module";
 import { AdsModule } from "./ads/ads.module";
 import { NotificationsModule } from "./notifications/notifications.module";
+import { BillingModule } from "./billing/billing.module";
 
 const cfg = env();
 
@@ -29,6 +30,7 @@ const cfg = env();
     MeModule,
     AdsModule,
     NotificationsModule,
+    BillingModule,
     AvatarModule,
     TrainingsModule,
     DuelsModule

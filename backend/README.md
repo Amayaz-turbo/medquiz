@@ -34,6 +34,8 @@ Protected:
 - `POST /ads/reward-grants`
 - `GET /notifications`
 - `POST /notifications/:notificationId/read`
+- `GET /billing/subscription`
+- `POST /billing/checkout-session`
 - `GET /avatar/stages`
 - `GET /avatar/specialties`
 - `GET /me/avatar`
