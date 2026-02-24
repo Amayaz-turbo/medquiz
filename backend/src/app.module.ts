@@ -9,6 +9,7 @@ import { TrainingsModule } from "./trainings/trainings.module";
 import { DuelsModule } from "./duels/duels.module";
 import { MeModule } from "./me/me.module";
 import { ObservabilityModule } from "./observability/observability.module";
+import { AvatarModule } from "./avatar/avatar.module";
 
 const cfg = env();
 
@@ -24,6 +25,7 @@ const cfg = env();
     HealthModule,
     AuthModule,
     MeModule,
+    AvatarModule,
     TrainingsModule,
     DuelsModule
   ]

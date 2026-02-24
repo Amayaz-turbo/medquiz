@@ -27,6 +27,12 @@ Public:
 
 Protected:
 - `GET /me`
+- `GET /avatar/stages`
+- `GET /avatar/specialties`
+- `GET /me/avatar`
+- `GET /me/avatar/inventory`
+- `POST /me/avatar/equipment`
+- `POST /me/avatar/specialty`
 - `GET /trainings/dashboard`
 - `GET /trainings/state/subjects`
 - `GET /trainings/state/subjects/:subjectId/chapters`

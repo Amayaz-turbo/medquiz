@@ -181,6 +181,90 @@ describe("Critical integration flows", () => {
     expect(meResponse.body.data.email).toBe(registered.email);
   });
 
+  it("exposes avatar progression, inventory, equipment and specialty stage gate", async () => {
+    const player = await registerUser("Avatar Player");
+
+    const stages = await request(app.getHttpServer())
+      .get("/v1/avatar/stages")
+      .set("Authorization", `Bearer ${player.accessToken}`)
+      .expect(200);
+    expect((stages.body.data.items as unknown[]).length).toBeGreaterThan(0);
+
+    const specialties = await request(app.getHttpServer())
+      .get("/v1/avatar/specialties")
+      .set("Authorization", `Bearer ${player.accessToken}`)
+      .expect(200);
+    expect((specialties.body.data.items as unknown[]).length).toBeGreaterThan(0);
+
+    const avatarBefore = await request(app.getHttpServer())
+      .get("/v1/me/avatar")
+      .set("Authorization", `Bearer ${player.accessToken}`)
+      .expect(200);
+    expect(avatarBefore.body.data.currentStage.code).toBe("pass_las");
+    expect(avatarBefore.body.data.inventorySummary.totalOwned).toBeGreaterThan(0);
+
+    const inventory = await request(app.getHttpServer())
+      .get("/v1/me/avatar/inventory")
+      .set("Authorization", `Bearer ${player.accessToken}`)
+      .expect(200);
+    const inventoryItems = inventory.body.data.items as Array<{
+      id: string;
+      itemType: "object" | "pose" | "outfit" | "background";
+    }>;
+    expect(inventoryItems.length).toBeGreaterThan(0);
+    const firstItem = inventoryItems[0];
+
+    await request(app.getHttpServer())
+      .post("/v1/me/avatar/equipment")
+      .set("Authorization", `Bearer ${player.accessToken}`)
+      .send({
+        itemType: firstItem.itemType,
+        itemId: firstItem.id
+      })
+      .expect(201);
+
+    const avatarAfterEquip = await request(app.getHttpServer())
+      .get("/v1/me/avatar")
+      .set("Authorization", `Bearer ${player.accessToken}`)
+      .expect(200);
+    expect(avatarAfterEquip.body.data.equipment[firstItem.itemType].id).toBe(firstItem.id);
+
+    const specialtyId = (specialties.body.data.items as Array<{ id: string }>)[0].id;
+    const specialtyLocked = await request(app.getHttpServer())
+      .post("/v1/me/avatar/specialty")
+      .set("Authorization", `Bearer ${player.accessToken}`)
+      .send({ specialtyId })
+      .expect(422);
+    expect(specialtyLocked.body.error.code).toBe("AVATAR_SPECIALTY_STAGE_LOCKED");
+
+    await db.query(
+      `
+        UPDATE user_avatar_progress
+        SET current_stage_id = (
+          SELECT id
+          FROM avatar_stages
+          WHERE code = 'interne'
+          LIMIT 1
+        )
+        WHERE user_id = $1
+      `,
+      [player.userId]
+    );
+
+    const specialtySet = await request(app.getHttpServer())
+      .post("/v1/me/avatar/specialty")
+      .set("Authorization", `Bearer ${player.accessToken}`)
+      .send({ specialtyId })
+      .expect(201);
+    expect(specialtySet.body.data.specialty.id).toBe(specialtyId);
+
+    const avatarAfterSpecialty = await request(app.getHttpServer())
+      .get("/v1/me/avatar")
+      .set("Authorization", `Bearer ${player.accessToken}`)
+      .expect(200);
+    expect(avatarAfterSpecialty.body.data.specialty.id).toBe(specialtyId);
+  });
+
   it("runs a training session and updates chapter progress state", async () => {
     const trainee = await registerUser("Training Player");
 
