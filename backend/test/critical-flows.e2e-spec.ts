@@ -250,6 +250,151 @@ describe("Critical integration flows", () => {
     expect(invalidName.body.error.code).toBe("VALIDATION_ERROR");
   });
 
+  it("handles rewarded ads flow with free-window and avatar cosmetic grants", async () => {
+    const user = await registerUser("Ads Reward Runner");
+
+    const subjectsState = await request(app.getHttpServer())
+      .get("/v1/trainings/state/subjects")
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .expect(200);
+    const subjectId = subjectsState.body.data.items[0].id as string;
+
+    const chaptersState = await request(app.getHttpServer())
+      .get(`/v1/trainings/state/subjects/${subjectId}/chapters`)
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .expect(200);
+    const chapterId = chaptersState.body.data.items[0].id as string;
+
+    const createdSession = await request(app.getHttpServer())
+      .post("/v1/trainings/sessions")
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .send({
+        mode: "learning",
+        stopRule: "fixed_custom",
+        targetQuestionCount: 1,
+        subjectIds: [subjectId],
+        chapterIds: [chapterId]
+      })
+      .expect(201);
+    const sessionId = createdSession.body.data.id as string;
+    expect(createdSession.body.data.isFirstSessionOfDay).toBe(true);
+
+    const listedQuestions = await request(app.getHttpServer())
+      .get(`/v1/trainings/sessions/${sessionId}/questions?limit=10`)
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .expect(200);
+    const firstQuestion = (listedQuestions.body.data.items as Array<{
+      id: string;
+      questionType: string;
+      choices: Array<{ id: string }>;
+    }>)[0];
+    expect(firstQuestion).toBeDefined();
+
+    const answerPayload: Record<string, unknown> =
+      firstQuestion.questionType === "open_text"
+        ? {
+            questionId: firstQuestion.id,
+            openTextAnswer: "ATP",
+            responseTimeMs: 520
+          }
+        : firstQuestion.questionType === "multi_choice"
+          ? {
+              questionId: firstQuestion.id,
+              selectedChoiceIds: [firstQuestion.choices[0].id],
+              responseTimeMs: 520
+            }
+          : {
+              questionId: firstQuestion.id,
+              selectedChoiceId: firstQuestion.choices[0].id,
+              responseTimeMs: 520
+            };
+
+    await request(app.getHttpServer())
+      .post(`/v1/trainings/sessions/${sessionId}/answers`)
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .send(answerPayload)
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post(`/v1/trainings/sessions/${sessionId}/complete`)
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .expect(201);
+
+    const rewardedEligibility = await request(app.getHttpServer())
+      .get(`/v1/ads/eligibility?placement=rewarded_end_first_session&sessionId=${sessionId}`)
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .expect(200);
+    expect(rewardedEligibility.body.data.eligible).toBe(true);
+
+    const interstitialEligibilityBefore = await request(app.getHttpServer())
+      .get("/v1/ads/eligibility?placement=quiz_start_interstitial")
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .expect(200);
+    expect(interstitialEligibilityBefore.body.data.eligible).toBe(true);
+
+    await request(app.getHttpServer())
+      .post("/v1/ads/impressions")
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .send({
+        placement: "rewarded_end_first_session",
+        sessionId,
+        network: "admob",
+        rewardGranted: true
+      })
+      .expect(201);
+
+    const freeWindowGrant = await request(app.getHttpServer())
+      .post("/v1/ads/reward-grants")
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .send({
+        placement: "rewarded_end_first_session",
+        grantType: "ad_free_window",
+        sessionId
+      })
+      .expect(201);
+    expect(freeWindowGrant.body.data.grantType).toBe("ad_free_window");
+    expect(freeWindowGrant.body.data.rewardWindowEndsAt).toBeTruthy();
+
+    const interstitialEligibilityAfter = await request(app.getHttpServer())
+      .get("/v1/ads/eligibility?placement=quiz_start_interstitial")
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .expect(200);
+    expect(interstitialEligibilityAfter.body.data.eligible).toBe(false);
+    expect(interstitialEligibilityAfter.body.data.reason).toBe("ad_free_window_active");
+    expect(interstitialEligibilityAfter.body.data.rewardWindowEndsAt).toBeTruthy();
+
+    await request(app.getHttpServer())
+      .post("/v1/ads/impressions")
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .send({
+        placement: "rewarded_avatar_cosmetic",
+        network: "admob",
+        rewardGranted: true
+      })
+      .expect(201);
+
+    const cosmeticGrant = await request(app.getHttpServer())
+      .post("/v1/ads/reward-grants")
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .send({
+        placement: "rewarded_avatar_cosmetic",
+        grantType: "avatar_cosmetic"
+      })
+      .expect(201);
+    expect(cosmeticGrant.body.data.grantType).toBe("avatar_cosmetic");
+    expect(cosmeticGrant.body.data.avatarItem.id).toBeTruthy();
+
+    const inventory = await request(app.getHttpServer())
+      .get("/v1/me/avatar/inventory")
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .expect(200);
+    const grantedItem = (inventory.body.data.items as Array<{ id: string; acquiredSource: string }>).find(
+      (item) => item.id === (cosmeticGrant.body.data.avatarItem.id as string)
+    );
+    expect(grantedItem).toBeDefined();
+    expect(grantedItem?.acquiredSource).toBe("rewarded");
+  });
+
   it("exposes avatar progression, inventory, equipment and specialty stage gate", async () => {
     const player = await registerUser("Avatar Player");
 

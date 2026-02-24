@@ -10,6 +10,7 @@ import { DuelsModule } from "./duels/duels.module";
 import { MeModule } from "./me/me.module";
 import { ObservabilityModule } from "./observability/observability.module";
 import { AvatarModule } from "./avatar/avatar.module";
+import { AdsModule } from "./ads/ads.module";
 
 const cfg = env();
 
@@ -25,6 +26,7 @@ const cfg = env();
     HealthModule,
     AuthModule,
     MeModule,
+    AdsModule,
     AvatarModule,
     TrainingsModule,
     DuelsModule

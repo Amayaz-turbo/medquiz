@@ -29,6 +29,9 @@ Protected:
 - `GET /me`
 - `PATCH /me/profile`
 - `PATCH /me/profile/customization`
+- `GET /ads/eligibility`
+- `POST /ads/impressions`
+- `POST /ads/reward-grants`
 - `GET /avatar/stages`
 - `GET /avatar/specialties`
 - `GET /me/avatar`
