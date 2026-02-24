@@ -1627,6 +1627,85 @@ export class TrainingsService {
     });
   }
 
+  async claimNextQuestionSubmission(userId: string) {
+    if (!this.canAccessAllSubmissions(userId)) {
+      throw new ForbiddenException({
+        code: "TRAINING_SUBMISSION_REVIEW_FORBIDDEN",
+        message: "You are not allowed to claim submissions"
+      });
+    }
+
+    return this.db.withTransaction(async (client) => {
+      const candidateResult = await client.query<{
+        id: string;
+        claimed_by_user_id: string | null;
+        claim_expires_at: string | null;
+      }>(
+        `
+          SELECT
+            qs.id,
+            qs.claimed_by_user_id,
+            qs.claim_expires_at
+          FROM question_submissions qs
+          WHERE qs.status = 'pending'
+            AND (
+              qs.claim_expires_at IS NULL
+              OR qs.claim_expires_at <= NOW()
+              OR qs.claimed_by_user_id = $1
+            )
+          ORDER BY
+            CASE
+              WHEN qs.claimed_by_user_id = $1
+                   AND qs.claim_expires_at IS NOT NULL
+                   AND qs.claim_expires_at > NOW()
+              THEN 0
+              ELSE 1
+            END ASC,
+            qs.created_at ASC,
+            qs.id ASC
+          LIMIT 1
+          FOR UPDATE SKIP LOCKED
+        `,
+        [userId]
+      );
+      const candidate = candidateResult.rows[0];
+      if (!candidate) {
+        throw new NotFoundException({
+          code: "REVIEW_QUEUE_EMPTY",
+          message: "No pending submission available to claim"
+        });
+      }
+
+      const updated = await client.query<{
+        claimed_by_user_id: string;
+        claimed_at: string;
+        claim_expires_at: string;
+      }>(
+        `
+          UPDATE question_submissions
+          SET claimed_by_user_id = $2,
+              claimed_at = NOW(),
+              claim_expires_at = NOW() + make_interval(mins => $3)
+          WHERE id = $1
+          RETURNING claimed_by_user_id, claimed_at, claim_expires_at
+        `,
+        [candidate.id, userId, this.submissionClaimTtlMinutes]
+      );
+      const claim = updated.rows[0];
+
+      return {
+        submissionId: candidate.id,
+        claim: {
+          claimedByUserId: claim.claimed_by_user_id,
+          claimedAt: claim.claimed_at,
+          claimExpiresAt: claim.claim_expires_at,
+          isActive: true,
+          ttlMinutes: this.submissionClaimTtlMinutes
+        }
+      };
+    });
+  }
+
   async releaseQuestionSubmissionClaim(userId: string, submissionId: string) {
     if (!this.canAccessAllSubmissions(userId)) {
       throw new ForbiddenException({

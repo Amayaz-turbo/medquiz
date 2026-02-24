@@ -1280,6 +1280,107 @@ describe("Critical integration flows", () => {
     expect(submissionAfter.body.data.claim.claimedByUserId).toBeNull();
   });
 
+  it("claims next pending submission while skipping active claims from others", async () => {
+    const proposer = await registerUser("Next Claim Proposer");
+    const reviewer1 = await registerUser("Next Claim Reviewer 1");
+    const reviewer2 = await registerUser("Next Claim Reviewer 2");
+
+    const chapterRow = await db.query<{ subject_id: string; chapter_id: string }>(
+      `
+        SELECT c.subject_id, c.id AS chapter_id
+        FROM chapters c
+        JOIN subjects s
+          ON s.id = c.subject_id
+        WHERE c.is_active = TRUE
+          AND s.is_active = TRUE
+        ORDER BY s.sort_order ASC, c.sort_order ASC
+        LIMIT 1
+      `
+    );
+    expect(chapterRow.rowCount).toBe(1);
+    const subjectId = chapterRow.rows[0].subject_id;
+    const chapterId = chapterRow.rows[0].chapter_id;
+
+    const first = await request(app.getHttpServer())
+      .post("/v1/trainings/submissions")
+      .set("Authorization", `Bearer ${proposer.accessToken}`)
+      .send({
+        subjectId,
+        chapterId,
+        questionType: "single_choice",
+        prompt: "Quel organe assure principalement la filtration glomérulaire ?",
+        explanation: "Le rein assure la filtration glomérulaire.",
+        difficulty: 2,
+        choices: [
+          { label: "Rein", isCorrect: true },
+          { label: "Foie", isCorrect: false },
+          { label: "Poumon", isCorrect: false },
+          { label: "Cœur", isCorrect: false }
+        ]
+      })
+      .expect(201);
+    const firstSubmissionId = first.body.data.id as string;
+
+    const second = await request(app.getHttpServer())
+      .post("/v1/trainings/submissions")
+      .set("Authorization", `Bearer ${proposer.accessToken}`)
+      .send({
+        subjectId,
+        chapterId,
+        questionType: "single_choice",
+        prompt: "Quel ion est majoritairement intracellulaire ?",
+        explanation: "Le potassium est l'ion majoritairement intracellulaire.",
+        difficulty: 2,
+        choices: [
+          { label: "Potassium", isCorrect: true },
+          { label: "Sodium", isCorrect: false },
+          { label: "Chlore", isCorrect: false },
+          { label: "Calcium", isCorrect: false }
+        ]
+      })
+      .expect(201);
+    const secondSubmissionId = second.body.data.id as string;
+
+    await db.query(
+      `
+        UPDATE question_submissions
+        SET created_at = NOW() - INTERVAL '200 days'
+        WHERE id = $1
+      `,
+      [firstSubmissionId]
+    );
+    await db.query(
+      `
+        UPDATE question_submissions
+        SET created_at = NOW() - INTERVAL '190 days'
+        WHERE id = $1
+      `,
+      [secondSubmissionId]
+    );
+
+    await request(app.getHttpServer())
+      .post(`/v1/trainings/admin/submissions/${firstSubmissionId}/claim`)
+      .set("Authorization", `Bearer ${reviewer1.accessToken}`)
+      .expect(201);
+
+    const claimedNextByReviewer2 = await request(app.getHttpServer())
+      .post("/v1/trainings/admin/submissions/claim-next")
+      .set("Authorization", `Bearer ${reviewer2.accessToken}`)
+      .expect(201);
+    expect(claimedNextByReviewer2.body.data.submissionId).toBe(secondSubmissionId);
+
+    await request(app.getHttpServer())
+      .post(`/v1/trainings/admin/submissions/${firstSubmissionId}/release-claim`)
+      .set("Authorization", `Bearer ${reviewer1.accessToken}`)
+      .expect(201);
+
+    const claimedNextAfterRelease = await request(app.getHttpServer())
+      .post("/v1/trainings/admin/submissions/claim-next")
+      .set("Authorization", `Bearer ${reviewer2.accessToken}`)
+      .expect(201);
+    expect(claimedNextAfterRelease.body.data.submissionId).toBe(secondSubmissionId);
+  });
+
   it("plays a full duel (5 rounds) to completion", async () => {
     const player1 = await registerUser("Duel Player 1");
     const player2 = await registerUser("Duel Player 2");

@@ -146,6 +146,12 @@ export class TrainingsController {
     return { data: result };
   }
 
+  @Post("admin/submissions/claim-next")
+  async claimNextQuestionSubmission(@CurrentUser() user: AuthenticatedUser) {
+    const result = await this.trainingsService.claimNextQuestionSubmission(user.userId);
+    return { data: result };
+  }
+
   @Post("admin/submissions/:submissionId/claim")
   async claimQuestionSubmission(
     @CurrentUser() user: AuthenticatedUser,
