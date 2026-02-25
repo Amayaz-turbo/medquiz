@@ -115,17 +115,19 @@ export class AuthRepository {
     client: PoolClient,
     params: { email: string; displayName: string; passwordHash: string }
   ): Promise<UserRow> {
-    const stageResult = await client.query<{ id: string }>(
-      `
-        SELECT id
-        FROM avatar_stages
-        WHERE code = 'pass_las'
-        LIMIT 1
-      `
-    );
-    const passLasStageId = stageResult.rows[0]?.id;
-    if (!passLasStageId) {
-      throw new Error("avatar stage pass_las is missing; run migrations/002_seed_avatar_stages.sql");
+    let passLasStageId: string | null = null;
+    try {
+      const stageResult = await client.query<{ id: string }>(
+        `
+          SELECT id
+          FROM avatar_stages
+          WHERE code = 'pass_las'
+          LIMIT 1
+        `
+      );
+      passLasStageId = stageResult.rows[0]?.id ?? null;
+    } catch {
+      passLasStageId = null;
     }
 
     const userResult = await client.query<UserRow>(
@@ -155,13 +157,19 @@ export class AuthRepository {
       [user.id]
     );
 
-    await client.query(
-      `
-        INSERT INTO user_avatar_progress (user_id, current_stage_id)
-        VALUES ($1, $2)
-      `,
-      [user.id, passLasStageId]
-    );
+    if (passLasStageId) {
+      try {
+        await client.query(
+          `
+            INSERT INTO user_avatar_progress (user_id, current_stage_id)
+            VALUES ($1, $2)
+          `,
+          [user.id, passLasStageId]
+        );
+      } catch {
+        // Keep auth registration resilient even if avatar progression tables are not fully seeded.
+      }
+    }
 
     return user;
   }
