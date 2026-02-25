@@ -3,13 +3,16 @@ import {
   Catch,
   ExceptionFilter,
   HttpException,
-  HttpStatus
+  HttpStatus,
+  Logger
 } from "@nestjs/common";
 import { FastifyReply, FastifyRequest } from "fastify";
 import { randomUUID } from "node:crypto";
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger(HttpExceptionFilter.name);
+
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<FastifyReply>();
@@ -47,6 +50,20 @@ export class HttpExceptionFilter implements ExceptionFilter {
           code = this.defaultCodeForStatus(statusCode);
         }
       }
+    } else if (exception instanceof Error) {
+      const hostName = (request.hostname ?? "").toLowerCase();
+      const isLocalHost =
+        hostName === "localhost" || hostName.startsWith("127.") || hostName === "::1" || hostName.endsWith(".local");
+      if (isLocalHost && exception.message) {
+        message = exception.message;
+        details = { name: exception.name };
+      }
+      this.logger.error(
+        `Unhandled exception on ${request.method} ${request.url}: ${exception.message}`,
+        exception.stack
+      );
+    } else {
+      this.logger.error(`Unhandled non-error exception on ${request.method} ${request.url}: ${String(exception)}`);
     }
 
     response.status(statusCode).send({

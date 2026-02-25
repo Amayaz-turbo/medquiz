@@ -7,6 +7,7 @@ import {
 import { JwtService } from "@nestjs/jwt";
 import * as argon2 from "argon2";
 import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
+import { isIP } from "node:net";
 import { env } from "../config/env";
 import { LoginDto } from "./dto/login.dto";
 import { RefreshDto } from "./dto/refresh.dto";
@@ -256,7 +257,7 @@ export class AuthService {
       tokenHash: this.hashToken(refreshToken),
       expiresAt: new Date(Date.now() + this.cfg.refreshTokenTtlDays * 24 * 60 * 60 * 1000),
       userAgent: params.userAgent,
-      ipAddress: params.ipAddress
+      ipAddress: this.normalizeIpAddress(params.ipAddress)
     });
 
     return {
@@ -284,5 +285,12 @@ export class AuthService {
     }
     const maybe = error as { code?: unknown };
     return maybe.code === "23505";
+  }
+
+  private normalizeIpAddress(value: string | null): string | null {
+    if (!value) {
+      return null;
+    }
+    return isIP(value) > 0 ? value : null;
   }
 }
