@@ -6,20 +6,21 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
   <title>MedQuiz - Prototype Entraînement</title>
   <style>
     :root {
-      --bg-1: #071c2c;
-      --bg-2: #0f3550;
-      --surface: rgba(255, 255, 255, 0.9);
-      --surface-strong: #ffffff;
-      --text: #0f1d2a;
-      --muted: #4a6277;
-      --accent: #0ea5a4;
-      --accent-strong: #0b7f7e;
-      --warn: #d97706;
+      --ink: #0b1d2a;
+      --ink-soft: #3f5a6d;
+      --surface: #f6fbff;
+      --surface-elevated: #ffffff;
+      --line: #d8e5ef;
+      --brand: #0f766e;
+      --brand-strong: #115e59;
+      --brand-soft: #d9f2ef;
+      --warm: #f59e0b;
       --danger: #be123c;
       --ok: #15803d;
-      --ring: 0 0 0 3px rgba(14, 165, 164, 0.22);
-      --radius: 16px;
-      --shadow: 0 24px 50px rgba(2, 19, 33, 0.28);
+      --radius-lg: 20px;
+      --radius-md: 14px;
+      --shadow: 0 20px 42px rgba(3, 27, 45, 0.16);
+      --ring: 0 0 0 3px rgba(15, 118, 110, 0.22);
     }
 
     * { box-sizing: border-box; }
@@ -27,186 +28,284 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
     body {
       margin: 0;
       min-height: 100vh;
-      font-family: "Space Grotesk", "Avenir Next", "Segoe UI", sans-serif;
-      color: var(--text);
+      font-family: "Sora", "Avenir Next", "Segoe UI", sans-serif;
+      color: var(--ink);
       background:
-        radial-gradient(circle at 15% -10%, rgba(14, 165, 164, 0.45), transparent 40%),
-        radial-gradient(circle at 95% 5%, rgba(249, 115, 22, 0.4), transparent 35%),
-        linear-gradient(145deg, var(--bg-1) 0%, var(--bg-2) 70%, #0f4b61 100%);
-      padding: 20px;
+        radial-gradient(circle at 8% -12%, rgba(14, 165, 164, 0.32), transparent 34%),
+        radial-gradient(circle at 95% 4%, rgba(249, 115, 22, 0.26), transparent 30%),
+        linear-gradient(150deg, #062137 0%, #0b2f47 40%, #0f4c62 100%);
+      padding: 18px;
     }
 
     .shell {
-      max-width: 1200px;
+      max-width: 1220px;
       margin: 0 auto;
       display: grid;
-      gap: 16px;
-      animation: appear 450ms ease-out;
+      gap: 14px;
+      animation: fade-in 360ms ease-out;
     }
 
     .hero {
-      color: #e6fbff;
-      background: linear-gradient(130deg, rgba(8, 67, 83, 0.85), rgba(14, 40, 70, 0.85));
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 18px;
+      background:
+        radial-gradient(circle at 82% 14%, rgba(255, 255, 255, 0.2), transparent 35%),
+        linear-gradient(118deg, rgba(11, 35, 57, 0.94), rgba(9, 74, 88, 0.92));
+      color: #f3fcff;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 22px;
       box-shadow: var(--shadow);
-      padding: 20px;
+      padding: 22px;
       display: flex;
       justify-content: space-between;
-      align-items: center;
       gap: 16px;
+      align-items: flex-start;
     }
 
     .hero h1 {
       margin: 0;
-      font-size: clamp(24px, 3vw, 34px);
+      font-size: clamp(26px, 3vw, 36px);
       letter-spacing: 0.2px;
     }
 
     .hero p {
-      margin: 6px 0 0;
-      opacity: 0.9;
+      margin: 10px 0 0;
+      max-width: 62ch;
+      font-size: 14px;
+      color: rgba(231, 250, 255, 0.9);
+    }
+
+    .hero-meta {
+      display: grid;
+      justify-items: end;
+      gap: 10px;
+      min-width: 210px;
+    }
+
+    .pill {
+      display: inline-flex;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      background: rgba(255, 255, 255, 0.12);
+      color: #f1f9ff;
+      padding: 7px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      letter-spacing: 0.18px;
+    }
+
+    .user-badge {
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      color: #e9f9ff;
+      font-size: 13px;
+      padding: 10px 12px;
+      text-align: right;
+      width: 100%;
     }
 
     .grid {
       display: grid;
-      grid-template-columns: 360px 1fr;
-      gap: 16px;
+      grid-template-columns: minmax(330px, 390px) 1fr;
+      gap: 14px;
     }
 
     .panel {
-      background: var(--surface);
-      border-radius: var(--radius);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(245, 251, 255, 0.9));
+      border: 1px solid rgba(255, 255, 255, 0.68);
+      border-radius: var(--radius-lg);
       box-shadow: var(--shadow);
-      border: 1px solid rgba(255, 255, 255, 0.6);
       padding: 16px;
-      backdrop-filter: blur(8px);
+      backdrop-filter: blur(12px);
     }
 
     .panel h2 {
-      margin: 0 0 10px;
+      margin: 0;
       font-size: 18px;
     }
 
     .panel h3 {
-      margin: 14px 0 8px;
-      font-size: 14px;
-      letter-spacing: 0.2px;
-      color: var(--muted);
+      margin: 0;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--ink-soft);
     }
 
-    .auth-grid {
-      display: grid;
-      gap: 10px;
+    .section {
+      border: 1px solid var(--line);
+      background: var(--surface-elevated);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      margin-top: 12px;
+    }
+
+    .section + .section { margin-top: 10px; }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .section-note {
+      color: var(--ink-soft);
+      font-size: 12px;
+    }
+
+    .auth-grid { display: grid; gap: 8px; }
+
+    .label {
+      font-size: 12px;
+      color: var(--ink-soft);
+      margin-bottom: 4px;
+      display: block;
     }
 
     input, select, textarea, button {
       width: 100%;
-      border-radius: 10px;
+      border-radius: 11px;
       font: inherit;
     }
 
     input, select, textarea {
-      border: 1px solid #c8d7e2;
+      border: 1px solid #c7d9e7;
       padding: 10px 12px;
-      background: #fff;
-      color: var(--text);
+      background: #ffffff;
+      color: var(--ink);
+      font-size: 14px;
     }
 
     input:focus, select:focus, textarea:focus {
       outline: none;
+      border-color: var(--brand);
       box-shadow: var(--ring);
-      border-color: var(--accent);
     }
+
+    textarea { resize: vertical; min-height: 110px; }
 
     button {
       border: 0;
       padding: 10px 12px;
-      font-weight: 650;
+      font-weight: 700;
       cursor: pointer;
-      transition: transform 120ms ease, filter 120ms ease;
+      transition: transform 130ms ease, filter 130ms ease, box-shadow 130ms ease;
     }
 
-    button:hover { transform: translateY(-1px); filter: brightness(1.03); }
-    button:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+    button:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.02);
+      box-shadow: 0 8px 18px rgba(15, 43, 62, 0.18);
+    }
 
-    .btn-primary { background: linear-gradient(120deg, var(--accent), #22c55e); color: #fff; }
-    .btn-secondary { background: #e8f1f8; color: #153046; }
-    .btn-danger { background: #fee2e2; color: #7f1d1d; }
+    button:disabled {
+      opacity: 0.56;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
 
-    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .btn-primary {
+      background: linear-gradient(130deg, var(--brand), #0f9f8f);
+      color: #fff;
+    }
+
+    .btn-secondary {
+      background: #e9f2f9;
+      color: #123247;
+    }
+
+    .btn-danger {
+      background: #ffe4ea;
+      color: #8e173f;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
 
     .stats {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 10px;
-      margin-bottom: 10px;
+      gap: 8px;
+      margin-bottom: 8px;
     }
 
     .stat {
-      background: var(--surface-strong);
-      border: 1px solid #dce8ef;
+      border: 1px solid var(--line);
       border-radius: 12px;
       padding: 10px;
+      background: #fff;
     }
 
-    .stat .k { font-size: 12px; color: var(--muted); }
-    .stat .v { margin-top: 4px; font-size: 22px; font-weight: 700; }
+    .stat .k {
+      color: var(--ink-soft);
+      font-size: 11px;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+    }
+
+    .stat .v {
+      margin-top: 6px;
+      font-size: 22px;
+      line-height: 1;
+      font-weight: 800;
+    }
 
     .subject-list, .chapter-list, .history-list {
       display: grid;
       gap: 8px;
-      max-height: 240px;
+      max-height: 250px;
       overflow: auto;
-      padding-right: 4px;
+      padding-right: 2px;
     }
 
     .subject-item, .chapter-item {
       display: grid;
       grid-template-columns: auto 1fr auto;
-      gap: 8px;
+      gap: 9px;
       align-items: center;
-      border: 1px solid #d6e4ee;
+      border: 1px solid var(--line);
       background: #fff;
-      border-radius: 10px;
-      padding: 8px 10px;
+      border-radius: 11px;
+      padding: 9px 10px;
     }
 
     .subject-meta {
+      color: var(--ink-soft);
       font-size: 12px;
-      color: var(--muted);
+      margin-top: 2px;
     }
 
     .q-card {
-      background: #fff;
-      border: 1px solid #d9e4ee;
-      border-radius: 12px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
       padding: 14px;
       margin-bottom: 10px;
+      background: #fff;
+      min-height: 190px;
     }
 
     .q-type {
-      display: inline-block;
-      font-size: 11px;
-      border-radius: 999px;
-      background: #dbeafe;
-      color: #1e3a8a;
-      padding: 4px 8px;
-      margin-bottom: 8px;
+      display: inline-flex;
+      font-size: 10px;
+      letter-spacing: 0.52px;
       text-transform: uppercase;
-      letter-spacing: 0.45px;
+      border-radius: 999px;
+      padding: 5px 8px;
+      background: var(--brand-soft);
+      color: var(--brand-strong);
+      margin-bottom: 8px;
+      font-weight: 700;
     }
 
-    .choice-list {
-      display: grid;
-      gap: 8px;
-      margin-top: 8px;
-    }
+    .choice-list { display: grid; gap: 7px; margin-top: 9px; }
 
     .choice {
-      border: 1px solid #d6e4ee;
+      border: 1px solid var(--line);
       border-radius: 10px;
-      padding: 8px;
+      padding: 9px;
       display: flex;
       gap: 8px;
       align-items: flex-start;
@@ -214,20 +313,35 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
     }
 
     .status {
-      margin-top: 8px;
-      padding: 10px;
-      border-radius: 10px;
-      font-size: 14px;
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      border: 1px solid transparent;
     }
 
-    .status.info { background: #e0f2fe; color: #0c4a6e; }
-    .status.ok { background: #dcfce7; color: #14532d; }
-    .status.err { background: #fee2e2; color: #7f1d1d; }
+    .status.info {
+      background: #e0f2fe;
+      border-color: #b8e4fb;
+      color: #0d4c68;
+    }
+
+    .status.ok {
+      background: #dcfce7;
+      border-color: #acefbe;
+      color: #14532d;
+    }
+
+    .status.err {
+      background: #ffe3e3;
+      border-color: #f7baba;
+      color: #8b102f;
+    }
 
     .history-item {
-      border: 1px solid #d6e4ee;
+      border: 1px solid var(--line);
       border-radius: 10px;
-      padding: 8px 10px;
+      padding: 9px 10px;
       background: #fff;
       font-size: 13px;
     }
@@ -235,18 +349,39 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
     .history-item b.ok { color: var(--ok); }
     .history-item b.err { color: var(--danger); }
 
-    .muted { color: var(--muted); font-size: 13px; }
+    .muted {
+      color: var(--ink-soft);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
     .hidden { display: none !important; }
 
-    @keyframes appear {
-      from { opacity: 0; transform: translateY(6px); }
+    @keyframes fade-in {
+      from { opacity: 0; transform: translateY(8px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
     @media (max-width: 980px) {
       body { padding: 12px; }
+      .hero {
+        padding: 16px;
+        border-radius: 18px;
+        flex-direction: column;
+      }
+      .hero-meta {
+        justify-items: start;
+        width: 100%;
+      }
+      .user-badge { text-align: left; }
       .grid { grid-template-columns: 1fr; }
-      .hero { flex-direction: column; align-items: flex-start; }
+      .panel { border-radius: 16px; }
+    }
+
+    @media (max-width: 640px) {
+      .row { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: 1fr 1fr; }
+      .stat .v { font-size: 19px; }
     }
   </style>
 </head>
@@ -254,71 +389,140 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
   <div class="shell">
     <header class="hero">
       <div>
-        <h1>Prototype Visuel - Entraînement MedQuiz</h1>
-        <p>Objectif: te montrer une vraie expérience produit immédiatement, branchée sur ton API.</p>
+        <h1>Espace Entraînement MedQuiz</h1>
+        <p>
+          Prototype produit branché sur l'API: connexion, filtres matière/chapitre, sessions d'entraînement et
+          corrections immédiates.
+        </p>
       </div>
-      <div id="userBadge" class="muted">Non connecté</div>
+      <div class="hero-meta">
+        <span class="pill">Prototype V2</span>
+        <span class="pill">Backend live</span>
+        <div id="userBadge" class="user-badge">Non connecté</div>
+      </div>
     </header>
 
     <main class="grid">
       <section class="panel" id="leftPanel">
-        <h2>Connexion</h2>
-        <div class="auth-grid">
-          <input id="emailInput" type="email" placeholder="email" />
-          <input id="passwordInput" type="password" placeholder="mot de passe" />
-          <input id="displayNameInput" type="text" placeholder="nom affiché (inscription)" />
-          <div class="row">
-            <button class="btn-secondary" id="registerBtn">Créer compte</button>
-            <button class="btn-primary" id="loginBtn">Se connecter</button>
+        <h2>Contrôle Session</h2>
+
+        <div class="section">
+          <div class="section-head">
+            <h3>Connexion</h3>
+            <span class="section-note">Compte test ou réel</span>
           </div>
-          <button class="btn-danger hidden" id="logoutBtn">Déconnexion</button>
+          <div class="auth-grid">
+            <div>
+              <label class="label" for="emailInput">Email</label>
+              <input id="emailInput" type="email" placeholder="email" />
+            </div>
+            <div>
+              <label class="label" for="passwordInput">Mot de passe</label>
+              <input id="passwordInput" type="password" placeholder="mot de passe" />
+            </div>
+            <div>
+              <label class="label" for="displayNameInput">Nom affiché (inscription)</label>
+              <input id="displayNameInput" type="text" placeholder="nom affiché" />
+            </div>
+            <div class="row">
+              <button class="btn-secondary" id="registerBtn">Créer compte</button>
+              <button class="btn-primary" id="loginBtn">Se connecter</button>
+            </div>
+            <button class="btn-danger hidden" id="logoutBtn">Déconnexion</button>
+          </div>
         </div>
 
-        <h3>Configuration Session</h3>
-        <div class="auth-grid">
-          <select id="modeSelect">
-            <option value="learning">Apprentissage</option>
-            <option value="discovery">Découverte</option>
-            <option value="review">Révision</option>
-            <option value="par_coeur">Par coeur</option>
-            <option value="rattrapage">A revoir</option>
-          </select>
-          <select id="stopRuleSelect">
-            <option value="fixed_10">10 questions</option>
-            <option value="fixed_custom">Choisir nombre</option>
-            <option value="until_stop">Jusqu'à arrêt</option>
-          </select>
-          <input id="targetCountInput" type="number" min="1" max="200" value="20" placeholder="Nombre de questions" />
-          <button class="btn-primary" id="createSessionBtn" disabled>Démarrer entraînement</button>
-          <button class="btn-secondary" id="refreshDashboardBtn" disabled>Rafraîchir dashboard</button>
+        <div class="section">
+          <div class="section-head">
+            <h3>Configuration Session</h3>
+            <span class="section-note">Modes selon ton besoin</span>
+          </div>
+          <div class="auth-grid">
+            <div>
+              <label class="label" for="modeSelect">Mode</label>
+              <select id="modeSelect">
+                <option value="learning">Apprentissage</option>
+                <option value="discovery">Découverte</option>
+                <option value="review">Révision</option>
+                <option value="par_coeur">Par coeur</option>
+                <option value="rattrapage">A revoir</option>
+              </select>
+            </div>
+            <div>
+              <label class="label" for="stopRuleSelect">Durée de session</label>
+              <select id="stopRuleSelect">
+                <option value="fixed_10">10 questions</option>
+                <option value="fixed_custom">Choisir nombre</option>
+                <option value="until_stop">Jusqu'à arrêt</option>
+              </select>
+            </div>
+            <div>
+              <label class="label" for="targetCountInput">Nombre de questions (mode personnalisé)</label>
+              <input id="targetCountInput" type="number" min="1" max="200" value="20" placeholder="Nombre de questions" />
+            </div>
+            <button class="btn-primary" id="createSessionBtn" disabled>Démarrer entraînement</button>
+            <button class="btn-secondary" id="refreshDashboardBtn" disabled>Rafraîchir dashboard</button>
+          </div>
         </div>
 
-        <h3>Matières</h3>
-        <div id="subjectsList" class="subject-list"></div>
+        <div class="section">
+          <div class="section-head">
+            <h3>Matières</h3>
+            <span class="section-note">Filtre global</span>
+          </div>
+          <div id="subjectsList" class="subject-list"></div>
+        </div>
 
-        <h3>Chapitres (filtres)</h3>
-        <div id="chaptersList" class="chapter-list"></div>
+        <div class="section">
+          <div class="section-head">
+            <h3>Chapitres</h3>
+            <span class="section-note">Filtre fin</span>
+          </div>
+          <div id="chaptersList" class="chapter-list"></div>
+        </div>
       </section>
 
       <section class="panel">
-        <h2>Session En Cours</h2>
-        <div class="stats" id="stats"></div>
-        <div id="sessionSummary" class="muted">Aucune session active.</div>
+        <h2>Entraînement En Cours</h2>
 
-        <div id="questionContainer" class="q-card hidden"></div>
-
-        <div class="row" id="questionActions">
-          <button class="btn-primary" id="submitAnswerBtn" disabled>Valider réponse</button>
-          <button class="btn-secondary" id="nextQuestionBtn" disabled>Question suivante</button>
-        </div>
-        <div style="margin-top:8px">
-          <button class="btn-danger" id="completeSessionBtn" disabled>Terminer session</button>
+        <div class="section">
+          <div class="section-head">
+            <h3>Performance</h3>
+            <span class="section-note">Vision immédiate</span>
+          </div>
+          <div class="stats" id="stats"></div>
+          <div id="sessionSummary" class="muted">Aucune session active.</div>
         </div>
 
-        <div id="statusBox" class="status info">Connecte-toi pour commencer.</div>
+        <div class="section">
+          <div class="section-head">
+            <h3>Question Active</h3>
+            <span class="section-note">Réponse + correction</span>
+          </div>
+          <div id="questionContainer" class="q-card hidden"></div>
+          <div class="row" id="questionActions">
+            <button class="btn-primary" id="submitAnswerBtn" disabled>Valider réponse</button>
+            <button class="btn-secondary" id="nextQuestionBtn" disabled>Question suivante</button>
+          </div>
+          <div style="margin-top:8px">
+            <button class="btn-danger" id="completeSessionBtn" disabled>Terminer session</button>
+          </div>
+        </div>
 
-        <h3>Historique immédiat</h3>
-        <div id="historyList" class="history-list"></div>
+        <div class="section">
+          <div class="section-head">
+            <h3>État système</h3>
+          </div>
+          <div id="statusBox" class="status info">Connecte-toi pour commencer.</div>
+        </div>
+
+        <div class="section">
+          <div class="section-head">
+            <h3>Historique immédiat</h3>
+            <span class="section-note">12 dernières réponses</span>
+          </div>
+          <div id="historyList" class="history-list"></div>
+        </div>
       </section>
     </main>
   </div>
