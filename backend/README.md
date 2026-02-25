@@ -35,6 +35,7 @@ Protected:
 - `POST /ads/reward-grants`
 - `GET /notifications`
 - `POST /notifications/:notificationId/read`
+- `POST /notifications/admin/requeue-failed`
 - `GET /billing/subscription`
 - `POST /billing/checkout-session`
 - `GET /avatar/stages`
@@ -109,6 +110,7 @@ Server will run on `PORT` (default `8080`), base prefix `/v1`.
 Background workers enabled by default:
 - duel turn expiration worker (`DUEL_EXPIRATION_JOB_ENABLED=true`)
 - push notifications dispatch worker (`PUSH_NOTIFICATIONS_JOB_ENABLED=true`)
+  - retries/backoff are controlled with `PUSH_NOTIFICATIONS_MAX_ATTEMPTS`, `PUSH_NOTIFICATIONS_BACKOFF_BASE_SECONDS`, `PUSH_NOTIFICATIONS_BACKOFF_MAX_SECONDS`
 
 ## Observability / SLO
 
@@ -139,6 +141,6 @@ Background workers enabled by default:
 ## Important scope notes
 
 - Duel timeout worker (`expire_duel_turns`) is wired and configurable via env.
-- Push notifications dispatch worker is wired; it processes pending rows in `notifications` and sends to `user_push_tokens`.
+- Push notifications dispatch worker is wired; it processes pending rows in `notifications`, retries with backoff, and sends to `user_push_tokens`.
 - Open-text training answers are enabled with normalized exact-match scoring.
 - OAuth Google/Apple endpoints from API spec are not yet implemented in this checkpoint.

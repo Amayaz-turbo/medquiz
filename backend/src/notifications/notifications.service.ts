@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { env } from "../config/env";
 import { DatabaseService } from "../database/database.service";
 
 type NotificationStatus = "pending" | "sent" | "failed" | "read";
@@ -26,6 +27,8 @@ interface ListNotificationsOptions {
 
 @Injectable()
 export class NotificationsService {
+  private readonly cfg = env();
+
   constructor(private readonly db: DatabaseService) {}
 
   async listNotifications(userId: string, options: ListNotificationsOptions) {
@@ -116,6 +119,48 @@ export class NotificationsService {
     };
   }
 
+  async requeueFailedNotifications(requestedByUserId: string, limitRaw?: number) {
+    this.assertNotificationsAdminAccess(requestedByUserId);
+    const limit = this.parsePositiveInteger(
+      typeof limitRaw === "number" ? String(limitRaw) : undefined,
+      100,
+      1,
+      1000,
+      "limit"
+    );
+
+    const result = await this.db.withTransaction(async (client) => {
+      const updated = await client.query<{ id: string }>(
+        `
+          WITH target AS (
+            SELECT n.id
+            FROM notifications n
+            WHERE n.status = 'failed'
+            ORDER BY n.created_at ASC, n.id ASC
+            LIMIT $1
+            FOR UPDATE SKIP LOCKED
+          )
+          UPDATE notifications n
+          SET
+            status = 'pending',
+            dispatch_attempt_count = 0,
+            next_dispatch_at = NOW(),
+            last_dispatch_error = NULL
+          FROM target
+          WHERE n.id = target.id
+          RETURNING n.id
+        `,
+        [limit]
+      );
+
+      return updated.rowCount;
+    });
+
+    return {
+      requeuedCount: result
+    };
+  }
+
   private parseStatus(raw: string | undefined): NotificationStatus | null {
     if (raw === undefined || raw === null || raw.trim().length === 0) {
       return null;
@@ -148,6 +193,26 @@ export class NotificationsService {
       });
     }
     return parsed;
+  }
+
+  private assertNotificationsAdminAccess(userId: string): void {
+    const allowlist = this.cfg.notificationsAdminUserIds;
+    if (allowlist.length === 0) {
+      if (this.cfg.nodeEnv === "production") {
+        throw new ForbiddenException({
+          code: "NOTIFICATIONS_ADMIN_ALLOWLIST_REQUIRED",
+          message: "Notifications admin allowlist is required in production"
+        });
+      }
+      return;
+    }
+
+    if (!allowlist.includes(userId)) {
+      throw new ForbiddenException({
+        code: "NOTIFICATIONS_ADMIN_FORBIDDEN",
+        message: "Notifications admin access required"
+      });
+    }
   }
 
   private parseCursor(raw: string | undefined): NotificationCursor | null {

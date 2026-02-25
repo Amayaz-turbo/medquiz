@@ -46,7 +46,7 @@ export class NotificationPushWorker implements OnModuleInit, OnModuleDestroy {
       const result = await this.dispatchService.dispatchPending();
       if (result.processed > 0) {
         this.logger.log(
-          `push notifications tick processed=${result.processed}, sent=${result.sent}, failed=${result.failed}`
+          `push notifications tick processed=${result.processed}, sent=${result.sent}, retried=${result.retried}, failed=${result.failed}`
         );
       }
     } catch (error) {

@@ -530,13 +530,20 @@ CREATE TABLE notifications (
   type notification_type NOT NULL,
   payload JSONB NOT NULL DEFAULT '{}'::jsonb,
   status notification_status NOT NULL DEFAULT 'pending',
+  dispatch_attempt_count INTEGER NOT NULL DEFAULT 0,
+  next_dispatch_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_dispatch_error TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   sent_at TIMESTAMPTZ,
-  read_at TIMESTAMPTZ
+  read_at TIMESTAMPTZ,
+  CONSTRAINT notifications_dispatch_attempt_count_chk CHECK (dispatch_attempt_count >= 0)
 );
 
 CREATE INDEX notifications_user_status_created_idx ON notifications (user_id, status, created_at DESC);
 CREATE INDEX notifications_type_created_idx ON notifications (type, created_at DESC);
+CREATE INDEX notifications_pending_dispatch_idx
+  ON notifications (next_dispatch_at ASC, created_at ASC, id ASC)
+  WHERE status = 'pending';
 
 CREATE TABLE user_push_tokens (
   id UUID PRIMARY KEY,

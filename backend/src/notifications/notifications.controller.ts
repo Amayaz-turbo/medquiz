@@ -1,7 +1,8 @@
-import { Controller, Get, Param, ParseUUIDPipe, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, UseGuards } from "@nestjs/common";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { AuthenticatedUser } from "../auth/interfaces/authenticated-user.interface";
+import { RequeueFailedNotificationsDto } from "./dto/requeue-failed-notifications.dto";
 import { NotificationsService } from "./notifications.service";
 
 @Controller("notifications")
@@ -30,6 +31,15 @@ export class NotificationsController {
     @Param("notificationId", new ParseUUIDPipe({ version: "4" })) notificationId: string
   ) {
     const result = await this.notificationsService.markNotificationRead(user.userId, notificationId);
+    return { data: result };
+  }
+
+  @Post("admin/requeue-failed")
+  async requeueFailedNotifications(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() body: RequeueFailedNotificationsDto
+  ) {
+    const result = await this.notificationsService.requeueFailedNotifications(user.userId, body.limit);
     return { data: result };
   }
 }

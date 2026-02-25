@@ -53,7 +53,7 @@ describe("Critical integration flows", () => {
   let db: DatabaseService;
   let duelsService: { expireDueTurns: (limit?: number) => Promise<{ processed: number }> };
   let notificationPushDispatchService: {
-    dispatchPending: (limit?: number) => Promise<{ processed: number; sent: number; failed: number }>;
+    dispatchPending: (limit?: number) => Promise<{ processed: number; sent: number; failed: number; retried: number }>;
   };
   let isolatedDb: IsolatedTestDatabase;
 
@@ -81,6 +81,10 @@ describe("Critical integration flows", () => {
     process.env.PUSH_NOTIFICATIONS_WEBHOOK_URL = "";
     process.env.PUSH_NOTIFICATIONS_WEBHOOK_TOKEN = "";
     process.env.PUSH_NOTIFICATIONS_WEBHOOK_TIMEOUT_MS = "2500";
+    process.env.PUSH_NOTIFICATIONS_MAX_ATTEMPTS = "3";
+    process.env.PUSH_NOTIFICATIONS_BACKOFF_BASE_SECONDS = "10";
+    process.env.PUSH_NOTIFICATIONS_BACKOFF_MAX_SECONDS = "30";
+    process.env.NOTIFICATIONS_ADMIN_USER_IDS = "";
     process.env.OPEN_TEXT_EDITOR_USER_IDS = "";
     process.env.TRAINING_CONTENT_EDITOR_USER_IDS = "";
 
@@ -593,27 +597,125 @@ describe("Critical integration flows", () => {
       [sentNotification1, tokenUser.userId, sentNotification2, failedNotification, noTokenUser.userId]
     );
 
+    await db.query(
+      `
+        UPDATE notifications
+        SET next_dispatch_at = NOW() + INTERVAL '1 day'
+        WHERE status = 'pending'
+          AND NOT (id = ANY($1::uuid[]))
+      `,
+      [[sentNotification1, sentNotification2, failedNotification]]
+    );
+    await db.query(
+      `
+        UPDATE notifications
+        SET next_dispatch_at = NOW() - INTERVAL '1 second'
+        WHERE id = ANY($1::uuid[])
+      `,
+      [[sentNotification1, sentNotification2, failedNotification]]
+    );
+
     const dispatch = await notificationPushDispatchService.dispatchPending(3);
     expect(dispatch.processed).toBe(3);
     expect(dispatch.sent).toBe(2);
-    expect(dispatch.failed).toBe(1);
+    expect(dispatch.retried).toBe(1);
+    expect(dispatch.failed).toBe(0);
 
-    const rows = await db.query<{ id: string; status: string; sent_at: string | null }>(
+    const firstPassRows = await db.query<{
+      id: string;
+      status: string;
+      sent_at: string | null;
+      dispatch_attempt_count: number;
+      next_dispatch_at: string;
+      last_dispatch_error: string | null;
+    }>(
       `
-        SELECT id, status, sent_at
+        SELECT id, status, sent_at, dispatch_attempt_count, next_dispatch_at, last_dispatch_error
         FROM notifications
         WHERE id = ANY($1::uuid[])
       `,
       [[sentNotification1, sentNotification2, failedNotification]]
     );
 
-    const byId = new Map(rows.rows.map((row) => [row.id, row]));
+    const byId = new Map(firstPassRows.rows.map((row) => [row.id, row]));
     expect(byId.get(sentNotification1)?.status).toBe("sent");
     expect(byId.get(sentNotification2)?.status).toBe("sent");
-    expect(byId.get(failedNotification)?.status).toBe("failed");
+    expect(byId.get(failedNotification)?.status).toBe("pending");
     expect(byId.get(sentNotification1)?.sent_at).toBeTruthy();
     expect(byId.get(sentNotification2)?.sent_at).toBeTruthy();
     expect(byId.get(failedNotification)?.sent_at).toBeNull();
+    expect(byId.get(failedNotification)?.dispatch_attempt_count).toBe(1);
+    expect(byId.get(failedNotification)?.last_dispatch_error).toBe("NO_PUSH_TOKEN");
+
+    await db.query(
+      `
+        UPDATE notifications
+        SET next_dispatch_at = NOW() - INTERVAL '1 second'
+        WHERE id = $1
+      `,
+      [failedNotification]
+    );
+    const secondAttempt = await notificationPushDispatchService.dispatchPending(3);
+    expect(secondAttempt.processed).toBe(1);
+    expect(secondAttempt.sent).toBe(0);
+    expect(secondAttempt.retried).toBe(1);
+    expect(secondAttempt.failed).toBe(0);
+
+    await db.query(
+      `
+        UPDATE notifications
+        SET next_dispatch_at = NOW() - INTERVAL '1 second'
+        WHERE id = $1
+      `,
+      [failedNotification]
+    );
+    const thirdAttempt = await notificationPushDispatchService.dispatchPending(3);
+    expect(thirdAttempt.processed).toBe(1);
+    expect(thirdAttempt.sent).toBe(0);
+    expect(thirdAttempt.retried).toBe(0);
+    expect(thirdAttempt.failed).toBe(1);
+
+    const failedRow = await db.query<{
+      status: string;
+      dispatch_attempt_count: number;
+      last_dispatch_error: string | null;
+    }>(
+      `
+        SELECT status, dispatch_attempt_count, last_dispatch_error
+        FROM notifications
+        WHERE id = $1
+      `,
+      [failedNotification]
+    );
+    expect(failedRow.rows[0]?.status).toBe("failed");
+    expect(failedRow.rows[0]?.dispatch_attempt_count).toBe(3);
+    expect(failedRow.rows[0]?.last_dispatch_error).toBe("NO_PUSH_TOKEN");
+
+    const requeue = await request(app.getHttpServer())
+      .post("/v1/notifications/admin/requeue-failed")
+      .set("Authorization", `Bearer ${tokenUser.accessToken}`)
+      .send({
+        limit: 1
+      })
+      .expect(201);
+    expect(requeue.body.data.requeuedCount).toBe(1);
+
+    const requeuedRow = await db.query<{
+      status: string;
+      dispatch_attempt_count: number;
+      next_dispatch_at: string;
+      last_dispatch_error: string | null;
+    }>(
+      `
+        SELECT status, dispatch_attempt_count, next_dispatch_at, last_dispatch_error
+        FROM notifications
+        WHERE id = $1
+      `,
+      [failedNotification]
+    );
+    expect(requeuedRow.rows[0]?.status).toBe("pending");
+    expect(requeuedRow.rows[0]?.dispatch_attempt_count).toBe(0);
+    expect(requeuedRow.rows[0]?.last_dispatch_error).toBeNull();
   });
 
   it("returns current subscription and creates checkout payloads", async () => {

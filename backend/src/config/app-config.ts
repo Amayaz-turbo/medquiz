@@ -21,6 +21,10 @@ export interface AppConfig {
   pushNotificationsWebhookUrl: string | null;
   pushNotificationsWebhookToken: string | null;
   pushNotificationsWebhookTimeoutMs: number;
+  pushNotificationsMaxAttempts: number;
+  pushNotificationsBackoffBaseSeconds: number;
+  pushNotificationsBackoffMaxSeconds: number;
+  notificationsAdminUserIds: string[];
   openTextEditorUserIds: string[];
   trainingContentEditorUserIds: string[];
 }
@@ -86,6 +90,29 @@ export function getAppConfig(): AppConfig {
   ) {
     throw new Error("PUSH_NOTIFICATIONS_WEBHOOK_TIMEOUT_MS must be in range 100..15000");
   }
+  const pushNotificationsMaxAttempts = Number(process.env.PUSH_NOTIFICATIONS_MAX_ATTEMPTS ?? "5");
+  if (!Number.isFinite(pushNotificationsMaxAttempts) || pushNotificationsMaxAttempts < 1 || pushNotificationsMaxAttempts > 20) {
+    throw new Error("PUSH_NOTIFICATIONS_MAX_ATTEMPTS must be in range 1..20");
+  }
+  const pushNotificationsBackoffBaseSeconds = Number(process.env.PUSH_NOTIFICATIONS_BACKOFF_BASE_SECONDS ?? "30");
+  if (
+    !Number.isFinite(pushNotificationsBackoffBaseSeconds) ||
+    pushNotificationsBackoffBaseSeconds < 1 ||
+    pushNotificationsBackoffBaseSeconds > 3600
+  ) {
+    throw new Error("PUSH_NOTIFICATIONS_BACKOFF_BASE_SECONDS must be in range 1..3600");
+  }
+  const pushNotificationsBackoffMaxSeconds = Number(process.env.PUSH_NOTIFICATIONS_BACKOFF_MAX_SECONDS ?? "900");
+  if (
+    !Number.isFinite(pushNotificationsBackoffMaxSeconds) ||
+    pushNotificationsBackoffMaxSeconds < 1 ||
+    pushNotificationsBackoffMaxSeconds > 86400
+  ) {
+    throw new Error("PUSH_NOTIFICATIONS_BACKOFF_MAX_SECONDS must be in range 1..86400");
+  }
+  if (pushNotificationsBackoffBaseSeconds > pushNotificationsBackoffMaxSeconds) {
+    throw new Error("PUSH_NOTIFICATIONS_BACKOFF_BASE_SECONDS must be <= PUSH_NOTIFICATIONS_BACKOFF_MAX_SECONDS");
+  }
 
   const databaseUrl = process.env.DATABASE_URL;
   const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET;
@@ -122,6 +149,15 @@ export function getAppConfig(): AppConfig {
     pushNotificationsWebhookTokenRaw.length > 0 ? pushNotificationsWebhookTokenRaw : null;
   if (pushNotificationsWebhookToken && pushNotificationsWebhookToken.length < 16) {
     throw new Error("PUSH_NOTIFICATIONS_WEBHOOK_TOKEN must be at least 16 characters when set");
+  }
+  const notificationsAdminUserIds = (process.env.NOTIFICATIONS_ADMIN_USER_IDS ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+  for (const userId of notificationsAdminUserIds) {
+    if (!uuidV4Regex.test(userId)) {
+      throw new Error("NOTIFICATIONS_ADMIN_USER_IDS must contain valid UUID v4 values");
+    }
   }
   const openTextEditorUserIds = (process.env.OPEN_TEXT_EDITOR_USER_IDS ?? "")
     .split(",")
@@ -165,6 +201,10 @@ export function getAppConfig(): AppConfig {
     pushNotificationsWebhookUrl,
     pushNotificationsWebhookToken,
     pushNotificationsWebhookTimeoutMs,
+    pushNotificationsMaxAttempts,
+    pushNotificationsBackoffBaseSeconds,
+    pushNotificationsBackoffMaxSeconds,
+    notificationsAdminUserIds,
     openTextEditorUserIds,
     trainingContentEditorUserIds
   };
