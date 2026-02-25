@@ -13,6 +13,7 @@ import { AvatarModule } from "./avatar/avatar.module";
 import { AdsModule } from "./ads/ads.module";
 import { NotificationsModule } from "./notifications/notifications.module";
 import { BillingModule } from "./billing/billing.module";
+import { DemoModule } from "./demo/demo.module";
 
 const cfg = env();
 
@@ -31,6 +32,7 @@ const cfg = env();
     AdsModule,
     NotificationsModule,
     BillingModule,
+    DemoModule,
     AvatarModule,
     TrainingsModule,
     DuelsModule

@@ -15,6 +15,7 @@ Backend API NestJS for MedQuiz with priority on:
 ## Current implemented routes (`/v1`)
 
 Public:
+- `GET /demo` (prototype UI entraînement, visible en navigateur)
 - `GET /health`
 - `GET /health/live`
 - `GET /health/ready`
