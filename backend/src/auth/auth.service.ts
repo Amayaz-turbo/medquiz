@@ -93,7 +93,15 @@ export class AuthService {
       });
     }
 
-    const passwordOk = await argon2.verify(passwordHash, dto.password);
+    let passwordOk = false;
+    try {
+      passwordOk = await argon2.verify(passwordHash, dto.password);
+    } catch {
+      throw new UnauthorizedException({
+        code: "INVALID_CREDENTIALS",
+        message: "Invalid credentials"
+      });
+    }
     if (!passwordOk) {
       throw new UnauthorizedException({
         code: "INVALID_CREDENTIALS",
