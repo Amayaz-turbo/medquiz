@@ -399,6 +399,15 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
         if (!res.ok) {
           var msg = (json && json.error && json.error.message) || ('HTTP ' + res.status);
+          if (
+            msg === 'An unexpected error occurred' &&
+            json &&
+            json.error &&
+            json.error.details &&
+            typeof json.error.details.name === 'string'
+          ) {
+            msg = msg + ' (' + json.error.details.name + ')';
+          }
           throw new Error(path + ' -> ' + msg);
         }
 

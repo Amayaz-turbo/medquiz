@@ -51,13 +51,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
         }
       }
     } else if (exception instanceof Error) {
-      const hostName = (request.hostname ?? "").toLowerCase();
-      const isLocalHost =
-        hostName === "localhost" || hostName.startsWith("127.") || hostName === "::1" || hostName.endsWith(".local");
-      if (isLocalHost && exception.message) {
+      if (exception.message) {
         message = exception.message;
-        details = { name: exception.name };
       }
+      details = {
+        name: exception.name
+      };
       this.logger.error(
         `Unhandled exception on ${request.method} ${request.url}: ${exception.message}`,
         exception.stack
