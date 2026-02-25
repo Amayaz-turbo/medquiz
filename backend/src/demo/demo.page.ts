@@ -326,8 +326,14 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
   <script>
     (function () {
       var baseUrl = window.location.origin + '/v1';
+      var persistedToken = localStorage.getItem('medquiz_demo_token') || '';
+      if (window.location.search.indexOf('reset=1') !== -1) {
+        localStorage.removeItem('medquiz_demo_token');
+        persistedToken = '';
+      }
+
       var state = {
-        token: localStorage.getItem('medquiz_demo_token') || '',
+        token: persistedToken,
         me: null,
         dashboard: null,
         subjects: [],
@@ -393,7 +399,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
         if (!res.ok) {
           var msg = (json && json.error && json.error.message) || ('HTTP ' + res.status);
-          throw new Error(msg);
+          throw new Error(path + ' -> ' + msg);
         }
 
         return json ? json.data : null;
@@ -847,7 +853,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         } catch (err) {
           saveToken('');
           ensureAuthUi();
-          setStatus('Session invalide, reconnecte-toi.', 'err');
+          setStatus((err && err.message) ? err.message : 'Session invalide, reconnecte-toi.', 'err');
         }
       })();
     })();
