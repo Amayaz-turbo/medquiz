@@ -374,6 +374,46 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       min-width: 110px;
     }
 
+    .setup-list {
+      display: grid;
+      gap: 7px;
+      margin-bottom: 10px;
+    }
+
+    .setup-step {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 8px 10px;
+      background: #fff;
+      font-size: 13px;
+      color: var(--ink);
+    }
+
+    .setup-step b {
+      font-size: 12px;
+      margin-right: 6px;
+    }
+
+    .setup-step.done {
+      border-color: #b6e8c7;
+      background: #f3fcf7;
+    }
+
+    .setup-step.todo {
+      border-color: #f5d3a3;
+      background: #fffaf1;
+    }
+
+    .preset-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .preset-grid .wide {
+      grid-column: 1 / -1;
+    }
+
     .subject-list, .chapter-list, .history-list {
       display: grid;
       gap: 8px;
@@ -588,6 +628,19 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
         <div class="section">
           <div class="section-head">
+            <h3>Assistant De Démarrage</h3>
+            <span id="setupStateChip" class="chip">À configurer</span>
+          </div>
+          <div id="setupChecklist" class="setup-list"></div>
+          <div class="preset-grid">
+            <button class="btn-secondary wide" id="presetRecommendedBtn" disabled>Preset conseillé</button>
+            <button class="btn-secondary" id="presetDiscoveryBtn" disabled>Découverte 10</button>
+            <button class="btn-secondary" id="presetReviewBtn" disabled>Révision libre</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-head">
             <h3>Matières</h3>
             <span class="section-note">Filtre global</span>
           </div>
@@ -714,6 +767,11 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         targetCountInput: document.getElementById('targetCountInput'),
         createSessionBtn: document.getElementById('createSessionBtn'),
         refreshDashboardBtn: document.getElementById('refreshDashboardBtn'),
+        setupStateChip: document.getElementById('setupStateChip'),
+        setupChecklist: document.getElementById('setupChecklist'),
+        presetRecommendedBtn: document.getElementById('presetRecommendedBtn'),
+        presetDiscoveryBtn: document.getElementById('presetDiscoveryBtn'),
+        presetReviewBtn: document.getElementById('presetReviewBtn'),
         subjectsList: document.getElementById('subjectsList'),
         chaptersList: document.getElementById('chaptersList'),
         stats: document.getElementById('stats'),
@@ -788,9 +846,12 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
       function ensureAuthUi() {
         var connected = !!state.token;
-        refs.createSessionBtn.disabled = !connected;
         refs.refreshDashboardBtn.disabled = !connected;
         refs.logoutBtn.classList.toggle('hidden', !connected);
+        if (!connected) {
+          refs.createSessionBtn.disabled = true;
+        }
+        renderSetupGuide();
       }
 
       async function loadMe() {
@@ -802,6 +863,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         state.dashboard = await api('/trainings/dashboard');
         renderStats();
         renderFocus();
+        renderSetupGuide();
       }
 
       async function loadSubjects() {
@@ -847,6 +909,104 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           rattrapage: 'À revoir'
         };
         return labels[mode] || mode;
+      }
+
+      function isSessionSetupDurationValid() {
+        var stopRule = refs.stopRuleSelect.value;
+        if (stopRule !== 'fixed_custom') {
+          return true;
+        }
+        var n = Number(refs.targetCountInput.value || '0');
+        return Number.isFinite(n) && n >= 1 && n <= 200;
+      }
+
+      function getSessionScopeLabel() {
+        var subjectCount = Object.keys(state.selectedSubjects).length;
+        var chapterCount = Object.keys(state.selectedChapters).length;
+        if (chapterCount > 0) {
+          return chapterCount + ' chapitres ciblés';
+        }
+        if (subjectCount > 0) {
+          return subjectCount + ' matières ciblées';
+        }
+        return 'Toutes les matières actives';
+      }
+
+      function setupStepHtml(label, done, detail) {
+        var klass = done ? 'setup-step done' : 'setup-step todo';
+        var marker = done ? 'OK' : 'À faire';
+        return '<div class="' + klass + '"><b>' + marker + '</b>' + escapeHtml(label) + ' · ' + escapeHtml(detail) + '</div>';
+      }
+
+      function renderSetupGuide() {
+        var connected = !!state.token;
+        var mode = refs.modeSelect.value;
+        var stopRule = refs.stopRuleSelect.value;
+        var durationValid = isSessionSetupDurationValid();
+        var modeReady = !!mode;
+        var durationText = stopRule === 'fixed_custom'
+          ? (durationValid ? (String(refs.targetCountInput.value) + ' questions') : 'Nombre invalide (1..200)')
+          : (stopRule === 'fixed_10' ? '10 questions' : 'Jusqu\'à arrêt');
+
+        refs.setupChecklist.innerHTML = [
+          setupStepHtml('Mode', modeReady, getModeLabel(mode)),
+          setupStepHtml('Durée', durationValid, durationText),
+          setupStepHtml('Périmètre', true, getSessionScopeLabel()),
+          setupStepHtml('Prêt à démarrer', connected && durationValid, connected ? (durationValid ? 'Session prête' : 'Corriger la durée') : 'Connexion requise')
+        ].join('');
+
+        if (!connected) {
+          refs.setupStateChip.className = 'chip warn';
+          refs.setupStateChip.textContent = 'Connexion requise';
+        } else if (!durationValid) {
+          refs.setupStateChip.className = 'chip warn';
+          refs.setupStateChip.textContent = 'Paramètres invalides';
+        } else {
+          refs.setupStateChip.className = 'chip';
+          refs.setupStateChip.textContent = 'Prêt';
+        }
+
+        refs.createSessionBtn.disabled = !connected || !durationValid;
+        refs.presetDiscoveryBtn.disabled = !connected;
+        refs.presetReviewBtn.disabled = !connected;
+
+        var suggestedMode = state.dashboard && state.dashboard.overview
+          ? state.dashboard.overview.suggestedMode
+          : '';
+        refs.presetRecommendedBtn.disabled = !connected || !suggestedMode;
+      }
+
+      function clearSessionFilters() {
+        state.selectedSubjects = {};
+        state.selectedChapters = {};
+        renderSubjects();
+        renderChapters();
+      }
+
+      async function selectTopReinforceSubjects(maxCount) {
+        if (!state.dashboard || !Array.isArray(state.dashboard.subjects)) {
+          clearSessionFilters();
+          return 0;
+        }
+        var candidates = state.dashboard.subjects
+          .filter(function (s) { return Number(s.questionsToReinforceCount || 0) > 0; })
+          .sort(function (a, b) { return Number(b.questionsToReinforceCount || 0) - Number(a.questionsToReinforceCount || 0); })
+          .slice(0, maxCount);
+
+        if (!candidates.length) {
+          clearSessionFilters();
+          return 0;
+        }
+
+        state.selectedSubjects = {};
+        state.selectedChapters = {};
+        candidates.forEach(function (s) {
+          state.selectedSubjects[s.id] = true;
+        });
+        renderSubjects();
+        await Promise.all(candidates.map(function (s) { return loadChapters(s.id); }));
+        renderChapters();
+        return candidates.length;
       }
 
       function renderFocus() {
@@ -999,6 +1159,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
               });
               renderChapters();
             }
+            renderSetupGuide();
           });
         });
       }
@@ -1053,6 +1214,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
             } else {
               delete state.selectedChapters[id];
             }
+            renderSetupGuide();
           });
         });
       }
@@ -1359,10 +1521,12 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         var custom = refs.stopRuleSelect.value === 'fixed_custom';
         refs.targetCountInput.disabled = !custom;
         renderSessionGoal();
+        renderSetupGuide();
       });
 
       refs.targetCountInput.addEventListener('input', function () {
         renderSessionGoal();
+        renderSetupGuide();
       });
 
       refs.applySuggestedModeBtn.addEventListener('click', function () {
@@ -1372,7 +1536,62 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         }
         refs.modeSelect.value = suggested;
         renderSessionGoal();
+        renderSetupGuide();
         setStatus('Mode conseillé appliqué: ' + getModeLabel(suggested) + '.', 'info');
+      });
+
+      refs.modeSelect.addEventListener('change', function () {
+        renderSetupGuide();
+      });
+
+      refs.presetDiscoveryBtn.addEventListener('click', function () {
+        refs.modeSelect.value = 'discovery';
+        refs.stopRuleSelect.value = 'fixed_10';
+        refs.targetCountInput.value = '10';
+        refs.targetCountInput.disabled = true;
+        clearSessionFilters();
+        renderSessionGoal();
+        renderSetupGuide();
+        setStatus('Preset appliqué: Découverte 10 (toutes matières).', 'info');
+      });
+
+      refs.presetReviewBtn.addEventListener('click', function () {
+        refs.modeSelect.value = 'review';
+        refs.stopRuleSelect.value = 'until_stop';
+        refs.targetCountInput.disabled = true;
+        clearSessionFilters();
+        renderSessionGoal();
+        renderSetupGuide();
+        setStatus('Preset appliqué: Révision libre (toutes matières).', 'info');
+      });
+
+      refs.presetRecommendedBtn.addEventListener('click', async function () {
+        try {
+          var suggestedMode = state.dashboard && state.dashboard.overview
+            ? state.dashboard.overview.suggestedMode
+            : '';
+          if (!suggestedMode) {
+            throw new Error('Aucun mode conseillé disponible pour le moment.');
+          }
+          refs.modeSelect.value = suggestedMode;
+          refs.stopRuleSelect.value = 'fixed_10';
+          refs.targetCountInput.value = '10';
+          refs.targetCountInput.disabled = true;
+
+          var selectedCount = 0;
+          if (suggestedMode === 'rattrapage') {
+            selectedCount = await selectTopReinforceSubjects(3);
+          } else {
+            clearSessionFilters();
+          }
+
+          renderSessionGoal();
+          renderSetupGuide();
+          var scopeLabel = selectedCount > 0 ? (' · ' + selectedCount + ' matière(s) ciblée(s)') : '';
+          setStatus('Preset conseillé appliqué: ' + getModeLabel(suggestedMode) + scopeLabel + '.', 'ok');
+        } catch (err) {
+          setStatus(err.message || String(err), 'err');
+        }
       });
 
       (async function init() {
@@ -1382,6 +1601,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           renderFocus();
           renderSessionGoal();
           renderCompletion();
+          renderSetupGuide();
           refs.targetCountInput.disabled = refs.stopRuleSelect.value !== 'fixed_custom';
           if (state.token) {
             await bootstrapConnectedState();
