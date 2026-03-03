@@ -253,6 +253,96 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       font-weight: 800;
     }
 
+    .goal-block {
+      margin-top: 10px;
+      border: 1px dashed var(--line);
+      border-radius: 12px;
+      padding: 10px;
+      background: #fbfeff;
+    }
+
+    .goal-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      border-radius: 999px;
+      padding: 5px 9px;
+      background: #e8f5f4;
+      color: #0b5f58;
+      border: 1px solid #bfe7e2;
+      white-space: nowrap;
+    }
+
+    .progress-track {
+      height: 9px;
+      border-radius: 999px;
+      background: #dfedf7;
+      overflow: hidden;
+      border: 1px solid #ccdfed;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #0f766e, #14b8a6);
+      transition: width 220ms ease;
+    }
+
+    .completion-card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .completion-title {
+      margin: 0;
+      font-size: 15px;
+      color: var(--ink);
+    }
+
+    .completion-kpis {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 8px;
+    }
+
+    .completion-kpi {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 8px;
+      background: #f9fdff;
+    }
+
+    .completion-kpi .k {
+      font-size: 11px;
+      color: var(--ink-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.25px;
+    }
+
+    .completion-kpi .v {
+      margin-top: 5px;
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--ink);
+      line-height: 1;
+    }
+
     .subject-list, .chapter-list, .history-list {
       display: grid;
       gap: 8px;
@@ -492,6 +582,15 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           </div>
           <div class="stats" id="stats"></div>
           <div id="sessionSummary" class="muted">Aucune session active.</div>
+          <div class="goal-block">
+            <div class="goal-row">
+              <div id="sessionGoalLabel" class="muted">Objectif: session libre</div>
+              <div id="sessionGoalChip" class="chip">Libre</div>
+            </div>
+            <div class="progress-track">
+              <div id="sessionGoalProgressBar" class="progress-fill"></div>
+            </div>
+          </div>
         </div>
 
         <div class="section">
@@ -514,6 +613,14 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
             <h3>État système</h3>
           </div>
           <div id="statusBox" class="status info">Connecte-toi pour commencer.</div>
+        </div>
+
+        <div id="completionSection" class="section hidden">
+          <div class="section-head">
+            <h3>Résultat De Session</h3>
+            <span class="section-note">Bilan immédiat</span>
+          </div>
+          <div id="completionContent" class="completion-card"></div>
         </div>
 
         <div class="section">
@@ -547,7 +654,8 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         session: null,
         currentQuestion: null,
         questionShownAt: 0,
-        history: []
+        history: [],
+        lastCompletedSession: null
       };
 
       var refs = {
@@ -567,11 +675,16 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         chaptersList: document.getElementById('chaptersList'),
         stats: document.getElementById('stats'),
         sessionSummary: document.getElementById('sessionSummary'),
+        sessionGoalLabel: document.getElementById('sessionGoalLabel'),
+        sessionGoalChip: document.getElementById('sessionGoalChip'),
+        sessionGoalProgressBar: document.getElementById('sessionGoalProgressBar'),
         questionContainer: document.getElementById('questionContainer'),
         submitAnswerBtn: document.getElementById('submitAnswerBtn'),
         nextQuestionBtn: document.getElementById('nextQuestionBtn'),
         completeSessionBtn: document.getElementById('completeSessionBtn'),
         statusBox: document.getElementById('statusBox'),
+        completionSection: document.getElementById('completionSection'),
+        completionContent: document.getElementById('completionContent'),
         historyList: document.getElementById('historyList')
       };
 
@@ -676,6 +789,72 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
       function statHtml(label, value) {
         return '<div class="stat"><div class="k">' + escapeHtml(label) + '</div><div class="v">' + escapeHtml(value) + '</div></div>';
+      }
+
+      function getGoalFromUi() {
+        var stopRule = refs.stopRuleSelect.value;
+        if (stopRule === 'fixed_10') {
+          return { stopRule: stopRule, target: 10 };
+        }
+        if (stopRule === 'fixed_custom') {
+          var customTarget = Number(refs.targetCountInput.value || '0');
+          return { stopRule: stopRule, target: Number.isFinite(customTarget) && customTarget > 0 ? customTarget : null };
+        }
+        return { stopRule: stopRule, target: null };
+      }
+
+      function getGoalFromSession() {
+        if (!state.session) {
+          return null;
+        }
+        if (state.session.stopRule === 'fixed_10') {
+          return { stopRule: state.session.stopRule, target: 10 };
+        }
+        if (state.session.stopRule === 'fixed_custom') {
+          return { stopRule: state.session.stopRule, target: Number(state.session.targetQuestionCount || 0) || null };
+        }
+        return { stopRule: state.session.stopRule, target: null };
+      }
+
+      function renderSessionGoal() {
+        var config = getGoalFromSession() || getGoalFromUi();
+        var attempts = state.session && state.session.progress ? Number(state.session.progress.attempts || 0) : 0;
+
+        if (config && config.target) {
+          var pct = Math.max(0, Math.min(100, Math.round((attempts / config.target) * 100)));
+          refs.sessionGoalLabel.textContent = 'Objectif: ' + config.target + ' questions';
+          refs.sessionGoalChip.textContent = attempts + '/' + config.target;
+          refs.sessionGoalProgressBar.style.width = pct + '%';
+          return;
+        }
+
+        refs.sessionGoalLabel.textContent = 'Objectif: session libre';
+        refs.sessionGoalChip.textContent = 'Libre';
+        refs.sessionGoalProgressBar.style.width = '0%';
+      }
+
+      function renderCompletion() {
+        if (!state.lastCompletedSession) {
+          refs.completionSection.classList.add('hidden');
+          refs.completionContent.innerHTML = '';
+          return;
+        }
+
+        var result = state.lastCompletedSession;
+        var attempts = Number(result.attempts || 0);
+        var correct = Number(result.correct || 0);
+        var successRate = attempts > 0 ? Math.round((correct / attempts) * 1000) / 10 : 0;
+        var label = successRate >= 80 ? 'Très solide' : (successRate >= 60 ? 'En progression' : 'À renforcer');
+
+        refs.completionSection.classList.remove('hidden');
+        refs.completionContent.innerHTML =
+          '<h4 class="completion-title">Session terminée</h4>'
+          + '<div class="completion-kpis">'
+          + '<div class="completion-kpi"><div class="k">Bonnes réponses</div><div class="v">' + escapeHtml(String(correct)) + '</div></div>'
+          + '<div class="completion-kpi"><div class="k">Tentatives</div><div class="v">' + escapeHtml(String(attempts)) + '</div></div>'
+          + '<div class="completion-kpi"><div class="k">Taux de réussite</div><div class="v">' + escapeHtml(String(successRate)) + '%</div></div>'
+          + '</div>'
+          + '<div class="muted">Lecture rapide: <b>' + escapeHtml(label) + '</b>. Relance une session pour continuer.</div>';
       }
 
       function renderSubjects() {
@@ -796,6 +975,8 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         var session = await api('/trainings/sessions', { method: 'POST', body: body });
         state.session = session;
         state.history = [];
+        state.lastCompletedSession = null;
+        renderCompletion();
         renderHistory();
         refs.completeSessionBtn.disabled = false;
         refs.nextQuestionBtn.disabled = false;
@@ -812,6 +993,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         state.session = sessionDetails;
         refs.sessionSummary.textContent = 'Mode: ' + sessionDetails.mode + ' · Stop: ' + sessionDetails.stopRule + ' · Progression: '
           + sessionDetails.progress.correct + '/' + sessionDetails.progress.attempts;
+        renderSessionGoal();
 
         var next = await api('/trainings/sessions/' + state.session.id + '/next-question');
         state.currentQuestion = next.item;
@@ -825,6 +1007,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           refs.questionContainer.classList.remove('hidden');
           refs.questionContainer.innerHTML = '<div class="muted">Plus de question disponible avec les filtres actuels. Termine la session ou change de mode/filtres.</div>';
           refs.submitAnswerBtn.disabled = true;
+          refs.nextQuestionBtn.disabled = true;
           return;
         }
 
@@ -925,11 +1108,16 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           return;
         }
         var result = await api('/trainings/sessions/' + state.session.id + '/complete', { method: 'POST' });
+        state.lastCompletedSession = result;
+        renderCompletion();
         setStatus('Session terminée: ' + result.correct + '/' + result.attempts + ' correctes.', 'ok');
         refs.completeSessionBtn.disabled = true;
         refs.nextQuestionBtn.disabled = true;
         refs.submitAnswerBtn.disabled = true;
+        state.session = null;
         state.currentQuestion = null;
+        refs.sessionSummary.textContent = 'Session clôturée. Tu peux en démarrer une nouvelle.';
+        renderSessionGoal();
         renderQuestion();
         await loadDashboard();
       }
@@ -995,6 +1183,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         state.selectedSubjects = {};
         state.selectedChapters = {};
         state.history = [];
+        state.lastCompletedSession = null;
         refs.userBadge.textContent = 'Non connecté';
         refs.subjectsList.innerHTML = '';
         refs.chaptersList.innerHTML = '';
@@ -1003,6 +1192,8 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         refs.questionContainer.innerHTML = '';
         refs.questionContainer.classList.add('hidden');
         renderHistory();
+        renderSessionGoal();
+        renderCompletion();
         ensureAuthUi();
         setStatus('Déconnecté.', 'info');
       });
@@ -1053,12 +1244,19 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       refs.stopRuleSelect.addEventListener('change', function () {
         var custom = refs.stopRuleSelect.value === 'fixed_custom';
         refs.targetCountInput.disabled = !custom;
+        renderSessionGoal();
+      });
+
+      refs.targetCountInput.addEventListener('input', function () {
+        renderSessionGoal();
       });
 
       (async function init() {
         try {
           ensureAuthUi();
           renderHistory();
+          renderSessionGoal();
+          renderCompletion();
           refs.targetCountInput.disabled = refs.stopRuleSelect.value !== 'fixed_custom';
           if (state.token) {
             await bootstrapConnectedState();
