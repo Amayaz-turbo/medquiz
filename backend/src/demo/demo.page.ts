@@ -284,6 +284,12 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       white-space: nowrap;
     }
 
+    .chip.warn {
+      background: #fff4d6;
+      color: #8a4b00;
+      border-color: #ffd48a;
+    }
+
     .progress-track {
       height: 9px;
       border-radius: 999px;
@@ -341,6 +347,31 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       font-weight: 800;
       color: var(--ink);
       line-height: 1;
+    }
+
+    .focus-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .focus-item {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 9px;
+      background: #fff;
+    }
+
+    .focus-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .btn-inline {
+      width: auto;
+      min-width: 110px;
     }
 
     .subject-list, .chapter-list, .history-list {
@@ -610,6 +641,18 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
         <div class="section">
           <div class="section-head">
+            <h3>Priorités De Révision</h3>
+            <span class="section-note">Résultats cumulés</span>
+          </div>
+          <div id="focusList" class="focus-list"></div>
+          <div class="goal-row" style="margin-top:8px">
+            <div id="suggestedModeLabel" class="muted">Mode conseillé: -</div>
+            <button class="btn-secondary btn-inline" id="applySuggestedModeBtn" disabled>Appliquer</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-head">
             <h3>État système</h3>
           </div>
           <div id="statusBox" class="status info">Connecte-toi pour commencer.</div>
@@ -675,6 +718,9 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         chaptersList: document.getElementById('chaptersList'),
         stats: document.getElementById('stats'),
         sessionSummary: document.getElementById('sessionSummary'),
+        focusList: document.getElementById('focusList'),
+        suggestedModeLabel: document.getElementById('suggestedModeLabel'),
+        applySuggestedModeBtn: document.getElementById('applySuggestedModeBtn'),
         sessionGoalLabel: document.getElementById('sessionGoalLabel'),
         sessionGoalChip: document.getElementById('sessionGoalChip'),
         sessionGoalProgressBar: document.getElementById('sessionGoalProgressBar'),
@@ -755,6 +801,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       async function loadDashboard() {
         state.dashboard = await api('/trainings/dashboard');
         renderStats();
+        renderFocus();
       }
 
       async function loadSubjects() {
@@ -789,6 +836,69 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
       function statHtml(label, value) {
         return '<div class="stat"><div class="k">' + escapeHtml(label) + '</div><div class="v">' + escapeHtml(value) + '</div></div>';
+      }
+
+      function getModeLabel(mode) {
+        var labels = {
+          learning: 'Apprentissage',
+          discovery: 'Découverte',
+          review: 'Révision',
+          par_coeur: 'Par coeur',
+          rattrapage: 'À revoir'
+        };
+        return labels[mode] || mode;
+      }
+
+      function renderFocus() {
+        var d = state.dashboard;
+        if (!d || !Array.isArray(d.subjects) || !d.overview) {
+          refs.focusList.innerHTML = '<div class="muted">Données insuffisantes pour proposer une priorité.</div>';
+          refs.suggestedModeLabel.textContent = 'Mode conseillé: -';
+          refs.applySuggestedModeBtn.disabled = true;
+          refs.applySuggestedModeBtn.removeAttribute('data-mode');
+          return;
+        }
+
+        var sorted = d.subjects.slice().sort(function (a, b) {
+          var reinforceA = Number(a.questionsToReinforceCount || 0);
+          var reinforceB = Number(b.questionsToReinforceCount || 0);
+          if (reinforceB !== reinforceA) {
+            return reinforceB - reinforceA;
+          }
+          var successA = a.successRatePct == null ? 100 : Number(a.successRatePct);
+          var successB = b.successRatePct == null ? 100 : Number(b.successRatePct);
+          if (successA !== successB) {
+            return successA - successB;
+          }
+          return Number(b.attemptsCount || 0) - Number(a.attemptsCount || 0);
+        });
+
+        var focus = sorted.slice(0, 3);
+        if (!focus.length) {
+          refs.focusList.innerHTML = '<div class="muted">Commence quelques sessions pour obtenir des priorités automatiques.</div>';
+        } else {
+          refs.focusList.innerHTML = focus.map(function (item) {
+            var reinforce = Number(item.questionsToReinforceCount || 0);
+            var success = item.successRatePct == null ? '-' : item.successRatePct + '%';
+            var chipClass = reinforce > 0 ? 'chip warn' : 'chip';
+            var chipText = reinforce > 0 ? (reinforce + ' à revoir') : 'Stable';
+            return '<div class="focus-item">'
+              + '<div class="focus-top"><b>' + escapeHtml(item.name) + '</b><span class="' + chipClass + '">' + escapeHtml(chipText) + '</span></div>'
+              + '<div class="subject-meta">Réussite ' + escapeHtml(String(success)) + ' · Tentatives ' + escapeHtml(String(item.attemptsCount || 0)) + ' · ' + escapeHtml(item.momentumLabel || 'Progression en cours') + '</div>'
+              + '</div>';
+          }).join('');
+        }
+
+        var suggestedMode = d.overview.suggestedMode || '';
+        if (suggestedMode) {
+          refs.suggestedModeLabel.textContent = 'Mode conseillé: ' + getModeLabel(suggestedMode);
+          refs.applySuggestedModeBtn.disabled = false;
+          refs.applySuggestedModeBtn.setAttribute('data-mode', suggestedMode);
+        } else {
+          refs.suggestedModeLabel.textContent = 'Mode conseillé: -';
+          refs.applySuggestedModeBtn.disabled = true;
+          refs.applySuggestedModeBtn.removeAttribute('data-mode');
+        }
       }
 
       function getGoalFromUi() {
@@ -1188,6 +1298,10 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         refs.subjectsList.innerHTML = '';
         refs.chaptersList.innerHTML = '';
         refs.stats.innerHTML = '';
+        refs.focusList.innerHTML = '';
+        refs.suggestedModeLabel.textContent = 'Mode conseillé: -';
+        refs.applySuggestedModeBtn.disabled = true;
+        refs.applySuggestedModeBtn.removeAttribute('data-mode');
         refs.sessionSummary.textContent = 'Aucune session active.';
         refs.questionContainer.innerHTML = '';
         refs.questionContainer.classList.add('hidden');
@@ -1251,10 +1365,21 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         renderSessionGoal();
       });
 
+      refs.applySuggestedModeBtn.addEventListener('click', function () {
+        var suggested = refs.applySuggestedModeBtn.getAttribute('data-mode');
+        if (!suggested) {
+          return;
+        }
+        refs.modeSelect.value = suggested;
+        renderSessionGoal();
+        setStatus('Mode conseillé appliqué: ' + getModeLabel(suggested) + '.', 'info');
+      });
+
       (async function init() {
         try {
           ensureAuthUi();
           renderHistory();
+          renderFocus();
           renderSessionGoal();
           renderCompletion();
           refs.targetCountInput.disabled = refs.stopRuleSelect.value !== 'fixed_custom';
