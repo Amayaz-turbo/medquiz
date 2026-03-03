@@ -427,6 +427,60 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       grid-column: 1 / -1;
     }
 
+    .duel-list {
+      display: grid;
+      gap: 8px;
+      max-height: 230px;
+      overflow: auto;
+      padding-right: 2px;
+    }
+
+    .duel-item {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 9px;
+      background: #fff;
+      display: grid;
+      gap: 5px;
+    }
+
+    .duel-item-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .duel-detail-card {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      background: #fff;
+      display: grid;
+      gap: 8px;
+    }
+
+    .duel-actions {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 8px;
+    }
+
+    .duel-question {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 9px;
+      background: #fff;
+      display: grid;
+      gap: 6px;
+    }
+
+    .mini {
+      font-size: 11px;
+      color: var(--ink-soft);
+      line-height: 1.3;
+    }
+
     .subject-list, .chapter-list, .history-list {
       display: grid;
       gap: 8px;
@@ -739,6 +793,44 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           </div>
           <div id="historyList" class="history-list"></div>
         </div>
+
+        <div class="section">
+          <div class="section-head">
+            <h3>Duel Asynchrone</h3>
+            <span class="section-note">5 manches x 3 questions</span>
+          </div>
+          <div class="auth-grid">
+            <div>
+              <label class="label" for="duelModeSelect">Type de duel</label>
+              <select id="duelModeSelect">
+                <option value="friend_invite">Ami (invitation)</option>
+                <option value="random_free">Aléatoire</option>
+                <option value="random_level">Niveau proche</option>
+              </select>
+            </div>
+            <div>
+              <label class="label" for="duelOpponentInput">Opponent userId (UUID pour ami)</label>
+              <input id="duelOpponentInput" type="text" placeholder="UUID adversaire" />
+            </div>
+            <div>
+              <label class="label" for="duelStatusFilterSelect">Filtre liste</label>
+              <select id="duelStatusFilterSelect">
+                <option value="all">Tous</option>
+                <option value="pending_opener">pending_opener</option>
+                <option value="in_progress">in_progress</option>
+                <option value="completed">completed</option>
+                <option value="cancelled">cancelled</option>
+                <option value="expired">expired</option>
+              </select>
+            </div>
+            <div class="row">
+              <button class="btn-primary" id="createDuelBtn" disabled>Créer duel</button>
+              <button class="btn-secondary" id="refreshDuelsBtn" disabled>Rafraîchir duels</button>
+            </div>
+          </div>
+          <div id="duelsList" class="duel-list" style="margin-top:8px"></div>
+          <div id="duelDetail" class="duel-detail-card hidden" style="margin-top:8px"></div>
+        </div>
       </section>
     </main>
   </div>
@@ -765,7 +857,15 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         questionShownAt: 0,
         history: [],
         lastCompletedSession: null,
-        lastSessionSetup: null
+        lastSessionSetup: null,
+        duels: [],
+        selectedDuelId: null,
+        selectedDuel: null,
+        openerQuestion: null,
+        openerShownAt: 0,
+        currentRound: null,
+        roundQuestions: [],
+        roundQuestionShownAtBySlot: {}
       };
 
       var refs = {
@@ -803,7 +903,14 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         statusBox: document.getElementById('statusBox'),
         completionSection: document.getElementById('completionSection'),
         completionContent: document.getElementById('completionContent'),
-        historyList: document.getElementById('historyList')
+        historyList: document.getElementById('historyList'),
+        duelModeSelect: document.getElementById('duelModeSelect'),
+        duelOpponentInput: document.getElementById('duelOpponentInput'),
+        duelStatusFilterSelect: document.getElementById('duelStatusFilterSelect'),
+        createDuelBtn: document.getElementById('createDuelBtn'),
+        refreshDuelsBtn: document.getElementById('refreshDuelsBtn'),
+        duelsList: document.getElementById('duelsList'),
+        duelDetail: document.getElementById('duelDetail')
       };
 
       function setStatus(msg, tone) {
@@ -866,8 +973,12 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         var connected = !!state.token;
         refs.refreshDashboardBtn.disabled = !connected;
         refs.logoutBtn.classList.toggle('hidden', !connected);
+        refs.createDuelBtn.disabled = !connected;
+        refs.refreshDuelsBtn.disabled = !connected;
         if (!connected) {
           refs.createSessionBtn.disabled = true;
+          refs.createDuelBtn.disabled = true;
+          refs.refreshDuelsBtn.disabled = true;
         }
         renderSetupGuide();
       }
@@ -927,6 +1038,26 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           rattrapage: 'À revoir'
         };
         return labels[mode] || mode;
+      }
+
+      function getDuelModeLabel(mode) {
+        var labels = {
+          friend_invite: 'Ami',
+          random_free: 'Aléatoire',
+          random_level: 'Niveau proche'
+        };
+        return labels[mode] || mode;
+      }
+
+      function getDuelStatusLabel(status) {
+        var labels = {
+          pending_opener: 'Opener',
+          in_progress: 'En cours',
+          completed: 'Terminé',
+          cancelled: 'Annulé',
+          expired: 'Expiré'
+        };
+        return labels[status] || status;
       }
 
       function isSessionSetupDurationValid() {
@@ -1253,6 +1384,330 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           refs.applySuggestedModeBtn.disabled = true;
           refs.applySuggestedModeBtn.removeAttribute('data-mode');
         }
+      }
+
+      function isUuidV4(value) {
+        return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value || '');
+      }
+
+      function setDuelModeUi() {
+        var isFriendInvite = refs.duelModeSelect.value === 'friend_invite';
+        refs.duelOpponentInput.disabled = !isFriendInvite;
+        if (!isFriendInvite) {
+          refs.duelOpponentInput.value = '';
+        }
+      }
+
+      function getDuelStatusFilterParam() {
+        var raw = refs.duelStatusFilterSelect.value;
+        return raw === 'all' ? '' : raw;
+      }
+
+      function resetDuelTransientView() {
+        state.openerQuestion = null;
+        state.openerShownAt = 0;
+        state.currentRound = null;
+        state.roundQuestions = [];
+        state.roundQuestionShownAtBySlot = {};
+      }
+
+      function renderDuelsList() {
+        if (!state.token) {
+          refs.duelsList.innerHTML = '<div class="muted">Connecte-toi pour voir les duels.</div>';
+          return;
+        }
+        if (!state.duels.length) {
+          refs.duelsList.innerHTML = '<div class="muted">Aucun duel pour ce filtre.</div>';
+          return;
+        }
+
+        refs.duelsList.innerHTML = state.duels.map(function (d) {
+          var isSelected = state.selectedDuelId === d.id;
+          return '<div class="duel-item">'
+            + '<div class="duel-item-top">'
+            + '<b>Duel ' + escapeHtml(d.id.slice(0, 8)) + '</b>'
+            + '<span class="chip' + (isSelected ? '' : ' warn') + '">' + escapeHtml(getDuelStatusLabel(d.status)) + '</span>'
+            + '</div>'
+            + '<div class="mini">Score ' + escapeHtml(String(d.player1Score)) + ' - ' + escapeHtml(String(d.player2Score)) + '</div>'
+            + '<div class="mini">Créé: ' + escapeHtml(String(d.createdAt || '').slice(0, 19).replace('T', ' ')) + '</div>'
+            + '<button class="btn-secondary" data-duel-id="' + escapeHtml(d.id) + '">Ouvrir</button>'
+            + '</div>';
+        }).join('');
+      }
+
+      function renderDuelDetail() {
+        var d = state.selectedDuel;
+        if (!d) {
+          refs.duelDetail.classList.add('hidden');
+          refs.duelDetail.innerHTML = '';
+          return;
+        }
+
+        refs.duelDetail.classList.remove('hidden');
+        var meId = state.me && state.me.id ? state.me.id : null;
+        var isMyTurn = Boolean(meId && d.currentTurnUserId === meId);
+        var canAccept = d.matchmakingMode === 'friend_invite'
+          && d.status === 'pending_opener'
+          && d.player2Id === meId
+          && !d.acceptedAt;
+        var canDecline = canAccept;
+        var canForfeit = d.status === 'pending_opener' || d.status === 'in_progress';
+
+        var actions = [];
+        if (canAccept) {
+          actions.push('<button class="btn-primary" data-duel-action="accept">Accepter</button>');
+        }
+        if (canDecline) {
+          actions.push('<button class="btn-danger" data-duel-action="decline">Refuser</button>');
+        }
+        if (canForfeit) {
+          actions.push('<button class="btn-danger" data-duel-action="forfeit">Abandonner</button>');
+        }
+        actions.push('<button class="btn-secondary" data-duel-action="load-opener">Charger opener</button>');
+        actions.push('<button class="btn-secondary" data-duel-action="load-round">Charger manche</button>');
+
+        var openerBlock = '<div class="duel-question"><b>Opener</b><div class="mini">Charge la question opener pour répondre.</div></div>';
+        if (state.openerQuestion) {
+          var openerChoices = (state.openerQuestion.choices || []).map(function (c) {
+            return '<label class="choice"><input type="radio" name="openerChoice" value="' + escapeHtml(c.id) + '" /> <span>' + escapeHtml(c.label) + '</span></label>';
+          }).join('');
+
+          var decisionButtons = '';
+          if (d.opener && d.opener.winnerUserId === meId && !d.opener.winnerDecision) {
+            decisionButtons =
+              '<div class="duel-actions">'
+              + '<button class="btn-primary" data-duel-action="opener-decision-take">Prendre la main</button>'
+              + '<button class="btn-secondary" data-duel-action="opener-decision-leave">Laisser la main</button>'
+              + '</div>';
+          }
+
+          openerBlock =
+            '<div class="duel-question">'
+            + '<b>Opener · difficulté ' + escapeHtml(String(state.openerQuestion.difficulty)) + '</b>'
+            + '<div>' + escapeHtml(state.openerQuestion.prompt) + '</div>'
+            + '<div class="choice-list">' + openerChoices + '</div>'
+            + '<div class="duel-actions"><button class="btn-primary" data-duel-action="answer-opener">Valider opener</button></div>'
+            + decisionButtons
+            + '</div>';
+        }
+
+        var roundBlock = '<div class="duel-question"><b>Manche courante</b><div class="mini">Charge la manche pour jouer ton tour.</div></div>';
+        if (state.currentRound) {
+          var subjectsButtons = '';
+          if (!state.currentRound.chosenSubjectId) {
+            subjectsButtons = '<div class="duel-actions">' + (state.currentRound.offeredSubjects || []).map(function (s) {
+              return '<button class="btn-secondary" data-duel-action="choose-subject" data-subject-id="' + escapeHtml(s.id) + '"' + (isMyTurn ? '' : ' disabled') + '>'
+                + escapeHtml(s.name)
+                + '</button>';
+            }).join('') + '</div>';
+          }
+
+          var loadQuestionsBtn = '';
+          if (state.currentRound.chosenSubjectId && isMyTurn) {
+            loadQuestionsBtn = '<button class="btn-secondary" data-duel-action="load-round-questions">Charger mes 3 questions</button>';
+          }
+
+          var questionsHtml = '';
+          if (state.roundQuestions.length) {
+            questionsHtml = state.roundQuestions.map(function (item) {
+              var choices = (item.question.choices || []).map(function (c) {
+                return '<label class="choice"><input type="radio" name="roundSlot_' + escapeHtml(String(item.slotNo)) + '" value="' + escapeHtml(c.id) + '" /> <span>' + escapeHtml(c.label) + '</span></label>';
+              }).join('');
+              return '<div class="duel-question">'
+                + '<b>Slot ' + escapeHtml(String(item.slotNo)) + ' · diff ' + escapeHtml(String(item.difficultySnapshot)) + '</b>'
+                + '<div>' + escapeHtml(item.question.prompt) + '</div>'
+                + '<div class="choice-list">' + choices + '</div>'
+                + '<button class="btn-primary" data-duel-action="submit-round-answer" data-slot-no="' + escapeHtml(String(item.slotNo)) + '" data-question-id="' + escapeHtml(item.question.id) + '"' + (isMyTurn ? '' : ' disabled') + '>Valider slot ' + escapeHtml(String(item.slotNo)) + '</button>'
+                + '</div>';
+            }).join('');
+          }
+
+          roundBlock =
+            '<div class="duel-question">'
+            + '<b>Manche ' + escapeHtml(String(state.currentRound.roundNo)) + ' · ' + escapeHtml(getDuelStatusLabel(state.currentRound.status)) + '</b>'
+            + '<div class="mini">Tour courant: ' + escapeHtml(String(state.currentRound.currentTurnUserId || '-').slice(0, 8)) + ' · Deadline: ' + escapeHtml(String(state.currentRound.turnDeadlineAt || '-').slice(0, 19).replace('T', ' ')) + '</div>'
+            + (state.currentRound.chosenSubjectId ? ('<div class="mini">Matière choisie: ' + escapeHtml(String(state.currentRound.chosenSubjectId).slice(0, 8)) + '</div>') : '<div class="mini">Choisis une matière parmi les 3 proposées.</div>')
+            + subjectsButtons
+            + (loadQuestionsBtn ? ('<div style="margin-top:8px">' + loadQuestionsBtn + '</div>') : '')
+            + (questionsHtml ? ('<div style="margin-top:8px; display:grid; gap:8px;">' + questionsHtml + '</div>') : '')
+            + '</div>';
+        }
+
+        var roundsMini = Array.isArray(d.rounds)
+          ? d.rounds.map(function (r) { return '#' + r.roundNo + ':' + r.status; }).join(' · ')
+          : '-';
+
+        refs.duelDetail.innerHTML =
+          '<div class="duel-item-top">'
+          + '<b>Duel ' + escapeHtml(d.id.slice(0, 8)) + '</b>'
+          + '<span class="chip">' + escapeHtml(getDuelStatusLabel(d.status)) + '</span>'
+          + '</div>'
+          + '<div class="mini">Type: ' + escapeHtml(getDuelModeLabel(d.matchmakingMode)) + ' · Score ' + escapeHtml(String(d.score.player1)) + ' - ' + escapeHtml(String(d.score.player2)) + '</div>'
+          + '<div class="mini">Round: ' + escapeHtml(String(d.currentRoundNo)) + ' · Mon tour: ' + escapeHtml(isMyTurn ? 'Oui' : 'Non') + '</div>'
+          + '<div class="mini">Manches: ' + escapeHtml(roundsMini) + '</div>'
+          + (d.winnerUserId ? ('<div class="mini">Vainqueur: ' + escapeHtml(String(d.winnerUserId).slice(0, 8)) + ' · Raison: ' + escapeHtml(String(d.winReason || '-')) + '</div>') : '')
+          + '<div class="duel-actions">' + actions.join('') + '</div>'
+          + openerBlock
+          + roundBlock;
+      }
+
+      async function loadDuels() {
+        if (!state.token) {
+          state.duels = [];
+          renderDuelsList();
+          return;
+        }
+        var status = getDuelStatusFilterParam();
+        var path = '/duels' + (status ? ('?status=' + encodeURIComponent(status)) : '');
+        var result = await api(path);
+        state.duels = result.items || [];
+        renderDuelsList();
+      }
+
+      async function loadDuelDetail(duelId) {
+        if (!duelId) {
+          return;
+        }
+        state.selectedDuelId = duelId;
+        resetDuelTransientView();
+        state.selectedDuel = await api('/duels/' + duelId);
+        renderDuelsList();
+        renderDuelDetail();
+      }
+
+      async function createDuelFromUi() {
+        var mode = refs.duelModeSelect.value;
+        var body = { matchmakingMode: mode };
+        if (mode === 'friend_invite') {
+          var opponent = refs.duelOpponentInput.value.trim();
+          if (!isUuidV4(opponent)) {
+            throw new Error('UUID adversaire invalide pour un duel ami.');
+          }
+          body.opponentUserId = opponent;
+        }
+        var result = await api('/duels', { method: 'POST', body: body });
+        await loadDuels();
+        if (result && result.duelId) {
+          await loadDuelDetail(result.duelId);
+        }
+        setStatus('Duel créé: ' + getDuelModeLabel(mode) + '.', 'ok');
+      }
+
+      async function loadOpenerQuestion() {
+        if (!state.selectedDuelId) {
+          throw new Error('Sélectionne un duel.');
+        }
+        var result = await api('/duels/' + state.selectedDuelId + '/opener');
+        state.openerQuestion = result.question;
+        state.openerShownAt = Date.now();
+        renderDuelDetail();
+      }
+
+      async function answerOpenerFromUi() {
+        if (!state.selectedDuelId || !state.openerQuestion) {
+          throw new Error('Charge l\'opener d\'abord.');
+        }
+        var selected = refs.duelDetail.querySelector('input[name="openerChoice"]:checked');
+        if (!selected) {
+          throw new Error('Choisis une réponse pour l\'opener.');
+        }
+        var payload = {
+          selectedChoiceId: selected.value,
+          responseTimeMs: Math.max(1, Math.round(Date.now() - state.openerShownAt))
+        };
+        var result = await api('/duels/' + state.selectedDuelId + '/opener/answer', {
+          method: 'POST',
+          body: payload
+        });
+        await loadDuelDetail(state.selectedDuelId);
+        setStatus(result.resolved ? 'Opener résolu.' : 'Réponse opener enregistrée.', 'ok');
+      }
+
+      async function decideOpenerFromUi(decision) {
+        if (!state.selectedDuelId) {
+          throw new Error('Sélectionne un duel.');
+        }
+        await api('/duels/' + state.selectedDuelId + '/opener/decision', {
+          method: 'POST',
+          body: { decision: decision }
+        });
+        await loadDuelDetail(state.selectedDuelId);
+        await loadCurrentRound();
+        setStatus('Décision opener appliquée.', 'ok');
+      }
+
+      async function loadCurrentRound() {
+        if (!state.selectedDuelId) {
+          throw new Error('Sélectionne un duel.');
+        }
+        state.currentRound = await api('/duels/' + state.selectedDuelId + '/rounds/current');
+        state.roundQuestions = [];
+        state.roundQuestionShownAtBySlot = {};
+        renderDuelDetail();
+      }
+
+      async function chooseCurrentRoundSubject(subjectId) {
+        if (!state.selectedDuelId || !state.currentRound) {
+          throw new Error('Charge la manche courante d\'abord.');
+        }
+        await api('/duels/' + state.selectedDuelId + '/rounds/' + state.currentRound.roundNo + '/choose-subject', {
+          method: 'POST',
+          body: { subjectId: subjectId }
+        });
+        await loadDuelDetail(state.selectedDuelId);
+        await loadCurrentRound();
+        setStatus('Matière de manche choisie.', 'ok');
+      }
+
+      async function loadRoundQuestions() {
+        if (!state.selectedDuelId || !state.currentRound) {
+          throw new Error('Charge la manche courante d\'abord.');
+        }
+        var result = await api('/duels/' + state.selectedDuelId + '/rounds/' + state.currentRound.roundNo + '/questions');
+        state.roundQuestions = result.items || [];
+        state.roundQuestionShownAtBySlot = {};
+        (state.roundQuestions || []).forEach(function (q) {
+          state.roundQuestionShownAtBySlot[String(q.slotNo)] = Date.now();
+        });
+        renderDuelDetail();
+      }
+
+      async function submitRoundAnswerFromUi(slotNo, questionId) {
+        if (!state.selectedDuelId || !state.currentRound) {
+          throw new Error('Charge la manche courante d\'abord.');
+        }
+        var selected = refs.duelDetail.querySelector('input[name="roundSlot_' + slotNo + '"]:checked');
+        if (!selected) {
+          throw new Error('Choisis une réponse pour le slot ' + slotNo + '.');
+        }
+        var startedAt = Number(state.roundQuestionShownAtBySlot[String(slotNo)] || Date.now());
+        var payload = {
+          slotNo: Number(slotNo),
+          questionId: questionId,
+          selectedChoiceId: selected.value,
+          responseTimeMs: Math.max(1, Math.round(Date.now() - startedAt))
+        };
+        var result = await api('/duels/' + state.selectedDuelId + '/rounds/' + state.currentRound.roundNo + '/answers', {
+          method: 'POST',
+          body: payload
+        });
+        await loadDuelDetail(state.selectedDuelId);
+        try {
+          await loadCurrentRound();
+          if (
+            state.selectedDuel &&
+            state.me &&
+            state.selectedDuel.currentTurnUserId === state.me.id &&
+            state.currentRound &&
+            state.currentRound.chosenSubjectId
+          ) {
+            await loadRoundQuestions();
+          }
+        } catch (err) {
+          // ignore refresh errors when duel switches state between requests
+        }
+        var resultTone = result.answerResult && result.answerResult.isCorrect ? 'ok' : 'info';
+        setStatus('Réponse duel enregistrée (slot ' + slotNo + ').', resultTone);
       }
 
       function getGoalFromUi() {
@@ -1615,6 +2070,8 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         await loadMe();
         await loadDashboard();
         await loadSubjects();
+        await loadDuels();
+        setDuelModeUi();
         setStatus('Prêt. Lance une session d\'entraînement.', 'info');
       }
 
@@ -1664,6 +2121,14 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         state.history = [];
         state.lastCompletedSession = null;
         state.lastSessionSetup = null;
+        state.duels = [];
+        state.selectedDuelId = null;
+        state.selectedDuel = null;
+        state.openerQuestion = null;
+        state.openerShownAt = 0;
+        state.currentRound = null;
+        state.roundQuestions = [];
+        state.roundQuestionShownAtBySlot = {};
         refs.userBadge.textContent = 'Non connecté';
         refs.subjectsList.innerHTML = '';
         refs.chaptersList.innerHTML = '';
@@ -1675,6 +2140,9 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         refs.sessionSummary.textContent = 'Aucune session active.';
         refs.questionContainer.innerHTML = '';
         refs.questionContainer.classList.add('hidden');
+        refs.duelsList.innerHTML = '';
+        refs.duelDetail.innerHTML = '';
+        refs.duelDetail.classList.add('hidden');
         renderHistory();
         renderSessionGoal();
         renderCompletion();
@@ -1776,6 +2244,143 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         }
       });
 
+      refs.duelModeSelect.addEventListener('change', function () {
+        setDuelModeUi();
+      });
+
+      refs.duelStatusFilterSelect.addEventListener('change', async function () {
+        try {
+          await loadDuels();
+        } catch (err) {
+          setStatus(err.message || String(err), 'err');
+        }
+      });
+
+      refs.createDuelBtn.addEventListener('click', async function () {
+        try {
+          await createDuelFromUi();
+        } catch (err) {
+          setStatus(err.message || String(err), 'err');
+        }
+      });
+
+      refs.refreshDuelsBtn.addEventListener('click', async function () {
+        try {
+          await loadDuels();
+          if (state.selectedDuelId) {
+            await loadDuelDetail(state.selectedDuelId);
+          }
+          setStatus('Liste des duels rafraîchie.', 'info');
+        } catch (err) {
+          setStatus(err.message || String(err), 'err');
+        }
+      });
+
+      refs.duelsList.addEventListener('click', async function (event) {
+        var target = event.target;
+        if (!target || typeof target.closest !== 'function') {
+          return;
+        }
+        var btn = target.closest('button[data-duel-id]');
+        if (!btn) {
+          return;
+        }
+        var duelId = btn.getAttribute('data-duel-id');
+        if (!duelId) {
+          return;
+        }
+        try {
+          await loadDuelDetail(duelId);
+          setStatus('Duel chargé.', 'info');
+        } catch (err) {
+          setStatus(err.message || String(err), 'err');
+        }
+      });
+
+      refs.duelDetail.addEventListener('click', async function (event) {
+        var target = event.target;
+        if (!target || typeof target.closest !== 'function') {
+          return;
+        }
+        var btn = target.closest('button[data-duel-action]');
+        if (!btn) {
+          return;
+        }
+        var action = btn.getAttribute('data-duel-action');
+        if (!action) {
+          return;
+        }
+        try {
+          if (action === 'accept') {
+            await api('/duels/' + state.selectedDuelId + '/accept', { method: 'POST' });
+            await loadDuels();
+            await loadDuelDetail(state.selectedDuelId);
+            setStatus('Duel accepté.', 'ok');
+            return;
+          }
+          if (action === 'decline') {
+            await api('/duels/' + state.selectedDuelId + '/decline', { method: 'POST' });
+            await loadDuels();
+            await loadDuelDetail(state.selectedDuelId);
+            setStatus('Duel refusé.', 'info');
+            return;
+          }
+          if (action === 'forfeit') {
+            await api('/duels/' + state.selectedDuelId + '/forfeit', { method: 'POST' });
+            await loadDuels();
+            await loadDuelDetail(state.selectedDuelId);
+            setStatus('Duel abandonné.', 'info');
+            return;
+          }
+          if (action === 'load-opener') {
+            await loadOpenerQuestion();
+            setStatus('Opener chargé.', 'info');
+            return;
+          }
+          if (action === 'answer-opener') {
+            await answerOpenerFromUi();
+            return;
+          }
+          if (action === 'opener-decision-take') {
+            await decideOpenerFromUi('take_hand');
+            return;
+          }
+          if (action === 'opener-decision-leave') {
+            await decideOpenerFromUi('leave_hand');
+            return;
+          }
+          if (action === 'load-round') {
+            await loadCurrentRound();
+            setStatus('Manche courante chargée.', 'info');
+            return;
+          }
+          if (action === 'choose-subject') {
+            var subjectId = btn.getAttribute('data-subject-id');
+            if (!subjectId) {
+              throw new Error('subjectId manquant.');
+            }
+            await chooseCurrentRoundSubject(subjectId);
+            return;
+          }
+          if (action === 'load-round-questions') {
+            await loadRoundQuestions();
+            setStatus('Questions de manche chargées.', 'info');
+            return;
+          }
+          if (action === 'submit-round-answer') {
+            var slotNo = btn.getAttribute('data-slot-no');
+            var questionId = btn.getAttribute('data-question-id');
+            if (!slotNo || !questionId) {
+              throw new Error('Paramètres de réponse manquants.');
+            }
+            await submitRoundAnswerFromUi(slotNo, questionId);
+            return;
+          }
+        } catch (err) {
+          setStatus(err.message || String(err), 'err');
+        }
+      });
+
       refs.completionContent.addEventListener('click', async function (event) {
         var target = event.target;
         if (!target || typeof target.closest !== 'function') {
@@ -1799,6 +2404,9 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       (async function init() {
         try {
           ensureAuthUi();
+          setDuelModeUi();
+          renderDuelsList();
+          renderDuelDetail();
           renderHistory();
           renderFocus();
           renderSessionGoal();
