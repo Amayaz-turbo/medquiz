@@ -813,7 +813,11 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
       async function api(path, options) {
         var opts = options || {};
-        var headers = Object.assign({ 'content-type': 'application/json' }, opts.headers || {});
+        var hasBody = Object.prototype.hasOwnProperty.call(opts, 'body');
+        var headers = Object.assign({}, opts.headers || {});
+        if (hasBody) {
+          headers['content-type'] = 'application/json';
+        }
         if (state.token) {
           headers.Authorization = 'Bearer ' + state.token;
         }
@@ -821,7 +825,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         var res = await fetch(baseUrl + path, {
           method: opts.method || 'GET',
           headers: headers,
-          body: opts.body ? JSON.stringify(opts.body) : undefined
+          body: hasBody ? JSON.stringify(opts.body) : undefined
         });
 
         var text = await res.text();
