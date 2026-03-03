@@ -349,6 +349,19 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       line-height: 1;
     }
 
+    .completion-actions {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 8px;
+      margin-top: 2px;
+    }
+
+    .completion-action-btn {
+      width: 100%;
+      min-height: 40px;
+      text-align: center;
+    }
+
     .focus-list {
       display: grid;
       gap: 8px;
@@ -751,7 +764,8 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         currentQuestion: null,
         questionShownAt: 0,
         history: [],
-        lastCompletedSession: null
+        lastCompletedSession: null,
+        lastSessionSetup: null
       };
 
       var refs = {
@@ -983,6 +997,46 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         renderChapters();
       }
 
+      async function applySessionSetupConfig(config) {
+        if (!config) {
+          return;
+        }
+
+        refs.modeSelect.value = config.mode || 'learning';
+        refs.stopRuleSelect.value = config.stopRule || 'fixed_10';
+
+        if (refs.stopRuleSelect.value === 'fixed_custom') {
+          var t = Number(config.targetQuestionCount || 10);
+          var safeTarget = Math.max(1, Math.min(200, Number.isFinite(t) ? t : 10));
+          refs.targetCountInput.value = String(safeTarget);
+          refs.targetCountInput.disabled = false;
+        } else {
+          refs.targetCountInput.disabled = true;
+          if (refs.stopRuleSelect.value === 'fixed_10') {
+            refs.targetCountInput.value = '10';
+          }
+        }
+
+        state.selectedSubjects = {};
+        state.selectedChapters = {};
+        var subjectIds = Array.isArray(config.subjectIds) ? config.subjectIds : [];
+        var chapterIds = Array.isArray(config.chapterIds) ? config.chapterIds : [];
+
+        subjectIds.forEach(function (id) {
+          state.selectedSubjects[id] = true;
+        });
+        renderSubjects();
+        if (subjectIds.length) {
+          await Promise.all(subjectIds.map(function (id) { return loadChapters(id); }));
+        }
+        chapterIds.forEach(function (id) {
+          state.selectedChapters[id] = true;
+        });
+        renderChapters();
+        renderSessionGoal();
+        renderSetupGuide();
+      }
+
       async function selectTopReinforceSubjects(maxCount) {
         if (!state.dashboard || !Array.isArray(state.dashboard.subjects)) {
           clearSessionFilters();
@@ -1007,6 +1061,142 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         await Promise.all(candidates.map(function (s) { return loadChapters(s.id); }));
         renderChapters();
         return candidates.length;
+      }
+
+      function getSuggestedMode() {
+        return (state.dashboard && state.dashboard.overview && state.dashboard.overview.suggestedMode) || '';
+      }
+
+      function getCompletionActions(successRate) {
+        var items = [];
+        var seen = {};
+        function push(key, label) {
+          if (seen[key]) {
+            return;
+          }
+          seen[key] = true;
+          items.push({ key: key, label: label });
+        }
+
+        if (state.lastSessionSetup) {
+          push('same', 'Relancer la même session');
+        }
+        if (successRate < 60) {
+          push('catchup', 'Rattrapage ciblé (10)');
+        } else if (successRate < 85) {
+          push('review10', 'Consolider (10)');
+        } else {
+          push('discovery', 'Passer en découverte (10)');
+        }
+
+        if (getSuggestedMode()) {
+          push('suggested', 'Suivre le mode conseillé');
+        }
+
+        return items.slice(0, 3);
+      }
+
+      async function applyPresetDiscovery(options) {
+        refs.modeSelect.value = 'discovery';
+        refs.stopRuleSelect.value = 'fixed_10';
+        refs.targetCountInput.value = '10';
+        refs.targetCountInput.disabled = true;
+        clearSessionFilters();
+        renderSessionGoal();
+        renderSetupGuide();
+        if (!(options && options.silent)) {
+          setStatus('Preset appliqué: Découverte 10 (toutes matières).', 'info');
+        }
+      }
+
+      async function applyPresetReviewFixed10(options) {
+        refs.modeSelect.value = 'review';
+        refs.stopRuleSelect.value = 'fixed_10';
+        refs.targetCountInput.value = '10';
+        refs.targetCountInput.disabled = true;
+        clearSessionFilters();
+        renderSessionGoal();
+        renderSetupGuide();
+        if (!(options && options.silent)) {
+          setStatus('Preset appliqué: Révision 10 (toutes matières).', 'info');
+        }
+      }
+
+      async function applyPresetReviewFree(options) {
+        refs.modeSelect.value = 'review';
+        refs.stopRuleSelect.value = 'until_stop';
+        refs.targetCountInput.disabled = true;
+        clearSessionFilters();
+        renderSessionGoal();
+        renderSetupGuide();
+        if (!(options && options.silent)) {
+          setStatus('Preset appliqué: Révision libre (toutes matières).', 'info');
+        }
+      }
+
+      async function applyPresetCatchup(options) {
+        refs.modeSelect.value = 'rattrapage';
+        refs.stopRuleSelect.value = 'fixed_10';
+        refs.targetCountInput.value = '10';
+        refs.targetCountInput.disabled = true;
+        var selectedCount = await selectTopReinforceSubjects(3);
+        if (!selectedCount) {
+          clearSessionFilters();
+        }
+        renderSessionGoal();
+        renderSetupGuide();
+        if (!(options && options.silent)) {
+          var scopeLabel = selectedCount > 0 ? (' · ' + selectedCount + ' matière(s) ciblée(s)') : '';
+          setStatus('Preset appliqué: Rattrapage ciblé (10)' + scopeLabel + '.', 'info');
+        }
+      }
+
+      async function applyPresetRecommended(options) {
+        var suggestedMode = getSuggestedMode();
+        if (!suggestedMode) {
+          throw new Error('Aucun mode conseillé disponible pour le moment.');
+        }
+
+        if (suggestedMode === 'rattrapage') {
+          await applyPresetCatchup({ silent: true });
+        } else if (suggestedMode === 'review') {
+          await applyPresetReviewFixed10({ silent: true });
+        } else if (suggestedMode === 'discovery') {
+          await applyPresetDiscovery({ silent: true });
+        } else {
+          refs.modeSelect.value = suggestedMode;
+          refs.stopRuleSelect.value = 'fixed_10';
+          refs.targetCountInput.value = '10';
+          refs.targetCountInput.disabled = true;
+          clearSessionFilters();
+          renderSessionGoal();
+          renderSetupGuide();
+        }
+
+        if (!(options && options.silent)) {
+          setStatus('Preset conseillé appliqué: ' + getModeLabel(suggestedMode) + '.', 'ok');
+        }
+      }
+
+      async function startRecommendedSession(action) {
+        if (action === 'same') {
+          if (!state.lastSessionSetup) {
+            throw new Error('Aucune session précédente à relancer.');
+          }
+          await applySessionSetupConfig(state.lastSessionSetup);
+        } else if (action === 'catchup') {
+          await applyPresetCatchup({ silent: true });
+        } else if (action === 'review10') {
+          await applyPresetReviewFixed10({ silent: true });
+        } else if (action === 'discovery') {
+          await applyPresetDiscovery({ silent: true });
+        } else if (action === 'suggested') {
+          await applyPresetRecommended({ silent: true });
+        } else {
+          throw new Error('Action recommandée inconnue.');
+        }
+
+        await createSession();
       }
 
       function renderFocus() {
@@ -1115,6 +1305,10 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         var correct = Number(result.correct || 0);
         var successRate = attempts > 0 ? Math.round((correct / attempts) * 1000) / 10 : 0;
         var label = successRate >= 80 ? 'Très solide' : (successRate >= 60 ? 'En progression' : 'À renforcer');
+        var actions = getCompletionActions(successRate);
+        var actionsHtml = actions.map(function (item) {
+          return '<button class="btn-primary completion-action-btn" data-completion-action="' + escapeHtml(item.key) + '">' + escapeHtml(item.label) + '</button>';
+        }).join('');
 
         refs.completionSection.classList.remove('hidden');
         refs.completionContent.innerHTML =
@@ -1124,6 +1318,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           + '<div class="completion-kpi"><div class="k">Tentatives</div><div class="v">' + escapeHtml(String(attempts)) + '</div></div>'
           + '<div class="completion-kpi"><div class="k">Taux de réussite</div><div class="v">' + escapeHtml(String(successRate)) + '%</div></div>'
           + '</div>'
+          + (actionsHtml ? ('<div class="completion-actions">' + actionsHtml + '</div>') : '')
           + '<div class="muted">Lecture rapide: <b>' + escapeHtml(label) + '</b>. Relance une session pour continuer.</div>';
       }
 
@@ -1245,6 +1440,13 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         }
 
         var session = await api('/trainings/sessions', { method: 'POST', body: body });
+        state.lastSessionSetup = {
+          mode: mode,
+          stopRule: stopRule,
+          targetQuestionCount: body.targetQuestionCount || null,
+          subjectIds: subjectIds.slice(),
+          chapterIds: chapterIds.slice()
+        };
         state.session = session;
         state.history = [];
         state.lastCompletedSession = null;
@@ -1390,6 +1592,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         state.currentQuestion = null;
         refs.sessionSummary.textContent = 'Session clôturée. Tu peux en démarrer une nouvelle.';
         renderSessionGoal();
+        renderSetupGuide();
         renderQuestion();
         await loadDashboard();
       }
@@ -1456,6 +1659,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         state.selectedChapters = {};
         state.history = [];
         state.lastCompletedSession = null;
+        state.lastSessionSetup = null;
         refs.userBadge.textContent = 'Non connecté';
         refs.subjectsList.innerHTML = '';
         refs.chaptersList.innerHTML = '';
@@ -1544,51 +1748,45 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         renderSetupGuide();
       });
 
-      refs.presetDiscoveryBtn.addEventListener('click', function () {
-        refs.modeSelect.value = 'discovery';
-        refs.stopRuleSelect.value = 'fixed_10';
-        refs.targetCountInput.value = '10';
-        refs.targetCountInput.disabled = true;
-        clearSessionFilters();
-        renderSessionGoal();
-        renderSetupGuide();
-        setStatus('Preset appliqué: Découverte 10 (toutes matières).', 'info');
+      refs.presetDiscoveryBtn.addEventListener('click', async function () {
+        try {
+          await applyPresetDiscovery();
+        } catch (err) {
+          setStatus(err.message || String(err), 'err');
+        }
       });
 
-      refs.presetReviewBtn.addEventListener('click', function () {
-        refs.modeSelect.value = 'review';
-        refs.stopRuleSelect.value = 'until_stop';
-        refs.targetCountInput.disabled = true;
-        clearSessionFilters();
-        renderSessionGoal();
-        renderSetupGuide();
-        setStatus('Preset appliqué: Révision libre (toutes matières).', 'info');
+      refs.presetReviewBtn.addEventListener('click', async function () {
+        try {
+          await applyPresetReviewFree();
+        } catch (err) {
+          setStatus(err.message || String(err), 'err');
+        }
       });
 
       refs.presetRecommendedBtn.addEventListener('click', async function () {
         try {
-          var suggestedMode = state.dashboard && state.dashboard.overview
-            ? state.dashboard.overview.suggestedMode
-            : '';
-          if (!suggestedMode) {
-            throw new Error('Aucun mode conseillé disponible pour le moment.');
-          }
-          refs.modeSelect.value = suggestedMode;
-          refs.stopRuleSelect.value = 'fixed_10';
-          refs.targetCountInput.value = '10';
-          refs.targetCountInput.disabled = true;
+          await applyPresetRecommended();
+        } catch (err) {
+          setStatus(err.message || String(err), 'err');
+        }
+      });
 
-          var selectedCount = 0;
-          if (suggestedMode === 'rattrapage') {
-            selectedCount = await selectTopReinforceSubjects(3);
-          } else {
-            clearSessionFilters();
+      refs.completionContent.addEventListener('click', async function (event) {
+        var target = event.target;
+        if (!target || typeof target.closest !== 'function') {
+          return;
+        }
+        var btn = target.closest('button[data-completion-action]');
+        if (!btn) {
+          return;
+        }
+        try {
+          var action = btn.getAttribute('data-completion-action');
+          if (!action) {
+            return;
           }
-
-          renderSessionGoal();
-          renderSetupGuide();
-          var scopeLabel = selectedCount > 0 ? (' · ' + selectedCount + ' matière(s) ciblée(s)') : '';
-          setStatus('Preset conseillé appliqué: ' + getModeLabel(suggestedMode) + scopeLabel + '.', 'ok');
+          await startRecommendedSession(action);
         } catch (err) {
           setStatus(err.message || String(err), 'err');
         }
