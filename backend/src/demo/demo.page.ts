@@ -714,7 +714,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
     .app-bottom-nav {
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 8px;
       padding: 10px 10px 12px;
       border-top: 1px solid rgba(13, 48, 67, 0.08);
@@ -2577,6 +2577,335 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
     .history-item b.ok { color: var(--ok); }
     .history-item b.err { color: var(--danger); }
 
+    .welcome-minimal-grid {
+      display: grid;
+      gap: 14px;
+      max-width: 440px;
+      margin: 0 auto;
+    }
+
+    .welcome-minimal-brand {
+      display: grid;
+      gap: 14px;
+      justify-items: center;
+      text-align: center;
+      padding: 28px 18px;
+      background:
+        radial-gradient(circle at top right, rgba(255, 255, 255, 0.16), transparent 34%),
+        linear-gradient(135deg, rgba(8, 40, 59, 0.95), rgba(11, 93, 97, 0.92));
+      color: #f5fcff;
+    }
+
+    .welcome-logo-mark {
+      width: 88px;
+      height: 88px;
+      border-radius: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.08));
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      font-size: 34px;
+      font-weight: 800;
+      box-shadow: 0 20px 40px rgba(5, 25, 42, 0.22);
+    }
+
+    .welcome-minimal-brand h2 {
+      margin: 0;
+      font-size: clamp(30px, 5vw, 42px);
+      line-height: 0.98;
+    }
+
+    .welcome-minimal-copy {
+      max-width: 24ch;
+      font-size: 14px;
+      line-height: 1.5;
+      color: rgba(233, 250, 255, 0.88);
+    }
+
+    .welcome-visual-placeholder {
+      width: 100%;
+      border-radius: 20px;
+      padding: 18px;
+      border: 1px dashed rgba(255, 255, 255, 0.26);
+      background: rgba(255, 255, 255, 0.08);
+      display: grid;
+      gap: 6px;
+      justify-items: center;
+      text-align: center;
+    }
+
+    .welcome-visual-placeholder b {
+      font-size: 14px;
+      color: #ffffff;
+    }
+
+    .welcome-visual-placeholder span {
+      font-size: 12px;
+      color: rgba(233, 250, 255, 0.78);
+    }
+
+    .welcome-auth-compact {
+      display: grid;
+      gap: 12px;
+    }
+
+    .toolbar-main {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .menu-back-btn {
+      width: auto;
+      min-width: 0;
+      padding-inline: 12px;
+      white-space: nowrap;
+    }
+
+    .menu-home-panel {
+      display: grid;
+      gap: 14px;
+    }
+
+    .menu-home-hero {
+      border: 1px solid #d7e6f0;
+      border-radius: 22px;
+      padding: 18px;
+      background:
+        radial-gradient(circle at top right, rgba(15, 118, 110, 0.1), transparent 34%),
+        linear-gradient(180deg, #ffffff, #f7fbff);
+      display: grid;
+      gap: 14px;
+    }
+
+    .menu-home-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .menu-home-copy {
+      display: grid;
+      gap: 5px;
+      min-width: 0;
+    }
+
+    .menu-home-kicker {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.28px;
+      color: var(--ink-soft);
+      font-weight: 800;
+    }
+
+    .menu-home-title {
+      font-size: clamp(26px, 5vw, 34px);
+      font-weight: 800;
+      line-height: 1.02;
+      color: var(--ink);
+    }
+
+    .menu-home-text {
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--ink-soft);
+      max-width: 40ch;
+    }
+
+    .menu-home-avatar {
+      width: 58px;
+      height: 58px;
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0f766e, #22c7af);
+      color: #ffffff;
+      font-size: 18px;
+      font-weight: 800;
+      box-shadow: 0 16px 28px rgba(15, 118, 110, 0.22);
+      flex: none;
+    }
+
+    .menu-home-note {
+      border-radius: 16px;
+      padding: 12px 14px;
+      background: #f2f8fc;
+      border: 1px solid #d7e5ef;
+      font-size: 13px;
+      line-height: 1.45;
+      color: var(--ink-soft);
+    }
+
+    .menu-module-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .menu-module-card {
+      border: 1px solid #d7e6f0;
+      border-radius: 20px;
+      padding: 16px;
+      background:
+        radial-gradient(circle at top right, rgba(15, 118, 110, 0.08), transparent 30%),
+        linear-gradient(180deg, #ffffff, #f6fbff);
+      display: grid;
+      gap: 10px;
+      text-align: left;
+      color: inherit;
+    }
+
+    .menu-module-card:hover {
+      transform: translateY(-1px);
+    }
+
+    .menu-module-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .menu-module-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #e8f6f3;
+      color: #0d6d63;
+      font-weight: 800;
+      font-size: 13px;
+      flex: none;
+    }
+
+    .menu-module-label {
+      font-size: 18px;
+      font-weight: 800;
+      line-height: 1.08;
+      color: var(--ink);
+    }
+
+    .menu-module-copy {
+      font-size: 12px;
+      line-height: 1.45;
+      color: var(--ink-soft);
+    }
+
+    .module-stack,
+    .training-flow,
+    .stats-stack {
+      display: grid;
+      gap: 12px;
+    }
+
+    .flow-view {
+      display: grid;
+      gap: 12px;
+    }
+
+    .module-head {
+      display: grid;
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+
+    .module-head b {
+      font-size: 22px;
+      line-height: 1.08;
+      color: var(--ink);
+    }
+
+    .module-head span {
+      font-size: 13px;
+      line-height: 1.45;
+      color: var(--ink-soft);
+    }
+
+    .training-mode-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .training-mode-card {
+      border: 1px solid #d8e5ef;
+      border-radius: 18px;
+      padding: 14px;
+      background: linear-gradient(180deg, #ffffff, #f7fbff);
+      display: grid;
+      gap: 8px;
+      text-align: left;
+      color: inherit;
+    }
+
+    .training-mode-card.is-selected {
+      border-color: rgba(15, 118, 110, 0.4);
+      box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.18);
+      background: linear-gradient(180deg, #eef8f6, #f7fbff);
+    }
+
+    .training-mode-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .training-mode-title {
+      font-size: 17px;
+      font-weight: 800;
+      line-height: 1.1;
+      color: var(--ink);
+    }
+
+    .training-mode-copy {
+      font-size: 12px;
+      line-height: 1.45;
+      color: var(--ink-soft);
+    }
+
+    .training-back-row,
+    .training-setup-actions,
+    .training-result-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .training-back-row button,
+    .training-setup-actions button,
+    .training-result-actions button {
+      width: auto;
+      min-width: 0;
+    }
+
+    .training-setup-stack {
+      display: grid;
+      gap: 12px;
+    }
+
+    .training-play-panel,
+    .training-result-panel {
+      display: grid;
+      gap: 12px;
+    }
+
+    .play-stage-note {
+      border-radius: 16px;
+      padding: 12px 14px;
+      background: #f2f8fc;
+      border: 1px solid #d7e5ef;
+      font-size: 12px;
+      line-height: 1.45;
+      color: var(--ink-soft);
+    }
+
     .muted {
       color: var(--ink-soft);
       font-size: 13px;
@@ -2584,18 +2913,11 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
     }
 
     body[data-screen="welcome"] .hero {
-      padding: 16px 18px;
-      border-radius: 20px;
+      display: none;
     }
 
-    body[data-screen="welcome"] .hero h1 {
-      font-size: clamp(22px, 2.6vw, 30px);
-    }
-
-    body[data-screen="welcome"] .hero p {
-      margin-top: 6px;
-      max-width: 44ch;
-      font-size: 13px;
+    body[data-screen="welcome"] .shell {
+      max-width: 520px;
     }
 
     body[data-auth="connected"] {
@@ -2683,7 +3005,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         grid-template-columns: 1fr;
       }
       .app-bottom-nav {
-        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
       }
       .app-toolbar-actions {
         width: 100%;
@@ -2738,6 +3060,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       }
       .dashboard-pulse-grid,
       .dashboard-grid,
+      .menu-module-grid,
       .welcome-feature-grid,
       .welcome-phone-nav,
       .completion-actions,
@@ -2784,6 +3107,13 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       .welcome-phone-head {
         flex-direction: column;
         align-items: flex-start;
+      }
+      .menu-home-head,
+      .training-back-row,
+      .training-setup-actions,
+      .training-result-actions {
+        flex-direction: column;
+        align-items: stretch;
       }
       .welcome-lane-item {
         grid-template-columns: 1fr;
@@ -2857,106 +3187,23 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
     <main class="screen-root">
       <section id="welcomeScreen" class="screen-pane">
-        <div class="grid welcome-grid">
-          <section class="panel auth-landing-panel welcome-story-panel">
-            <div class="welcome-story-minimal">
-              <div class="welcome-story-top">
-                <div class="welcome-kicker">Ouverture de l’app</div>
-                <div class="welcome-title">Entrer. Choisir. Commencer.</div>
-                <div class="welcome-mini-line">
-                  L’accueil doit être léger. Tu te connectes, tu arrives sur le dashboard, puis tu ouvres directement
-                  la bonne section.
-                </div>
-                <div class="welcome-story-chips">
-                  <span class="pill">Dashboard</span>
-                  <span class="pill">Entraînement</span>
-                  <span class="pill">Duel</span>
-                </div>
-              </div>
-
-              <div class="welcome-preview-phone">
-                <div class="welcome-phone-chrome"></div>
-                <div class="welcome-phone-screen">
-                  <div class="welcome-phone-head">
-                    <div class="welcome-phone-brand">
-                      <b>MedQuiz</b>
-                      <span>Dashboard personnel</span>
-                    </div>
-                    <div class="welcome-phone-avatar">YA</div>
-                  </div>
-
-                  <div class="welcome-phone-highlight">
-                    <div class="k">Aujourd’hui</div>
-                    <div class="v">10 questions</div>
-                    <div class="n">Une session courte conseillée pour repartir vite.</div>
-                  </div>
-
-                  <div class="welcome-phone-stack">
-                    <div class="welcome-preview-card">
-                      <div class="welcome-preview-copy">
-                        <b>Entraînement</b>
-                        <span>Session guidée et correction immédiate</span>
-                      </div>
-                      <span class="welcome-preview-badge">Go</span>
-                    </div>
-                    <div class="welcome-preview-card">
-                      <div class="welcome-preview-copy">
-                        <b>Duel</b>
-                        <span>Une manche en attente de réponse</span>
-                      </div>
-                      <span class="welcome-preview-badge">1 alerte</span>
-                    </div>
-                    <div class="welcome-preview-card">
-                      <div class="welcome-preview-copy">
-                        <b>Profil</b>
-                        <span>PASS/LAS vers DFGSM2</span>
-                      </div>
-                      <span class="welcome-preview-badge">Avatar</span>
-                    </div>
-                  </div>
-
-                  <div class="welcome-phone-nav">
-                    <div class="welcome-phone-nav-item active">
-                      <div class="welcome-phone-dot"></div>
-                      <div>Accueil</div>
-                    </div>
-                    <div class="welcome-phone-nav-item">
-                      <div class="welcome-phone-dot"></div>
-                      <div>Train</div>
-                    </div>
-                    <div class="welcome-phone-nav-item">
-                      <div class="welcome-phone-dot"></div>
-                      <div>Duel</div>
-                    </div>
-                    <div class="welcome-phone-nav-item">
-                      <div class="welcome-phone-dot"></div>
-                      <div>Profil</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="welcome-light-list">
-                <div class="welcome-light-item"><span class="welcome-light-bullet"></span><span>Moins de texte, plus d’orientation.</span></div>
-                <div class="welcome-light-item"><span class="welcome-light-bullet"></span><span>Une sensation d’app plus que de site vitrine.</span></div>
-                <div class="welcome-light-item"><span class="welcome-light-bullet"></span><span>Des écrans courts, chacun avec un rôle précis.</span></div>
-              </div>
+        <div class="welcome-minimal-grid">
+          <section class="panel welcome-minimal-brand">
+            <div class="welcome-logo-mark">M</div>
+            <h2>MedQuiz</h2>
+            <div class="welcome-minimal-copy">Crée ton compte ou connecte-toi. Ensuite tu arrives directement sur le menu principal.</div>
+            <div class="welcome-visual-placeholder">
+              <b>Logo / animation d’ouverture</b>
+              <span>On gardera ici l’emplacement pour une mini animation vidéo plus tard.</span>
             </div>
           </section>
 
-          <section class="panel auth-landing-panel welcome-auth-panel">
+          <section class="panel welcome-auth-compact">
             <div class="welcome-auth-head">
               <h2>Entrer dans l’app</h2>
-              <div class="welcome-auth-text">
-                Connecte-toi ou crée ton compte. Ensuite, l’app t’ouvre directement sur le dashboard.
-              </div>
+              <div class="welcome-auth-text">Seulement l’essentiel: créer un compte, se connecter, puis choisir un module.</div>
             </div>
-
             <div class="section welcome-auth-card">
-              <div class="section-head">
-                <h3>Connexion</h3>
-                <span class="section-note">Entre dans MedQuiz</span>
-              </div>
               <div class="auth-grid">
                 <div>
                   <label class="label" for="emailInput">Email</label>
@@ -2971,21 +3218,10 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
                   <input id="displayNameInput" type="text" placeholder="nom affiché" />
                 </div>
                 <div class="row">
-                  <button class="btn-secondary" id="registerBtn">Créer compte</button>
+                  <button class="btn-secondary" id="registerBtn">Créer un compte</button>
                   <button class="btn-primary" id="loginBtn">Se connecter</button>
                 </div>
-                <div id="welcomeStatusBox" class="status info welcome-status">Connecte-toi pour entrer dans l’application.</div>
-                <div class="welcome-auth-note">Le nom affiché sert au moment de l’inscription pour poser ta première identité joueur.</div>
-              </div>
-            </div>
-
-            <div class="welcome-note-card">
-              <b>Après connexion</b>
-              <span>Tu arrives sur un dashboard léger avec tes raccourcis, ton état actuel et le prochain meilleur pas.</span>
-              <div class="summary-inline-chips">
-                <span class="chip">Dashboard</span>
-                <span class="chip">Raccourcis</span>
-                <span class="chip">Parcours guidé</span>
+                <div id="welcomeStatusBox" class="status info welcome-status">Connecte-toi pour entrer dans MedQuiz.</div>
               </div>
             </div>
           </section>
@@ -2995,10 +3231,13 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       <section id="appShell" class="screen-pane hidden">
         <div class="app-frame">
           <div class="app-toolbar panel">
-            <div class="screen-title-block">
-              <div class="session-brief-eyebrow">MedQuiz App</div>
-              <div id="screenTitle" class="screen-title">Dashboard</div>
-              <div id="screenSubtitle" class="screen-subtitle">Choisis où tu veux entrer dans l’application.</div>
+            <div class="toolbar-main">
+              <button class="btn-secondary btn-inline menu-back-btn hidden" id="menuBackBtn">Menu</button>
+              <div class="screen-title-block">
+                <div class="session-brief-eyebrow">MedQuiz App</div>
+                <div id="screenTitle" class="screen-title">Menu</div>
+                <div id="screenSubtitle" class="screen-subtitle">Choisis simplement le module que tu veux ouvrir.</div>
+              </div>
             </div>
             <div class="app-toolbar-actions">
               <div class="app-top-meta">
@@ -3009,134 +3248,97 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           </div>
           <div class="app-scroll-area">
             <section id="dashboardScreen" class="screen-view">
-              <div class="dashboard-shell">
-                <section class="panel">
-                  <div id="dashboardHero"></div>
-                </section>
-
-                <div class="dashboard-subgrid">
-                  <section class="panel">
-                    <div class="section-head">
-                      <h3>Pouls Du Moment</h3>
-                      <span class="section-note">Lecture rapide de ta situation</span>
-                    </div>
-                    <div id="dashboardPulse" class="dashboard-pulse-grid"></div>
-                  </section>
-
-                  <section class="panel">
-                    <div class="section-head">
-                      <h3>Trajectoire Conseillée</h3>
-                      <span class="section-note">Par où repartir maintenant</span>
-                    </div>
-                    <div id="dashboardJourney"></div>
-                  </section>
-                </div>
-
-                <section class="panel">
-                  <div class="section-head">
-                    <h3>Catégories</h3>
-                    <span class="section-note">Point d’entrée principal</span>
-                  </div>
-                  <div id="dashboardCards" class="dashboard-grid"></div>
-                </section>
-              </div>
+              <section class="panel menu-home-panel">
+                <div id="dashboardHero" class="menu-home-hero"></div>
+                <div id="dashboardCards" class="menu-module-grid"></div>
+              </section>
             </section>
 
             <section id="trainingScreen" class="screen-view hidden">
-              <div class="grid">
-                <section class="panel session-design-panel" id="leftPanel">
-                  <h2>Contrôle Session</h2>
-
-                  <details class="app-collapsible" open>
-                    <summary>
-                      <div class="app-collapsible-head">
-                        <div class="app-collapsible-kicker">Session</div>
-                        <div class="app-collapsible-title">Configurer mon entraînement</div>
-                        <div class="app-collapsible-note">Mode, durée et lancement de la session.</div>
-                      </div>
-                      <div class="app-collapsible-meta">
-                        <span id="setupStateChip" class="chip">À configurer</span>
-                        <span class="app-collapsible-arrow">⌄</span>
-                      </div>
-                    </summary>
-                    <div class="app-collapsible-content">
-                      <div class="auth-grid">
-                        <div>
-                          <label class="label" for="modeSelect">Mode</label>
-                          <select id="modeSelect">
-                            <option value="learning">Apprentissage</option>
-                            <option value="discovery">Découverte</option>
-                            <option value="review">Révision</option>
-                            <option value="par_coeur">Par coeur</option>
-                            <option value="rattrapage">A revoir</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label class="label" for="stopRuleSelect">Durée de session</label>
-                          <select id="stopRuleSelect">
-                            <option value="fixed_10">10 questions</option>
-                            <option value="fixed_custom">Choisir nombre</option>
-                            <option value="until_stop">Jusqu'à arrêt</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label class="label" for="targetCountInput">Nombre de questions (mode personnalisé)</label>
-                          <input id="targetCountInput" type="number" min="1" max="200" value="20" placeholder="Nombre de questions" />
-                        </div>
-                        <button class="btn-primary" id="createSessionBtn" disabled>Démarrer entraînement</button>
-                        <button class="btn-secondary" id="refreshDashboardBtn" disabled>Rafraîchir dashboard</button>
-                      </div>
-                      <div id="setupChecklist" class="setup-list"></div>
-                      <div class="preset-grid">
-                        <button class="btn-secondary wide" id="presetRecommendedBtn" disabled>Preset conseillé</button>
-                        <button class="btn-secondary" id="presetDiscoveryBtn" disabled>Découverte 10</button>
-                        <button class="btn-secondary" id="presetReviewBtn" disabled>Révision libre</button>
-                      </div>
+              <div class="training-flow">
+                <section id="trainingHomeView" class="flow-view">
+                  <section class="panel">
+                    <div class="module-head">
+                      <b>Choisir un entraînement</b>
+                      <span>D’abord le type de session. Ensuite seulement la configuration. Puis l’écran question.</span>
                     </div>
-                  </details>
-
-                  <details class="app-collapsible">
-                    <summary>
-                      <div class="app-collapsible-head">
-                        <div class="app-collapsible-kicker">Filtres</div>
-                        <div class="app-collapsible-title">Matières</div>
-                        <div class="app-collapsible-note">Choisis ton terrain de jeu.</div>
-                      </div>
-                      <div class="app-collapsible-meta">
-                        <span class="app-collapsible-arrow">⌄</span>
-                      </div>
-                    </summary>
-                    <div class="app-collapsible-content">
-                      <div id="subjectsList" class="subject-list"></div>
-                    </div>
-                  </details>
-
-                  <details class="app-collapsible">
-                    <summary>
-                      <div class="app-collapsible-head">
-                        <div class="app-collapsible-kicker">Filtres</div>
-                        <div class="app-collapsible-title">Chapitres</div>
-                        <div class="app-collapsible-note">Affine si tu veux cibler précisément.</div>
-                      </div>
-                      <div class="app-collapsible-meta">
-                        <span class="app-collapsible-arrow">⌄</span>
-                      </div>
-                    </summary>
-                    <div class="app-collapsible-content">
-                      <div id="chaptersList" class="chapter-list"></div>
-                    </div>
-                  </details>
+                    <div id="trainingModeCards" class="training-mode-grid"></div>
+                  </section>
                 </section>
 
-                <section class="panel training-panel">
-                  <h2>Studio D'Entraînement</h2>
-
-                  <div class="section">
-                    <div class="section-head">
-                      <h3>Cockpit Session</h3>
-                      <span class="section-note">Ton état de jeu en un coup d'oeil</span>
+                <section id="trainingSetupView" class="flow-view hidden">
+                  <section class="panel">
+                    <div class="training-back-row">
+                      <button class="btn-secondary btn-inline" id="trainingSetupBackBtn">Retour aux types</button>
                     </div>
-                    <div class="stats" id="stats"></div>
+                    <div class="module-head">
+                      <b>Préparer la session</b>
+                      <span>Choisis la durée puis le périmètre. On garde seulement ce qui sert à lancer la session.</span>
+                    </div>
+                    <div class="training-setup-stack">
+                      <div class="section">
+                        <div class="section-head">
+                          <h3>Réglages</h3>
+                          <span id="setupStateChip" class="chip">À configurer</span>
+                        </div>
+                        <div class="auth-grid">
+                          <div>
+                            <label class="label" for="modeSelect">Mode</label>
+                            <select id="modeSelect">
+                              <option value="learning">Apprentissage</option>
+                              <option value="discovery">Découverte</option>
+                              <option value="review">Révision</option>
+                              <option value="par_coeur">Par coeur</option>
+                              <option value="rattrapage">A revoir</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label class="label" for="stopRuleSelect">Durée de session</label>
+                            <select id="stopRuleSelect">
+                              <option value="fixed_10">10 questions</option>
+                              <option value="fixed_custom">Choisir nombre</option>
+                              <option value="until_stop">Jusqu'à arrêt</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label class="label" for="targetCountInput">Nombre de questions (mode personnalisé)</label>
+                            <input id="targetCountInput" type="number" min="1" max="200" value="20" placeholder="Nombre de questions" />
+                          </div>
+                        </div>
+                        <div id="setupChecklist" class="setup-list"></div>
+                        <div class="preset-grid">
+                          <button class="btn-secondary wide" id="presetRecommendedBtn" disabled>Preset conseillé</button>
+                          <button class="btn-secondary" id="presetDiscoveryBtn" disabled>Découverte 10</button>
+                          <button class="btn-secondary" id="presetReviewBtn" disabled>Révision libre</button>
+                        </div>
+                      </div>
+
+                      <div class="section">
+                        <div class="section-head">
+                          <h3>Matières</h3>
+                          <span class="section-note">Choisis où tu veux t’entraîner</span>
+                        </div>
+                        <div id="subjectsList" class="subject-list"></div>
+                      </div>
+
+                      <div class="section">
+                        <div class="section-head">
+                          <h3>Chapitres</h3>
+                          <span class="section-note">Optionnel si tu veux cibler plus précisément</span>
+                        </div>
+                        <div id="chaptersList" class="chapter-list"></div>
+                      </div>
+
+                      <div class="training-setup-actions">
+                        <button class="btn-primary" id="createSessionBtn" disabled>Commencer</button>
+                        <button class="btn-secondary" id="refreshDashboardBtn" disabled>Rafraîchir les données</button>
+                      </div>
+                    </div>
+                  </section>
+                </section>
+
+                <section id="trainingPlayView" class="flow-view hidden">
+                  <section class="panel training-play-panel">
                     <div id="sessionSummary" class="session-brief empty"></div>
                     <div class="goal-block">
                       <div class="goal-row">
@@ -3147,13 +3349,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
                         <div id="sessionGoalProgressBar" class="progress-fill"></div>
                       </div>
                     </div>
-                  </div>
-
-                  <div class="section">
-                    <div class="section-head">
-                      <h3>Scène De Question</h3>
-                      <span class="section-note">Lecture, réponse, correction immédiate</span>
-                    </div>
+                    <div class="play-stage-note">Ici on ne garde que l’essentiel: progression, question, réponse, puis suite.</div>
                     <div id="questionContainer" class="q-card question-stage hidden"></div>
                     <div class="row question-actions-row" id="questionActions">
                       <button class="btn-primary" id="submitAnswerBtn" disabled>Valider réponse</button>
@@ -3162,58 +3358,30 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
                     <div class="question-exit-row">
                       <button class="btn-danger" id="completeSessionBtn" disabled>Terminer session</button>
                     </div>
-                  </div>
-
-                  <details class="app-collapsible">
-                    <summary>
-                      <div class="app-collapsible-head">
-                        <div class="app-collapsible-kicker">Suite</div>
-                        <div class="app-collapsible-title">Coach de révision</div>
-                        <div class="app-collapsible-note">Ce que tes résultats suggèrent ensuite.</div>
-                      </div>
-                      <div class="app-collapsible-meta">
-                        <span class="app-collapsible-arrow">⌄</span>
-                      </div>
-                    </summary>
-                    <div class="app-collapsible-content">
-                      <div id="focusList" class="focus-list"></div>
-                      <div class="goal-row" style="margin-top:8px">
-                        <div id="suggestedModeLabel" class="muted">Mode conseillé: -</div>
-                        <button class="btn-secondary btn-inline" id="applySuggestedModeBtn" disabled>Appliquer</button>
-                      </div>
-                    </div>
-                  </details>
-
-                  <div class="section">
-                    <div class="section-head">
-                      <h3>État système</h3>
-                    </div>
                     <div id="statusBox" class="status info">Connecte-toi pour commencer.</div>
-                  </div>
+                  </section>
+                </section>
 
-                  <div id="completionSection" class="section hidden">
-                    <div class="section-head">
-                      <h3>Débrief De Session</h3>
-                      <span class="section-note">Bilan utile et relance immédiate</span>
+                <section id="trainingResultView" class="flow-view hidden">
+                  <section class="panel training-result-panel">
+                    <div class="training-result-actions">
+                      <button class="btn-secondary btn-inline" id="trainingResultBackBtn">Nouvelle session</button>
                     </div>
-                    <div id="completionContent" class="completion-card completion-card-rich"></div>
-                  </div>
-
-                  <details class="app-collapsible">
-                    <summary>
-                      <div class="app-collapsible-head">
-                        <div class="app-collapsible-kicker">Réponses</div>
-                        <div class="app-collapsible-title">Historique immédiat</div>
-                        <div class="app-collapsible-note">Tes 12 dernières réponses commentées.</div>
+                    <div id="completionSection" class="section hidden">
+                      <div class="section-head">
+                        <h3>Débrief de session</h3>
+                        <span class="section-note">Bilan puis relance</span>
                       </div>
-                      <div class="app-collapsible-meta">
-                        <span class="app-collapsible-arrow">⌄</span>
+                      <div id="completionContent" class="completion-card completion-card-rich"></div>
+                    </div>
+                    <div class="section">
+                      <div class="section-head">
+                        <h3>Historique immédiat</h3>
+                        <span class="section-note">Tes dernières réponses commentées</span>
                       </div>
-                    </summary>
-                    <div class="app-collapsible-content">
                       <div id="historyList" class="history-list"></div>
                     </div>
-                  </details>
+                  </section>
                 </section>
               </div>
             </section>
@@ -3302,10 +3470,42 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
               </div>
             </section>
 
-            <section id="profileScreen" class="screen-view hidden">
-              <div class="grid">
+            <section id="statsScreen" class="screen-view hidden">
+              <div class="stats-stack">
                 <section class="panel">
-                  <h2>Profil</h2>
+                  <div class="section-head">
+                    <h3>Vue rapide</h3>
+                    <span class="section-note">Lecture simple de ta progression</span>
+                  </div>
+                  <div id="stats" class="stats"></div>
+                </section>
+                <section class="panel">
+                  <div class="section-head">
+                    <h3>Priorités</h3>
+                    <span class="section-note">Ce qu’il faut retravailler maintenant</span>
+                  </div>
+                  <div id="focusList" class="focus-list"></div>
+                  <div class="goal-row" style="margin-top:8px">
+                    <div id="suggestedModeLabel" class="muted">Mode conseillé: -</div>
+                    <button class="btn-secondary btn-inline" id="applySuggestedModeBtn" disabled>Préparer ce mode</button>
+                  </div>
+                </section>
+                <section class="panel">
+                  <div class="section-head">
+                    <h3>Indicateurs</h3>
+                    <span class="section-note">Le pouls général de ton activité</span>
+                  </div>
+                  <div id="dashboardPulse" class="dashboard-pulse-grid"></div>
+                </section>
+                <section class="panel">
+                  <div class="section-head">
+                    <h3>Trajectoire</h3>
+                    <span class="section-note">Le prochain meilleur pas</span>
+                  </div>
+                  <div id="dashboardJourney"></div>
+                </section>
+                <section class="panel">
+                  <h2>Progression joueur</h2>
                   <div id="profileSummary" class="section"></div>
                 </section>
                 <section class="panel">
@@ -3324,10 +3524,9 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           </div>
 
           <nav class="app-bottom-nav">
-            <button class="app-tab" id="homeNavBtn"><span class="app-tab-dot"></span><span>Accueil</span></button>
             <button class="app-tab" id="quickTrainingNavBtn"><span class="app-tab-dot"></span><span>Train</span></button>
             <button class="app-tab" id="quickDuelNavBtn"><span class="app-tab-dot"></span><span>Duel</span></button>
-            <button class="app-tab" id="profileNavBtn"><span class="app-tab-dot"></span><span>Profil</span></button>
+            <button class="app-tab" id="statsNavBtn"><span class="app-tab-dot"></span><span>Stats</span></button>
             <button class="app-tab" id="settingsNavBtn"><span class="app-tab-dot"></span><span>Réglages</span></button>
           </nav>
         </div>
@@ -3348,6 +3547,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       var state = {
         token: persistedToken,
         activeScreen: persistedToken ? 'dashboard' : 'welcome',
+        trainingFlow: 'home',
         me: null,
         myAvatar: null,
         dashboard: null,
@@ -3381,14 +3581,14 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         dashboardScreen: document.getElementById('dashboardScreen'),
         trainingScreen: document.getElementById('trainingScreen'),
         duelScreen: document.getElementById('duelScreen'),
-        profileScreen: document.getElementById('profileScreen'),
+        statsScreen: document.getElementById('statsScreen'),
         settingsScreen: document.getElementById('settingsScreen'),
+        menuBackBtn: document.getElementById('menuBackBtn'),
         screenTitle: document.getElementById('screenTitle'),
         screenSubtitle: document.getElementById('screenSubtitle'),
-        homeNavBtn: document.getElementById('homeNavBtn'),
         quickTrainingNavBtn: document.getElementById('quickTrainingNavBtn'),
         quickDuelNavBtn: document.getElementById('quickDuelNavBtn'),
-        profileNavBtn: document.getElementById('profileNavBtn'),
+        statsNavBtn: document.getElementById('statsNavBtn'),
         settingsNavBtn: document.getElementById('settingsNavBtn'),
         dashboardHero: document.getElementById('dashboardHero'),
         dashboardPulse: document.getElementById('dashboardPulse'),
@@ -3404,6 +3604,13 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         registerBtn: document.getElementById('registerBtn'),
         loginBtn: document.getElementById('loginBtn'),
         logoutBtn: document.getElementById('logoutBtn'),
+        trainingHomeView: document.getElementById('trainingHomeView'),
+        trainingSetupView: document.getElementById('trainingSetupView'),
+        trainingPlayView: document.getElementById('trainingPlayView'),
+        trainingResultView: document.getElementById('trainingResultView'),
+        trainingModeCards: document.getElementById('trainingModeCards'),
+        trainingSetupBackBtn: document.getElementById('trainingSetupBackBtn'),
+        trainingResultBackBtn: document.getElementById('trainingResultBackBtn'),
         modeSelect: document.getElementById('modeSelect'),
         stopRuleSelect: document.getElementById('stopRuleSelect'),
         targetCountInput: document.getElementById('targetCountInput'),
@@ -3453,20 +3660,20 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           subtitle: 'Connecte-toi pour entrer dans MedQuiz.'
         },
         dashboard: {
-          title: 'Dashboard',
-          subtitle: 'Choisis la grande catégorie que tu veux ouvrir.'
+          title: 'Menu',
+          subtitle: 'Choisis simplement le module que tu veux ouvrir.'
         },
         training: {
           title: 'Entraînement',
-          subtitle: 'Prépare une session, joue question par question et termine par un débrief utile.'
+          subtitle: 'Choisis un type de session, configure-la, puis joue question par question.'
         },
         duel: {
           title: 'Duel',
-          subtitle: 'Gère tes défis asynchrones, tes notifications et tes jokers depuis un seul écran.'
+          subtitle: 'Gère tes défis asynchrones, tes notifications et tes jokers.'
         },
-        profile: {
-          title: 'Profil',
-          subtitle: 'Relis ton identité joueur, ton parcours et ton avatar de progression.'
+        stats: {
+          title: 'Statistiques',
+          subtitle: 'Lis ta progression, tes priorités de révision et ton état général.'
         },
         settings: {
           title: 'Paramètres',
@@ -3510,6 +3717,44 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         return screenMeta[screenKey] ? screenKey : 'dashboard';
       }
 
+      function getTrainingScreenSubtitle() {
+        if (state.trainingFlow === 'setup') {
+          return 'Régle la durée et le périmètre avant de lancer la session.';
+        }
+        if (state.trainingFlow === 'play') {
+          return 'Ici on garde seulement la question, la progression et les actions utiles.';
+        }
+        if (state.trainingFlow === 'result') {
+          return 'Débrief de session puis relance simple.';
+        }
+        return 'Choisis d’abord le type d’entraînement que tu veux lancer.';
+      }
+
+      function getScreenSubtitle(screenKey) {
+        if (screenKey === 'training') {
+          return getTrainingScreenSubtitle();
+        }
+        return screenMeta[screenKey].subtitle;
+      }
+
+      function renderTrainingFlow() {
+        if (!refs.trainingHomeView) {
+          return;
+        }
+        refs.trainingHomeView.classList.toggle('hidden', state.trainingFlow !== 'home');
+        refs.trainingSetupView.classList.toggle('hidden', state.trainingFlow !== 'setup');
+        refs.trainingPlayView.classList.toggle('hidden', state.trainingFlow !== 'play');
+        refs.trainingResultView.classList.toggle('hidden', state.trainingFlow !== 'result');
+      }
+
+      function setTrainingFlow(step) {
+        state.trainingFlow = step || 'home';
+        renderTrainingFlow();
+        if (state.activeScreen === 'training') {
+          refs.screenSubtitle.textContent = getTrainingScreenSubtitle();
+        }
+      }
+
       function renderScreenFrame() {
         var connected = !!state.token;
         var active = normalizeActiveScreen(state.activeScreen);
@@ -3517,7 +3762,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           dashboard: refs.dashboardScreen,
           training: refs.trainingScreen,
           duel: refs.duelScreen,
-          profile: refs.profileScreen,
+          stats: refs.statsScreen,
           settings: refs.settingsScreen
         };
 
@@ -3536,12 +3781,13 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         }
 
         refs.screenTitle.textContent = screenMeta[active].title;
-        refs.screenSubtitle.textContent = screenMeta[active].subtitle;
-        setNavButtonActive(refs.homeNavBtn, active === 'dashboard');
+        refs.screenSubtitle.textContent = getScreenSubtitle(active);
+        refs.menuBackBtn.classList.toggle('hidden', active === 'dashboard');
         setNavButtonActive(refs.quickTrainingNavBtn, active === 'training');
         setNavButtonActive(refs.quickDuelNavBtn, active === 'duel');
-        setNavButtonActive(refs.profileNavBtn, active === 'profile');
+        setNavButtonActive(refs.statsNavBtn, active === 'stats');
         setNavButtonActive(refs.settingsNavBtn, active === 'settings');
+        renderTrainingFlow();
       }
 
       function setActiveScreen(screenKey) {
@@ -3673,66 +3919,26 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
       function renderDashboardHero() {
         if (!state.token) {
-          refs.dashboardHero.innerHTML = '<div class="muted">Connecte-toi pour afficher ton hall d’entrée.</div>';
+          refs.dashboardHero.innerHTML = '<div class="muted">Connecte-toi pour afficher ton menu principal.</div>';
           return;
         }
 
         var overview = getDashboardOverview();
         var name = getPreferredPlayerName();
         var stageName = state.myAvatar && state.myAvatar.currentStage ? state.myAvatar.currentStage.name : 'Début du parcours';
-        var nextStage = state.myAvatar && state.myAvatar.nextStage ? state.myAvatar.nextStage.name : '';
         var suggestedMode = overview && overview.suggestedMode ? getModeLabel(overview.suggestedMode) : 'À déterminer';
-        var successRate = overview && overview.successRatePct != null ? (overview.successRatePct + '%') : '—';
-        var unreadNotifications = getUnreadNotificationsCount();
-        var activeDuels = getActiveDuelsCount();
-        var refreshNeed = 0;
-
-        if (state.dashboard && Array.isArray(state.dashboard.subjects)) {
-          refreshNeed = state.dashboard.subjects.reduce(function (sum, subject) {
-            return sum + Number(subject.questionsToReinforceCount || 0);
-          }, 0);
-        }
-
-        var chips = [
-          '<span class="pill">' + escapeHtml(stageName) + '</span>',
-          '<span class="pill">' + escapeHtml(getSubscriptionLabel()) + '</span>',
-          '<span class="pill">' + escapeHtml('Mode conseillé: ' + suggestedMode) + '</span>'
-        ].join('');
+        var initials = getInitials(name);
 
         refs.dashboardHero.innerHTML =
-          '<div class="dashboard-hero">'
-          + '<div class="dashboard-hero-copy">'
-          + '<div class="dashboard-hero-kicker">Hall d’entrée</div>'
-          + '<div class="dashboard-hero-title">' + escapeHtml(getGreetingLabel() + ', ' + name) + '</div>'
-          + '<div class="dashboard-hero-text">'
-          + escapeHtml(
-            refreshNeed > 0
-              ? ('Tu as ' + refreshNeed + ' question' + (refreshNeed > 1 ? 's' : '') + ' à retravailler. Le plus simple est de repartir sur une session ' + suggestedMode.toLowerCase() + ' et de garder un oeil sur tes duels en attente.')
-              : ('Ton espace est prêt. Tu peux repartir sur un entraînement, vérifier tes défis asynchrones ou continuer à personnaliser ton profil.')
-          )
+          '<div class="menu-home-head">'
+          + '<div class="menu-home-copy">'
+          + '<div class="menu-home-kicker">' + escapeHtml(stageName) + '</div>'
+          + '<div class="menu-home-title">' + escapeHtml(getGreetingLabel() + ', ' + name) + '</div>'
+          + '<div class="menu-home-text">Bienvenue. Tu arrives directement sur un menu simple: un module, un écran, un rôle clair.</div>'
           + '</div>'
-          + '<div class="dashboard-hero-actions">'
-          + '<button class="btn-primary btn-inline" data-nav-screen="training">Reprendre l’entraînement</button>'
-          + '<button class="btn-secondary btn-inline" data-nav-screen="duel">Voir mes duels</button>'
-          + '<button class="btn-secondary btn-inline" data-nav-screen="profile">Voir mon profil</button>'
+          + '<div class="menu-home-avatar">' + escapeHtml(initials) + '</div>'
           + '</div>'
-          + '<div class="dashboard-meta">' + chips + '</div>'
-          + '</div>'
-          + '<div class="dashboard-hero-panel">'
-          + '<div class="dashboard-hero-panel-top">'
-          + '<div class="dashboard-hero-panel-title">'
-          + '<b>Indice de confiance actuel</b>'
-          + '<span>Lecture synthétique basée sur tes sessions récentes et ton activité.</span>'
-          + '</div>'
-          + '<div class="dashboard-hero-score"><div class="v">' + escapeHtml(successRate) + '</div><div class="k">Réussite cumulée</div></div>'
-          + '</div>'
-          + '<div class="dashboard-hero-list">'
-          + '<div class="dashboard-hero-list-item"><span>Couverture du programme travaillé</span><b>' + escapeHtml(overview ? (overview.chapterCoveragePct + '%') : '—') + '</b></div>'
-          + '<div class="dashboard-hero-list-item"><span>Duels actifs / notifications</span><b>' + escapeHtml(String(activeDuels) + ' / ' + String(unreadNotifications)) + '</b></div>'
-          + '<div class="dashboard-hero-list-item"><span>Étape avatar suivante</span><b>' + escapeHtml(nextStage || 'Continuer à progresser') + '</b></div>'
-          + '</div>'
-          + '</div>'
-          + '</div>';
+          + '<div class="menu-home-note">Mode conseillé du moment: <b>' + escapeHtml(suggestedMode) + '</b>. L’avatar reste visible ici comme repère, sans alourdir l’écran.</div>';
       }
 
       function renderDashboardPulse() {
@@ -3801,11 +4007,11 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
             actionLabel: 'Ouvrir duel'
           },
           {
-            title: nextStage ? ('Préparer ' + nextStage) : 'Soigner ton profil joueur',
-            note: 'Ton profil et ton avatar portent la progression de l’app. C’est aussi là que l’expérience devient plus personnelle.',
-            chip: state.myAvatar && state.myAvatar.currentStage ? state.myAvatar.currentStage.name : 'Profil',
-            screen: 'profile',
-            actionLabel: 'Ouvrir profil'
+            title: nextStage ? ('Préparer ' + nextStage) : 'Relire ta progression',
+            note: 'Tes statistiques, ton profil joueur et ton avatar sont regroupés ici pour lire la trajectoire complète.',
+            chip: state.myAvatar && state.myAvatar.currentStage ? state.myAvatar.currentStage.name : 'Stats',
+            screen: 'stats',
+            actionLabel: 'Ouvrir statistiques'
           }
         ];
 
@@ -3833,21 +4039,18 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
       function renderDashboardCards() {
         if (!state.token) {
-          refs.dashboardHero.innerHTML = '<div class="muted">Connecte-toi pour retrouver ton tableau de bord.</div>';
-          refs.dashboardPulse.innerHTML = '<div class="muted">Connecte-toi pour retrouver ton tableau de bord.</div>';
-          refs.dashboardJourney.innerHTML = '<div class="muted">Connecte-toi pour retrouver ton tableau de bord.</div>';
-          refs.dashboardCards.innerHTML = '<div class="muted">Connecte-toi pour retrouver ton tableau de bord.</div>';
+          refs.dashboardHero.innerHTML = '<div class="muted">Connecte-toi pour retrouver ton menu.</div>';
+          refs.dashboardPulse.innerHTML = '<div class="muted">Connecte-toi pour retrouver tes indicateurs.</div>';
+          refs.dashboardJourney.innerHTML = '<div class="muted">Connecte-toi pour retrouver ta trajectoire.</div>';
+          refs.dashboardCards.innerHTML = '<div class="muted">Connecte-toi pour ouvrir les modules.</div>';
           return;
         }
 
         var overview = getDashboardOverview();
         var suggestedMode = overview && overview.suggestedMode ? getModeLabel(overview.suggestedMode) : 'À déterminer';
-        var successRate = overview && overview.successRatePct != null ? (overview.successRatePct + '%') : 'Prêt';
-        var coverage = overview ? (overview.chapterCoveragePct + '%') : '-';
+        var successRate = overview && overview.successRatePct != null ? (overview.successRatePct + '%') : '—';
         var activeDuels = getActiveDuelsCount();
         var unreadNotifications = getUnreadNotificationsCount();
-        var stageName = state.myAvatar && state.myAvatar.currentStage ? state.myAvatar.currentStage.name : 'Début du parcours';
-        var nextStage = state.myAvatar && state.myAvatar.nextStage ? state.myAvatar.nextStage.name : '';
         var settingsValue = state.me && state.me.timezone ? state.me.timezone : 'Europe/Paris';
 
         renderDashboardHero();
@@ -3856,81 +4059,50 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
         var cards = [
           {
-            kicker: 'Révision',
             title: 'Entraînement',
-            value: successRate,
-            copy: 'Mode conseillé: ' + suggestedMode + '. Couverture du programme déjà travaillée: ' + coverage + '.',
-            chips: [
-              'Sessions 7j: ' + escapeHtml(String(overview ? overview.sessions7dCount : 0)),
-              'Tentatives: ' + escapeHtml(String(overview ? overview.attemptsCount : 0))
-            ],
-            badgeText: 'Session',
+            icon: 'TR',
+            copy: 'Choisir un type d’entraînement, régler la session, puis arriver sur un écran question uniquement.',
+            meta: 'Mode conseillé: ' + suggestedMode,
             screen: 'training',
-            actionLabel: 'Ouvrir entraînement'
+            actionLabel: 'Ouvrir'
           },
           {
-            kicker: 'Challenge',
             title: 'Duel',
-            value: activeDuels ? (String(activeDuels) + ' actif' + (activeDuels > 1 ? 's' : '')) : 'Prêt à lancer',
-            copy: unreadNotifications
-              ? (String(unreadNotifications) + ' notification' + (unreadNotifications > 1 ? 's' : '') + ' demandent ton attention.')
-              : 'Tes invitations, manches en attente et sursis se retrouvent ici.',
-            chips: [
-              'Notifications: ' + escapeHtml(String(unreadNotifications)),
-              'Filtre: ' + escapeHtml(refs.duelStatusFilterSelect.value)
-            ],
-            badgeText: unreadNotifications ? (String(unreadNotifications) + ' new') : 'Duel',
-            badgeTone: unreadNotifications ? 'warn' : '',
+            icon: 'DU',
+            copy: 'Retrouver les invitations, les tours en attente et les jokers sans te perdre.',
+            meta: unreadNotifications
+              ? (String(unreadNotifications) + ' notification' + (unreadNotifications > 1 ? 's' : '') + ' · ' + String(activeDuels) + ' duel(s) actif(s)')
+              : (activeDuels ? (String(activeDuels) + ' duel(s) actif(s)') : 'Prêt à lancer'),
             screen: 'duel',
-            actionLabel: 'Ouvrir duel'
+            actionLabel: 'Ouvrir'
           },
           {
-            kicker: 'Identité',
-            title: 'Profil',
-            value: stageName,
-            copy: nextStage
-              ? ('Prochaine étape avatar: ' + nextStage + '. Ton identité joueur se consolide ici.')
-              : 'Retrouve ton profil, ton alias et ton parcours de progression.',
-            chips: [
-              'Alias: ' + escapeHtml(state.me && state.me.publicAlias ? state.me.publicAlias : getPreferredPlayerName()),
-              'Abonnement: ' + escapeHtml(getSubscriptionLabel())
-            ],
-            badgeText: 'Profil',
-            screen: 'profile',
-            actionLabel: 'Voir profil'
+            title: 'Statistiques',
+            icon: 'ST',
+            copy: 'Lire ta réussite, tes priorités de révision et ta progression générale.',
+            meta: 'Réussite actuelle: ' + successRate,
+            screen: 'stats',
+            actionLabel: 'Ouvrir'
           },
           {
-            kicker: 'Réglages',
             title: 'Paramètres',
-            value: settingsValue,
-            copy: 'Timezone, visibilité et contexte local de la démo restent regroupés au même endroit.',
-            chips: [
-              'Visibilité: ' + escapeHtml(state.me && state.me.visibility ? state.me.visibility : 'friends'),
-              'Pays: ' + escapeHtml(state.me && state.me.countryCode ? state.me.countryCode : 'FR')
-            ],
-            badgeText: 'Réglages',
+            icon: 'RG',
+            copy: 'Retrouver les réglages du compte et les préférences de la démo au même endroit.',
+            meta: settingsValue,
             screen: 'settings',
-            actionLabel: 'Ouvrir paramètres'
+            actionLabel: 'Ouvrir'
           }
         ];
 
         refs.dashboardCards.innerHTML = cards.map(function (card) {
-          var badgeClass = card.badgeTone ? ('chip ' + card.badgeTone) : 'chip';
-          return '<article class="dashboard-card">'
-            + '<div class="dashboard-card-top">'
-            + '<div>'
-            + '<div class="dashboard-kicker">' + escapeHtml(card.kicker) + '</div>'
-            + '<div class="dashboard-card-title">' + escapeHtml(card.title) + '</div>'
+          return '<button class="menu-module-card" data-nav-screen="' + escapeHtml(card.screen) + '">'
+            + '<div class="menu-module-top">'
+            + '<div class="menu-module-label">' + escapeHtml(card.title) + '</div>'
+            + '<div class="menu-module-icon">' + escapeHtml(card.icon) + '</div>'
             + '</div>'
-            + '<span class="' + badgeClass + '">' + escapeHtml(card.badgeText) + '</span>'
-            + '</div>'
-            + '<div class="dashboard-value">' + escapeHtml(card.value) + '</div>'
-            + '<div class="dashboard-copy">' + escapeHtml(card.copy) + '</div>'
-            + '<div class="dashboard-meta">' + card.chips.map(function (chipLabel) {
-              return '<span class="chip">' + chipLabel + '</span>';
-            }).join('') + '</div>'
-            + '<div class="dashboard-card-actions"><button class="btn-primary btn-inline" data-nav-screen="' + escapeHtml(card.screen) + '">' + escapeHtml(card.actionLabel) + '</button></div>'
-            + '</article>';
+            + '<div class="menu-module-copy">' + escapeHtml(card.copy) + '</div>'
+            + '<span class="chip">' + escapeHtml(card.meta) + '</span>'
+            + '</button>';
         }).join('');
       }
 
@@ -4583,6 +4755,74 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           ? state.dashboard.overview.suggestedMode
           : '';
         refs.presetRecommendedBtn.disabled = !connected || !suggestedMode;
+        renderTrainingModeCards();
+      }
+
+      function renderTrainingModeCards() {
+        if (!refs.trainingModeCards) {
+          return;
+        }
+
+        var currentMode = refs.modeSelect.value || 'learning';
+        var cards = [
+          {
+            mode: 'learning',
+            title: 'Apprentissage',
+            copy: 'Le mode de base pour travailler calmement sans te disperser.'
+          },
+          {
+            mode: 'discovery',
+            title: 'Découverte',
+            copy: 'Voir des questions jamais vues et tester le terrain.'
+          },
+          {
+            mode: 'review',
+            title: 'Révision',
+            copy: 'Repasser sur les questions déjà rencontrées.'
+          },
+          {
+            mode: 'par_coeur',
+            title: 'Par coeur',
+            copy: 'Revenir sur les questions déjà réussies pour les ancrer.'
+          },
+          {
+            mode: 'rattrapage',
+            title: 'À revoir',
+            copy: 'Cibler les points à retravailler en priorité.'
+          }
+        ];
+
+        refs.trainingModeCards.innerHTML = cards.map(function (card) {
+          var selected = currentMode === card.mode;
+          return '<button class="training-mode-card' + (selected ? ' is-selected' : '') + '" data-training-mode="' + escapeHtml(card.mode) + '">'
+            + '<div class="training-mode-top">'
+            + '<div class="training-mode-title">' + escapeHtml(card.title) + '</div>'
+            + '<span class="chip' + (selected ? '' : ' neutral') + '">' + (selected ? 'Choisi' : 'Ouvrir') + '</span>'
+            + '</div>'
+            + '<div class="training-mode-copy">' + escapeHtml(card.copy) + '</div>'
+            + '</button>';
+        }).join('');
+      }
+
+      async function selectTrainingMode(mode) {
+        if (mode === 'discovery') {
+          await applyPresetDiscovery({ silent: true });
+        } else if (mode === 'review') {
+          await applyPresetReviewFree({ silent: true });
+        } else if (mode === 'rattrapage') {
+          await applyPresetCatchup({ silent: true });
+        } else {
+          refs.modeSelect.value = mode || 'learning';
+          refs.stopRuleSelect.value = 'fixed_10';
+          refs.targetCountInput.value = '10';
+          refs.targetCountInput.disabled = true;
+          clearSessionFilters();
+          renderSessionGoal();
+          renderSetupGuide();
+        }
+
+        setTrainingFlow('setup');
+        setStatus('Type d’entraînement choisi: ' + getModeLabel(refs.modeSelect.value) + '.', 'info');
       }
 
       function clearSessionFilters() {
@@ -5901,6 +6141,8 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         renderCompletion();
         renderHistory();
         renderSessionSummary();
+        setTrainingFlow('play');
+        setActiveScreen('training');
         refs.completeSessionBtn.disabled = false;
         refs.nextQuestionBtn.disabled = false;
         refs.submitAnswerBtn.disabled = false;
@@ -6066,6 +6308,8 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         renderSessionGoal();
         renderSetupGuide();
         renderQuestion();
+        setTrainingFlow('result');
+        setActiveScreen('training');
         await loadDashboard();
       }
 
@@ -6090,6 +6334,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         await loadDuels();
         startNotificationPolling();
         setDuelModeUi();
+        setTrainingFlow('home');
         setActiveScreen('dashboard');
         setStatus('Prêt. Lance une session d\'entraînement.', 'info');
       }
@@ -6157,6 +6402,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         state.currentRound = null;
         state.roundQuestions = [];
         state.roundQuestionShownAtBySlot = {};
+        state.trainingFlow = 'home';
         renderUserBadge();
         refs.subjectsList.innerHTML = '';
         refs.chaptersList.innerHTML = '';
@@ -6185,12 +6431,14 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         renderHistory();
         renderSessionGoal();
         renderCompletion();
+        renderTrainingModeCards();
+        renderTrainingFlow();
         ensureAuthUi();
         setActiveScreen('welcome');
         setStatus('Déconnecté.', 'info');
       });
 
-      refs.homeNavBtn.addEventListener('click', function () {
+      refs.menuBackBtn.addEventListener('click', function () {
         setActiveScreen('dashboard');
       });
 
@@ -6202,8 +6450,8 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         setActiveScreen('duel');
       });
 
-      refs.profileNavBtn.addEventListener('click', function () {
-        setActiveScreen('profile');
+      refs.statsNavBtn.addEventListener('click', function () {
+        setActiveScreen('stats');
       });
 
       refs.settingsNavBtn.addEventListener('click', function () {
@@ -6223,12 +6471,39 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         if (!screen) {
           return;
         }
+        if (screen === 'training' && !state.session) {
+          setTrainingFlow('home');
+        }
         setActiveScreen(screen);
       }
 
       refs.dashboardHero.addEventListener('click', handleDashboardNavClick);
       refs.dashboardJourney.addEventListener('click', handleDashboardNavClick);
       refs.dashboardCards.addEventListener('click', handleDashboardNavClick);
+
+      refs.trainingModeCards.addEventListener('click', async function (event) {
+        var target = event.target;
+        if (!target || typeof target.closest !== 'function') {
+          return;
+        }
+        var btn = target.closest('button[data-training-mode]');
+        if (!btn) {
+          return;
+        }
+        try {
+          await selectTrainingMode(btn.getAttribute('data-training-mode'));
+        } catch (err) {
+          setStatus(err.message || String(err), 'err');
+        }
+      });
+
+      refs.trainingSetupBackBtn.addEventListener('click', function () {
+        setTrainingFlow('home');
+      });
+
+      refs.trainingResultBackBtn.addEventListener('click', function () {
+        setTrainingFlow('home');
+      });
 
       refs.createSessionBtn.addEventListener('click', async function () {
         try {
@@ -6293,15 +6568,17 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         renderSetupGuide();
       });
 
-      refs.applySuggestedModeBtn.addEventListener('click', function () {
+      refs.applySuggestedModeBtn.addEventListener('click', async function () {
         var suggested = refs.applySuggestedModeBtn.getAttribute('data-mode');
         if (!suggested) {
           return;
         }
-        refs.modeSelect.value = suggested;
-        renderSessionGoal();
-        renderSetupGuide();
-        setStatus('Mode conseillé appliqué: ' + getModeLabel(suggested) + '.', 'info');
+        try {
+          await selectTrainingMode(suggested);
+          setActiveScreen('training');
+        } catch (err) {
+          setStatus(err.message || String(err), 'err');
+        }
       });
 
       refs.modeSelect.addEventListener('change', function () {
