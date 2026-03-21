@@ -683,6 +683,166 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       color: var(--ink-soft);
     }
 
+    .duel-player-scene {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(15, 118, 110, 0.08);
+      border-radius: 18px;
+      padding: 12px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), #eef7fb);
+      display: grid;
+      gap: 10px;
+      isolation: isolate;
+    }
+
+    .duel-player-scene::before {
+      content: "";
+      position: absolute;
+      top: -24px;
+      right: -18px;
+      width: 136px;
+      height: 136px;
+      background: radial-gradient(circle, var(--player-accent) 0%, transparent 68%);
+      opacity: 0.16;
+      filter: blur(10px);
+      z-index: 0;
+    }
+
+    .duel-player-scene::after {
+      content: "";
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      bottom: 12px;
+      height: 20px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(11, 47, 71, 0), rgba(11, 47, 71, 0.09), rgba(11, 47, 71, 0));
+      z-index: 0;
+    }
+
+    .duel-player-scene-top,
+    .duel-player-scene-body,
+    .duel-player-scene-copy {
+      position: relative;
+      z-index: 1;
+    }
+
+    .duel-player-scene-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .duel-player-stage-badge,
+    .duel-player-specialty-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: auto;
+      min-height: 0;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.28px;
+      white-space: nowrap;
+    }
+
+    .duel-player-stage-badge {
+      background: linear-gradient(135deg, var(--player-accent), #0b2f47);
+      color: #ffffff;
+      box-shadow: 0 10px 18px rgba(11, 47, 71, 0.16);
+    }
+
+    .duel-player-specialty-badge {
+      border: 1px solid rgba(11, 47, 71, 0.1);
+      background: rgba(255, 255, 255, 0.86);
+      color: var(--ink);
+    }
+
+    .duel-player-scene-body {
+      min-height: 132px;
+      display: grid;
+      place-items: center;
+    }
+
+    .duel-player-portrait-shell {
+      position: relative;
+      width: 136px;
+      height: 136px;
+      border-radius: 32px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(160deg, rgba(255, 255, 255, 0.9), rgba(228, 241, 248, 0.96));
+      box-shadow:
+        inset 0 0 0 2px rgba(255, 255, 255, 0.75),
+        0 18px 28px rgba(11, 47, 71, 0.12);
+    }
+
+    .duel-player-portrait-shell::before {
+      content: "";
+      position: absolute;
+      inset: 10px;
+      border-radius: 24px;
+      border: 1px dashed rgba(11, 47, 71, 0.14);
+    }
+
+    .duel-player-avatar.large {
+      width: 88px;
+      height: 88px;
+      border-radius: 24px;
+      font-size: 30px;
+      box-shadow: 0 16px 28px rgba(8, 31, 49, 0.2);
+    }
+
+    .duel-player-orbit {
+      position: absolute;
+      max-width: 92px;
+      padding: 5px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(11, 47, 71, 0.08);
+      background: rgba(255, 255, 255, 0.95);
+      color: var(--ink);
+      font-size: 10px;
+      font-weight: 700;
+      line-height: 1.15;
+      text-align: center;
+      box-shadow: 0 12px 22px rgba(11, 47, 71, 0.1);
+    }
+
+    .duel-player-orbit.pos-0 {
+      top: 8px;
+      right: -8px;
+    }
+
+    .duel-player-orbit.pos-1 {
+      left: -10px;
+      top: 54px;
+    }
+
+    .duel-player-orbit.pos-2 {
+      right: -4px;
+      bottom: 10px;
+    }
+
+    .duel-player-scene-copy {
+      display: grid;
+      gap: 2px;
+    }
+
+    .duel-player-scene-copy b {
+      font-size: 13px;
+      color: var(--ink);
+    }
+
+    .duel-player-scene-copy span {
+      font-size: 12px;
+      line-height: 1.35;
+      color: var(--ink-soft);
+    }
+
     .duel-player-name {
       font-size: 16px;
       font-weight: 800;
@@ -1041,6 +1201,34 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       .duel-player-head {
         align-items: flex-start;
         flex-direction: column;
+      }
+      .duel-player-stage-badge,
+      .duel-player-specialty-badge {
+        white-space: normal;
+      }
+      .duel-player-portrait-shell {
+        width: 124px;
+        height: 124px;
+      }
+      .duel-player-avatar.large {
+        width: 82px;
+        height: 82px;
+        font-size: 28px;
+      }
+      .duel-player-orbit {
+        max-width: 82px;
+      }
+      .duel-player-orbit.pos-0 {
+        top: 2px;
+        right: -6px;
+      }
+      .duel-player-orbit.pos-1 {
+        left: -4px;
+        top: 46px;
+      }
+      .duel-player-orbit.pos-2 {
+        right: 0;
+        bottom: 6px;
       }
       .duel-player-score {
         width: 100%;
@@ -1649,7 +1837,63 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           : [];
       }
 
+      function compactUpperLabel(value, maxLength) {
+        var text = String(value || '').trim();
+        if (!text) {
+          return '';
+        }
+        var normalized = text.replace(/\s+/g, ' ').toUpperCase();
+        if (normalized.length <= maxLength) {
+          return normalized;
+        }
+        var words = normalized.split(' ').filter(Boolean);
+        if (words.length > 1) {
+          var shortWords = words.slice(0, 2).map(function (word) {
+            return word.slice(0, Math.min(4, word.length));
+          }).join(' ');
+          if (shortWords.length <= maxLength) {
+            return shortWords;
+          }
+          return words.slice(0, 3).map(function (word) {
+            return word.slice(0, 1);
+          }).join('');
+        }
+        return normalized.slice(0, maxLength);
+      }
+
+      function getStageToken(profile, fallbackAvatar) {
+        var code = profile && profile.avatar && profile.avatar.currentStage && profile.avatar.currentStage.code
+          ? profile.avatar.currentStage.code
+          : (fallbackAvatar && fallbackAvatar.currentStage && fallbackAvatar.currentStage.code ? fallbackAvatar.currentStage.code : '');
+        var name = getDuelProfileStageName(profile) || (fallbackAvatar && fallbackAvatar.currentStage ? fallbackAvatar.currentStage.name : '');
+        if (code) {
+          return String(code).replace(/_/g, '/').toUpperCase();
+        }
+        return compactUpperLabel(name || 'MedQuiz', 12);
+      }
+
+      function getSpecialtyToken(profile, fallbackAvatar) {
+        var name = getDuelProfileSpecialtyName(profile) || (fallbackAvatar && fallbackAvatar.specialty ? fallbackAvatar.specialty.name : '');
+        if (!name) {
+          return 'PARCOURS';
+        }
+        return compactUpperLabel(name, 12);
+      }
+
+      function getLoadoutTokens(items) {
+        return (items || [])
+          .filter(Boolean)
+          .slice(0, 3)
+          .map(function (item) {
+            return compactUpperLabel(item, 10);
+          })
+          .filter(Boolean);
+      }
+
       function renderDuelPlayerCard(config) {
+        var orbitHtml = (config.sceneTokens || []).map(function (label, index) {
+          return '<div class="duel-player-orbit pos-' + escapeHtml(String(index)) + '">' + escapeHtml(label) + '</div>';
+        }).join('');
         var tagsHtml = (config.tags || []).length
           ? '<div class="duel-player-tags">' + config.tags.map(function (tag) {
             var toneClass = tag.tone === 'warn' ? ' warn' : (tag.tone === 'neutral' ? ' neutral' : '');
@@ -1670,6 +1914,19 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           + '</div>'
           + '</div>'
           + '<div class="duel-player-score"><b>' + escapeHtml(String(config.score)) + '</b><span>points</span></div>'
+          + '</div>'
+          + '<div class="duel-player-scene">'
+          + '<div class="duel-player-scene-top">'
+          + '<span class="duel-player-stage-badge">' + escapeHtml(config.stageToken) + '</span>'
+          + '<span class="duel-player-specialty-badge">' + escapeHtml(config.specialtyToken) + '</span>'
+          + '</div>'
+          + '<div class="duel-player-scene-body">'
+          + '<div class="duel-player-portrait-shell">'
+          + '<div class="duel-player-avatar large">' + escapeHtml(config.initials) + '</div>'
+          + orbitHtml
+          + '</div>'
+          + '</div>'
+          + '<div class="duel-player-scene-copy"><b>' + escapeHtml(config.sceneTitle) + '</b><span>' + escapeHtml(config.sceneCaption) + '</span></div>'
           + '</div>'
           + tagsHtml
           + '<div class="duel-player-facts">' + factsHtml + '</div>'
@@ -2325,6 +2582,9 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         var opponentStage = getDuelProfileStageName(opponentProfile) || 'Progression non visible';
         var opponentSpecialty = getDuelProfileSpecialtyName(opponentProfile) || 'Spécialité non visible';
         var opponentLoadout = getDuelProfileEquipmentSummary(opponentProfile);
+        var mySceneTokens = getLoadoutTokens(myLoadout);
+        var opponentSceneTokens = getLoadoutTokens(opponentLoadout);
+        var myNextStage = state.myAvatar && state.myAvatar.nextStage ? state.myAvatar.nextStage.name : '';
         var playerCardsHtml =
           '<div class="duel-player-grid">'
           + renderDuelPlayerCard({
@@ -2335,16 +2595,21 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
             name: myName,
             subtitle: myStage + (mySpecialty !== 'Spécialité non choisie' ? (' · ' + mySpecialty) : ''),
             score: myScore,
+            stageToken: getStageToken(myProfile, state.myAvatar),
+            specialtyToken: getSpecialtyToken(myProfile, state.myAvatar),
+            sceneTitle: myNextStage ? ('Cap vers ' + myNextStage) : 'Parcours en cours',
+            sceneCaption: myLoadout.length
+              ? ('Equipement actif: ' + myLoadout.join(' · '))
+              : 'Ton avatar progresse avec tes sessions et tes duels.',
+            sceneTokens: mySceneTokens,
             tags: [
               { label: isMyTurn ? 'À toi de jouer' : 'En attente', tone: isMyTurn ? 'default' : 'neutral' },
               { label: myJokerUsed ? 'Joker utilisé' : 'Joker dispo', tone: myJokerUsed ? 'warn' : 'default' }
-            ].concat(myLoadout.map(function (itemName) {
-              return { label: itemName, tone: 'neutral' };
-            })),
+            ],
             facts: [
               { label: 'Stade', value: myStage },
               { label: 'Spécialité', value: mySpecialty },
-              { label: 'Couleur profil', value: myAccent.toUpperCase() }
+              { label: myNextStage ? 'Cap suivant' : 'XP avatar', value: myNextStage || String(state.myAvatar && state.myAvatar.xpPoints != null ? state.myAvatar.xpPoints : 0) }
             ]
           })
           + renderDuelPlayerCard({
@@ -2355,12 +2620,17 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
             name: opponentName,
             subtitle: opponentStage + (opponentSpecialty !== 'Spécialité non visible' ? (' · ' + opponentSpecialty) : ''),
             score: opponentScore,
+            stageToken: getStageToken(opponentProfile, null),
+            specialtyToken: getSpecialtyToken(opponentProfile, null),
+            sceneTitle: opponentLoadout.length ? 'Style détecté' : 'Parcours observé',
+            sceneCaption: opponentLoadout.length
+              ? ('Equipement visible: ' + opponentLoadout.join(' · '))
+              : 'Les détails visuels évoluent au fil de sa progression.',
+            sceneTokens: opponentSceneTokens,
             tags: [
               { label: isMyTurn ? 'Attend ta réponse' : 'Joue maintenant', tone: isMyTurn ? 'neutral' : 'default' },
               { label: opponentJokerUsed ? 'Joker utilisé' : 'Joker dispo', tone: opponentJokerUsed ? 'warn' : 'default' }
-            ].concat(opponentLoadout.map(function (itemName) {
-              return { label: itemName, tone: 'neutral' };
-            })),
+            ],
             facts: [
               { label: 'Stade', value: opponentStage },
               { label: 'Spécialité', value: opponentSpecialty },
