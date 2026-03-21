@@ -564,6 +564,116 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       gap: 8px;
     }
 
+    .duel-guide {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px;
+      background: linear-gradient(180deg, #fbfeff, #f4fbff);
+      display: grid;
+      gap: 10px;
+    }
+
+    .duel-overview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 8px;
+    }
+
+    .duel-overview-card {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 8px;
+      background: #fff;
+    }
+
+    .duel-overview-card .k {
+      font-size: 11px;
+      color: var(--ink-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.2px;
+    }
+
+    .duel-overview-card .v {
+      margin-top: 4px;
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--ink);
+      line-height: 1.2;
+    }
+
+    .duel-stage-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+      gap: 8px;
+    }
+
+    .duel-stage {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 8px;
+      background: #fff;
+      display: grid;
+      gap: 4px;
+    }
+
+    .duel-stage.done {
+      border-color: #b6e8c7;
+      background: #f3fcf7;
+    }
+
+    .duel-stage.active {
+      border-color: #f5d3a3;
+      background: #fffaf1;
+      box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.12);
+    }
+
+    .duel-stage .step {
+      font-size: 11px;
+      color: var(--ink-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.25px;
+    }
+
+    .duel-stage .title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .duel-callout {
+      border: 1px solid #bfd8eb;
+      border-radius: 12px;
+      padding: 10px;
+      background: #edf8ff;
+      display: grid;
+      gap: 4px;
+    }
+
+    .duel-callout b {
+      font-size: 14px;
+      color: #123247;
+    }
+
+    .duel-round-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+      gap: 8px;
+    }
+
+    .duel-round-pill {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 8px;
+      background: #fff;
+      display: grid;
+      gap: 4px;
+    }
+
+    .duel-round-pill.active {
+      border-color: #bfe7e2;
+      background: #effaf8;
+    }
+
     .duel-actions {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
@@ -1202,6 +1312,119 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         return labels[status] || status;
       }
 
+      function getDuelRoundStatusLabel(status) {
+        var labels = {
+          awaiting_choice: 'Choix matière',
+          player1_turn: 'Tour joueur 1',
+          player2_turn: 'Tour joueur 2',
+          completed: 'Terminée',
+          scored_zero: 'Zéro automatique'
+        };
+        return labels[status] || status;
+      }
+
+      function getDuelGuideState(duel, meId) {
+        var isMyTurn = Boolean(meId && duel.currentTurnUserId === meId);
+
+        if (duel.status === 'completed' || duel.status === 'cancelled' || duel.status === 'expired') {
+          return {
+            stageKey: 'finish',
+            title: 'Duel clôturé',
+            detail: duel.winnerUserId
+              ? 'Le résultat est figé. Tu peux relire les manches et le score final.'
+              : 'Le duel est terminé.'
+          };
+        }
+
+        if (duel.matchmakingMode === 'friend_invite' && !duel.acceptedAt) {
+          if (duel.player2Id === meId) {
+            return {
+              stageKey: 'invite',
+              title: 'Invitation reçue',
+              detail: 'Accepte ou refuse avant de passer à l\'opener.'
+            };
+          }
+          return {
+            stageKey: 'invite',
+            title: 'Invitation envoyée',
+            detail: 'En attente de la réponse adverse.'
+          };
+        }
+
+        if (!duel.opener || !duel.opener.resolvedAt) {
+          if (state.openerQuestion) {
+            return {
+              stageKey: 'opener',
+              title: 'Répondre à l\'opener',
+              detail: 'Une seule question rapide pour déterminer l\'avantage initial.'
+            };
+          }
+          return {
+            stageKey: 'opener',
+            title: 'Charger l\'opener',
+            detail: 'L\'opener doit être joué avant le début des manches.'
+          };
+        }
+
+        if (duel.opener.winnerUserId === meId && !duel.opener.winnerDecision) {
+          return {
+            stageKey: 'decision',
+            title: 'Choisir qui commence',
+            detail: 'Tu as gagné l\'opener: décide si tu prends ou laisses la main.'
+          };
+        }
+
+        if (duel.status === 'pending_opener') {
+          return {
+            stageKey: 'decision',
+            title: 'Décision d\'opener en attente',
+            detail: 'Le gagnant de l\'opener choisit qui démarre la première manche.'
+          };
+        }
+
+        if (!state.currentRound) {
+          return {
+            stageKey: 'round',
+            title: isMyTurn ? 'Charger la manche' : 'Attendre la manche',
+            detail: isMyTurn
+              ? 'Charge la manche courante pour voir l\'action attendue.'
+              : 'Le duel est en cours, mais l\'initiative est adverse pour l\'instant.'
+          };
+        }
+
+        if (!state.currentRound.chosenSubjectId) {
+          return {
+            stageKey: 'round',
+            title: isMyTurn ? 'Choisir la matière' : 'Choix matière en attente',
+            detail: isMyTurn
+              ? 'Sélectionne une des 3 matières proposées pour lancer la manche.'
+              : 'L\'adversaire doit d\'abord choisir la matière de cette manche.'
+          };
+        }
+
+        if (isMyTurn && !state.roundQuestions.length) {
+          return {
+            stageKey: 'round',
+            title: 'Charger tes 3 questions',
+            detail: 'La matière est fixée: charge maintenant les slots de la manche.'
+          };
+        }
+
+        if (isMyTurn) {
+          return {
+            stageKey: 'round',
+            title: 'Jouer tes 3 slots',
+            detail: 'Réponds à tes questions pour terminer ton tour.'
+          };
+        }
+
+        return {
+          stageKey: 'round',
+          title: 'Tour adverse en cours',
+          detail: 'Tu reprendras la main quand le tour adverse sera terminé ou expiré.'
+        };
+      }
+
       function getNotificationTypeLabel(type) {
         var labels = {
           duel_turn: 'À toi de jouer',
@@ -1696,6 +1919,38 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           meId &&
           pendingJoker.grantedByUserId === meId
         );
+        var guideState = getDuelGuideState(d, meId);
+        var stageOrder = ['invite', 'opener', 'decision', 'round', 'finish'];
+        var stageTitles = {
+          invite: 'Invitation',
+          opener: 'Opener',
+          decision: 'Décision',
+          round: 'Manches',
+          finish: 'Clôture'
+        };
+        var activeStageIndex = stageOrder.indexOf(guideState.stageKey);
+        var stageListHtml = stageOrder.map(function (stageKey, index) {
+          var className = 'duel-stage';
+          if (index < activeStageIndex) {
+            className += ' done';
+          }
+          if (stageKey === guideState.stageKey) {
+            className += ' active';
+          }
+          return '<div class="' + className + '">'
+            + '<div class="step">Étape ' + escapeHtml(String(index + 1)) + '</div>'
+            + '<div class="title">' + escapeHtml(stageTitles[stageKey]) + '</div>'
+            + '</div>';
+        }).join('');
+        var roundsStripHtml = Array.isArray(d.rounds) && d.rounds.length
+          ? d.rounds.map(function (round) {
+            var roundClass = 'duel-round-pill' + (round.roundNo === d.currentRoundNo && d.status === 'in_progress' ? ' active' : '');
+            return '<div class="' + roundClass + '">'
+              + '<b>Manche ' + escapeHtml(String(round.roundNo)) + '</b>'
+              + '<div class="mini">' + escapeHtml(getDuelRoundStatusLabel(round.status)) + '</div>'
+              + '</div>';
+          }).join('')
+          : '<div class="mini">Aucune manche initialisée pour l\'instant.</div>';
 
         var actions = [];
         if (canAccept) {
@@ -1821,18 +2076,24 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
             + '</div>';
         }
 
-        var roundsMini = Array.isArray(d.rounds)
-          ? d.rounds.map(function (r) { return '#' + r.roundNo + ':' + r.status; }).join(' · ')
-          : '-';
-
         refs.duelDetail.innerHTML =
-          '<div class="duel-item-top">'
+          '<div class="duel-guide">'
+          + '<div class="duel-overview-grid">'
+          + '<div class="duel-overview-card"><div class="k">Score</div><div class="v">' + escapeHtml(String(d.score.player1)) + ' - ' + escapeHtml(String(d.score.player2)) + '</div></div>'
+          + '<div class="duel-overview-card"><div class="k">Tour actuel</div><div class="v">' + escapeHtml(isMyTurn ? 'À toi' : 'Adverse') + '</div></div>'
+          + '<div class="duel-overview-card"><div class="k">Manche active</div><div class="v">' + escapeHtml(String(d.currentRoundNo)) + '/5</div></div>'
+          + '<div class="duel-overview-card"><div class="k">Deadline</div><div class="v">' + escapeHtml(d.turnDeadlineAt ? formatDateTime(d.turnDeadlineAt) : '-') + '</div></div>'
+          + '</div>'
+          + '<div class="duel-stage-list">' + stageListHtml + '</div>'
+          + '<div class="duel-callout"><b>' + escapeHtml(guideState.title) + '</b><div class="mini">' + escapeHtml(guideState.detail) + '</div></div>'
+          + '<div class="duel-round-strip">' + roundsStripHtml + '</div>'
+          + '</div>'
+          + '<div class="duel-item-top">'
           + '<b>Duel ' + escapeHtml(d.id.slice(0, 8)) + '</b>'
           + '<span class="chip">' + escapeHtml(getDuelStatusLabel(d.status)) + '</span>'
           + '</div>'
           + '<div class="mini">Type: ' + escapeHtml(getDuelModeLabel(d.matchmakingMode)) + ' · Score ' + escapeHtml(String(d.score.player1)) + ' - ' + escapeHtml(String(d.score.player2)) + '</div>'
           + '<div class="mini">Round: ' + escapeHtml(String(d.currentRoundNo)) + ' · Mon tour: ' + escapeHtml(isMyTurn ? 'Oui' : 'Non') + '</div>'
-          + '<div class="mini">Manches: ' + escapeHtml(roundsMini) + '</div>'
           + (d.winnerUserId ? ('<div class="mini">Vainqueur: ' + escapeHtml(String(d.winnerUserId).slice(0, 8)) + ' · Raison: ' + escapeHtml(String(d.winReason || '-')) + '</div>') : '')
           + '<div class="duel-actions">' + actions.join('') + '</div>'
           + openerBlock
