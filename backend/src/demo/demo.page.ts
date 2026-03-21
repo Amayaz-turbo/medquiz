@@ -218,6 +218,219 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       background: rgba(255, 255, 255, 0.14);
     }
 
+    .welcome-story-minimal {
+      display: grid;
+      gap: 14px;
+    }
+
+    .welcome-mini-line {
+      max-width: 44ch;
+      font-size: 13px;
+      line-height: 1.55;
+      color: rgba(233, 250, 255, 0.86);
+    }
+
+    .welcome-preview-phone {
+      width: min(100%, 420px);
+      justify-self: start;
+      border-radius: 30px;
+      padding: 10px;
+      background: linear-gradient(180deg, #071f31, #0a3348);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      box-shadow: 0 28px 44px rgba(2, 17, 29, 0.3);
+    }
+
+    .welcome-phone-chrome {
+      width: 42%;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.22);
+      margin: 0 auto 10px;
+    }
+
+    .welcome-phone-screen {
+      border-radius: 22px;
+      padding: 14px;
+      background:
+        radial-gradient(circle at top right, rgba(15, 118, 110, 0.12), transparent 32%),
+        linear-gradient(180deg, #fafdff, #eef6fb);
+      color: var(--ink);
+      display: grid;
+      gap: 12px;
+    }
+
+    .welcome-phone-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .welcome-phone-brand {
+      display: grid;
+      gap: 2px;
+    }
+
+    .welcome-phone-brand b {
+      font-size: 15px;
+      line-height: 1.1;
+      color: var(--ink);
+    }
+
+    .welcome-phone-brand span {
+      font-size: 11px;
+      line-height: 1.35;
+      color: var(--ink-soft);
+    }
+
+    .welcome-phone-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0f766e, #22c7af);
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 13px;
+      box-shadow: 0 10px 18px rgba(15, 118, 110, 0.22);
+    }
+
+    .welcome-phone-highlight {
+      border-radius: 18px;
+      padding: 13px;
+      background: linear-gradient(135deg, #0a3148, #0f6f72);
+      color: #f4fcff;
+      display: grid;
+      gap: 5px;
+    }
+
+    .welcome-phone-highlight .k {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.28px;
+      color: rgba(230, 249, 255, 0.72);
+      font-weight: 800;
+    }
+
+    .welcome-phone-highlight .v {
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 1.02;
+    }
+
+    .welcome-phone-highlight .n {
+      font-size: 12px;
+      line-height: 1.42;
+      color: rgba(237, 251, 255, 0.88);
+    }
+
+    .welcome-phone-stack {
+      display: grid;
+      gap: 8px;
+    }
+
+    .welcome-preview-card {
+      border: 1px solid #d9e6ee;
+      border-radius: 16px;
+      padding: 11px;
+      background: linear-gradient(180deg, #ffffff, #f7fbfe);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .welcome-preview-copy {
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .welcome-preview-copy b {
+      font-size: 14px;
+      line-height: 1.15;
+      color: var(--ink);
+    }
+
+    .welcome-preview-copy span {
+      font-size: 11px;
+      line-height: 1.4;
+      color: var(--ink-soft);
+    }
+
+    .welcome-preview-badge {
+      border-radius: 999px;
+      padding: 5px 9px;
+      background: #e8f6f3;
+      color: #0c6e64;
+      font-size: 11px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .welcome-phone-nav {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      padding-top: 4px;
+    }
+
+    .welcome-phone-nav-item {
+      border-radius: 14px;
+      border: 1px solid #dce8ef;
+      padding: 9px 6px;
+      background: #ffffff;
+      display: grid;
+      gap: 5px;
+      justify-items: center;
+      text-align: center;
+      font-size: 10px;
+      color: var(--ink-soft);
+    }
+
+    .welcome-phone-nav-item.active {
+      border-color: rgba(15, 118, 110, 0.22);
+      background: linear-gradient(180deg, #eaf8f5, #f7fbff);
+      color: #0d6d63;
+      font-weight: 700;
+    }
+
+    .welcome-phone-dot {
+      width: 20px;
+      height: 20px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #0f766e, #22c7af);
+      opacity: 0.3;
+    }
+
+    .welcome-phone-nav-item.active .welcome-phone-dot {
+      opacity: 1;
+    }
+
+    .welcome-light-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .welcome-light-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      line-height: 1.45;
+      color: rgba(233, 250, 255, 0.84);
+    }
+
+    .welcome-light-bullet {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #f59e0b;
+      flex: none;
+    }
+
     .welcome-feature-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -2163,6 +2376,21 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       line-height: 1.35;
     }
 
+    body[data-screen="welcome"] .hero {
+      padding: 16px 18px;
+      border-radius: 20px;
+    }
+
+    body[data-screen="welcome"] .hero h1 {
+      font-size: clamp(22px, 2.6vw, 30px);
+    }
+
+    body[data-screen="welcome"] .hero p {
+      margin-top: 6px;
+      max-width: 44ch;
+      font-size: 13px;
+    }
+
     .hidden { display: none !important; }
 
     @keyframes fade-in {
@@ -2187,6 +2415,9 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       .panel { border-radius: 16px; }
       .welcome-title {
         max-width: none;
+      }
+      .welcome-preview-phone {
+        width: 100%;
       }
       .welcome-feature-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2252,6 +2483,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       .dashboard-pulse-grid,
       .dashboard-grid,
       .welcome-feature-grid,
+      .welcome-phone-nav,
       .completion-actions,
       .duel-actions,
       .duel-stage-list,
@@ -2283,6 +2515,11 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       }
       .dashboard-hero-score {
         text-align: left;
+      }
+      .welcome-preview-card,
+      .welcome-phone-head {
+        flex-direction: column;
+        align-items: flex-start;
       }
       .welcome-lane-item {
         grid-template-columns: 1fr;
@@ -2344,11 +2581,8 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
   <div class="shell">
     <header class="hero">
       <div>
-        <h1>Espace Entraînement MedQuiz</h1>
-        <p>
-          Prototype produit branché sur l'API: connexion, filtres matière/chapitre, sessions d'entraînement et
-          corrections immédiates.
-        </p>
+        <h1>MedQuiz</h1>
+        <p>Prototype app branché sur l’API, avec un parcours de plus en plus proche de la future version mobile.</p>
       </div>
       <div class="hero-meta">
         <span class="pill">Prototype V2</span>
@@ -2361,66 +2595,87 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       <section id="welcomeScreen" class="screen-pane">
         <div class="grid welcome-grid">
           <section class="panel auth-landing-panel welcome-story-panel">
-            <div class="welcome-story-top">
-              <div class="welcome-kicker">MedQuiz</div>
-              <div class="welcome-title">Réviser la médecine avec un déroulé simple et motivant.</div>
-              <div class="welcome-text">
-                L’idée est d’ouvrir l’application, te connecter, tomber sur un dashboard clair puis choisir
-                immédiatement entre entraînement, duel, profil ou paramètres. On garde une ambiance sérieuse,
-                rassurante et sans pression inutile.
+            <div class="welcome-story-minimal">
+              <div class="welcome-story-top">
+                <div class="welcome-kicker">Ouverture de l’app</div>
+                <div class="welcome-title">Entrer. Choisir. Commencer.</div>
+                <div class="welcome-mini-line">
+                  L’accueil doit être léger. Tu te connectes, tu arrives sur le dashboard, puis tu ouvres directement
+                  la bonne section.
+                </div>
+                <div class="welcome-story-chips">
+                  <span class="pill">Dashboard</span>
+                  <span class="pill">Entraînement</span>
+                  <span class="pill">Duel</span>
+                </div>
               </div>
-              <div class="welcome-story-chips">
-                <span class="pill">Entraînement guidé</span>
-                <span class="pill">Duel asynchrone</span>
-                <span class="pill">Profil évolutif</span>
-              </div>
-            </div>
 
-            <div class="welcome-feature-grid">
-              <div class="welcome-feature-card">
-                <div class="welcome-feature-kicker">Révision</div>
-                <div class="welcome-feature-value">Sessions courtes</div>
-                <div class="welcome-feature-copy">10 questions, nombre personnalisé ou entraînement libre selon le moment.</div>
-              </div>
-              <div class="welcome-feature-card">
-                <div class="welcome-feature-kicker">Challenge</div>
-                <div class="welcome-feature-value">Duel fluide</div>
-                <div class="welcome-feature-copy">Une vraie boucle asynchrone avec opener, manches, sursis et notifications.</div>
-              </div>
-              <div class="welcome-feature-card">
-                <div class="welcome-feature-kicker">Progression</div>
-                <div class="welcome-feature-value">Avatar vivant</div>
-                <div class="welcome-feature-copy">Ton profil avance dans les études de médecine et gagne en identité.</div>
-              </div>
-            </div>
+              <div class="welcome-preview-phone">
+                <div class="welcome-phone-chrome"></div>
+                <div class="welcome-phone-screen">
+                  <div class="welcome-phone-head">
+                    <div class="welcome-phone-brand">
+                      <b>MedQuiz</b>
+                      <span>Dashboard personnel</span>
+                    </div>
+                    <div class="welcome-phone-avatar">YA</div>
+                  </div>
 
-            <div class="welcome-lane">
-              <div class="welcome-lane-head">
-                <b>Comment l’app se vit</b>
-                <span>Un chemin lisible, sans écran fourre-tout, pour que l’expérience reste naturelle dès l’ouverture.</span>
+                  <div class="welcome-phone-highlight">
+                    <div class="k">Aujourd’hui</div>
+                    <div class="v">10 questions</div>
+                    <div class="n">Une session courte conseillée pour repartir vite.</div>
+                  </div>
+
+                  <div class="welcome-phone-stack">
+                    <div class="welcome-preview-card">
+                      <div class="welcome-preview-copy">
+                        <b>Entraînement</b>
+                        <span>Session guidée et correction immédiate</span>
+                      </div>
+                      <span class="welcome-preview-badge">Go</span>
+                    </div>
+                    <div class="welcome-preview-card">
+                      <div class="welcome-preview-copy">
+                        <b>Duel</b>
+                        <span>Une manche en attente de réponse</span>
+                      </div>
+                      <span class="welcome-preview-badge">1 alerte</span>
+                    </div>
+                    <div class="welcome-preview-card">
+                      <div class="welcome-preview-copy">
+                        <b>Profil</b>
+                        <span>PASS/LAS vers DFGSM2</span>
+                      </div>
+                      <span class="welcome-preview-badge">Avatar</span>
+                    </div>
+                  </div>
+
+                  <div class="welcome-phone-nav">
+                    <div class="welcome-phone-nav-item active">
+                      <div class="welcome-phone-dot"></div>
+                      <div>Accueil</div>
+                    </div>
+                    <div class="welcome-phone-nav-item">
+                      <div class="welcome-phone-dot"></div>
+                      <div>Train</div>
+                    </div>
+                    <div class="welcome-phone-nav-item">
+                      <div class="welcome-phone-dot"></div>
+                      <div>Duel</div>
+                    </div>
+                    <div class="welcome-phone-nav-item">
+                      <div class="welcome-phone-dot"></div>
+                      <div>Profil</div>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div class="welcome-lane-list">
-                <div class="welcome-lane-item">
-                  <div class="welcome-step">01</div>
-                  <div class="welcome-lane-copy">
-                    <b>Accueil</b>
-                    <span>Tu entres par une page de connexion propre, qui explique tout de suite ce que l’application propose.</span>
-                  </div>
-                </div>
-                <div class="welcome-lane-item">
-                  <div class="welcome-step">02</div>
-                  <div class="welcome-lane-copy">
-                    <b>Dashboard</b>
-                    <span>Une fois connecté, tu arrives sur un hall d’entrée qui te dit où tu en es et quoi faire ensuite.</span>
-                  </div>
-                </div>
-                <div class="welcome-lane-item">
-                  <div class="welcome-step">03</div>
-                  <div class="welcome-lane-copy">
-                    <b>Écrans dédiés</b>
-                    <span>Chaque grande brique a sa propre page: entraînement, duel, profil et paramètres.</span>
-                  </div>
-                </div>
+
+              <div class="welcome-light-list">
+                <div class="welcome-light-item"><span class="welcome-light-bullet"></span><span>Moins de texte, plus d’orientation.</span></div>
+                <div class="welcome-light-item"><span class="welcome-light-bullet"></span><span>Une sensation d’app plus que de site vitrine.</span></div>
+                <div class="welcome-light-item"><span class="welcome-light-bullet"></span><span>Des écrans courts, chacun avec un rôle précis.</span></div>
               </div>
             </div>
           </section>
@@ -2429,8 +2684,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
             <div class="welcome-auth-head">
               <h2>Entrer dans l’app</h2>
               <div class="welcome-auth-text">
-                Connecte-toi à un compte existant ou crée ton profil. Le nom affiché sert au moment de l’inscription,
-                puis l’application t’ouvre directement sur le dashboard.
+                Connecte-toi ou crée ton compte. Ensuite, l’app t’ouvre directement sur le dashboard.
               </div>
             </div>
 
@@ -2457,24 +2711,17 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
                   <button class="btn-primary" id="loginBtn">Se connecter</button>
                 </div>
                 <div id="welcomeStatusBox" class="status info welcome-status">Connecte-toi pour entrer dans l’application.</div>
-                <div class="welcome-auth-note">Si tu crées un compte, le nom affiché est utilisé pour construire ta première identité joueur.</div>
+                <div class="welcome-auth-note">Le nom affiché sert au moment de l’inscription pour poser ta première identité joueur.</div>
               </div>
             </div>
 
-            <div class="welcome-note-grid">
-              <div class="welcome-note-card">
-                <b>Ce que tu retrouves juste après</b>
-                <span>Un dashboard plus lisible, avec ton état actuel, tes raccourcis et un chemin conseillé pour repartir rapidement.</span>
-                <div class="summary-inline-chips">
-                  <span class="chip">Dashboard</span>
-                  <span class="chip">Coach de révision</span>
-                  <span class="chip">Raccourcis</span>
-                </div>
-              </div>
-
-              <div class="welcome-note-card">
-                <b>L’esprit de l’app</b>
-                <span>Un endroit utile et propre pour travailler, progresser et se challenger, sans vocabulaire culpabilisant ni interface trop lourde.</span>
+            <div class="welcome-note-card">
+              <b>Après connexion</b>
+              <span>Tu arrives sur un dashboard léger avec tes raccourcis, ton état actuel et le prochain meilleur pas.</span>
+              <div class="summary-inline-chips">
+                <span class="chip">Dashboard</span>
+                <span class="chip">Raccourcis</span>
+                <span class="chip">Parcours guidé</span>
               </div>
             </div>
           </section>
@@ -2940,6 +3187,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         };
 
         state.activeScreen = active;
+        document.body.setAttribute('data-screen', active);
         refs.welcomeScreen.classList.toggle('hidden', connected);
         refs.appShell.classList.toggle('hidden', !connected);
 
