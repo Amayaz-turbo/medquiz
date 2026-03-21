@@ -1607,6 +1607,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
         refs.duelDetail.classList.remove('hidden');
         var meId = state.me && state.me.id ? state.me.id : null;
+        var isPlayer1 = Boolean(meId && d.player1Id === meId);
         var isMyTurn = Boolean(meId && d.currentTurnUserId === meId);
         var canAccept = d.matchmakingMode === 'friend_invite'
           && d.status === 'pending_opener'
@@ -1614,6 +1615,15 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           && !d.acceptedAt;
         var canDecline = canAccept;
         var canForfeit = d.status === 'pending_opener' || d.status === 'in_progress';
+        var myJokerUsed = d.jokers ? (isPlayer1 ? d.jokers.player1Used : d.jokers.player2Used) : false;
+        var opponentJokerUsed = d.jokers ? (isPlayer1 ? d.jokers.player2Used : d.jokers.player1Used) : false;
+        var pendingJoker = d.jokers ? d.jokers.pending : null;
+        var canRequestJoker = d.status === 'in_progress' && isMyTurn && !myJokerUsed && !pendingJoker;
+        var canRespondToPendingJoker = Boolean(
+          pendingJoker &&
+          meId &&
+          pendingJoker.grantedByUserId === meId
+        );
 
         var actions = [];
         if (canAccept) {
@@ -1695,6 +1705,50 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
             + '</div>';
         }
 
+        var jokerBlock = '<div class="duel-question"><b>Joker / sursis 24h</b><div class="mini">Chaque joueur dispose d\'un sursis maximum par duel.</div></div>';
+        if (d.status === 'in_progress') {
+          var pendingHtml = '';
+          if (pendingJoker) {
+            if (canRespondToPendingJoker) {
+              pendingHtml =
+                '<div class="mini">Ton adversaire demande un sursis depuis le ' + escapeHtml(formatDateTime(pendingJoker.requestedAt)) + '.</div>'
+                + '<div class="duel-actions">'
+                + '<button class="btn-primary" data-duel-action="respond-joker-grant" data-joker-id="' + escapeHtml(pendingJoker.id) + '">Accorder 24h</button>'
+                + '<button class="btn-danger" data-duel-action="respond-joker-reject" data-joker-id="' + escapeHtml(pendingJoker.id) + '">Refuser</button>'
+                + '</div>';
+            } else {
+              pendingHtml = '<div class="mini">Une demande de sursis est déjà en attente depuis le ' + escapeHtml(formatDateTime(pendingJoker.requestedAt)) + '.</div>';
+            }
+          }
+
+          var requestHtml = '';
+          if (canRequestJoker) {
+            requestHtml =
+              '<label class="label" for="duelJokerReasonInput">Motif du sursis (optionnel)</label>'
+              + '<textarea id="duelJokerReasonInput" rows="3" placeholder="Ex: trajet, garde, imprévu..."></textarea>'
+              + '<div class="duel-actions"><button class="btn-secondary" data-duel-action="request-joker">Demander 24h de plus</button></div>';
+          }
+
+          var helperText = '';
+          if (!pendingJoker && !canRequestJoker) {
+            if (myJokerUsed) {
+              helperText = '<div class="mini">Ton joker a déjà été utilisé dans ce duel.</div>';
+            } else if (!isMyTurn) {
+              helperText = '<div class="mini">Le joker ne peut être demandé que pendant ton propre tour.</div>';
+            }
+          }
+
+          jokerBlock =
+            '<div class="duel-question">'
+            + '<b>Joker / sursis 24h</b>'
+            + '<div class="mini">Mon joker: ' + escapeHtml(myJokerUsed ? 'utilisé' : 'disponible') + ' · Joker adverse: ' + escapeHtml(opponentJokerUsed ? 'utilisé' : 'disponible') + '</div>'
+            + (d.turnDeadlineAt ? ('<div class="mini">Deadline actuelle: ' + escapeHtml(formatDateTime(d.turnDeadlineAt)) + '</div>') : '')
+            + pendingHtml
+            + requestHtml
+            + helperText
+            + '</div>';
+        }
+
         var roundsMini = Array.isArray(d.rounds)
           ? d.rounds.map(function (r) { return '#' + r.roundNo + ':' + r.status; }).join(' · ')
           : '-';
@@ -1710,6 +1764,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           + (d.winnerUserId ? ('<div class="mini">Vainqueur: ' + escapeHtml(String(d.winnerUserId).slice(0, 8)) + ' · Raison: ' + escapeHtml(String(d.winReason || '-')) + '</div>') : '')
           + '<div class="duel-actions">' + actions.join('') + '</div>'
           + openerBlock
+          + jokerBlock
           + roundBlock;
       }
 
@@ -2007,6 +2062,44 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         }
         var resultTone = result.answerResult && result.answerResult.isCorrect ? 'ok' : 'info';
         setStatus('Réponse duel enregistrée (slot ' + slotNo + ').', resultTone);
+      }
+
+      async function requestJokerFromUi() {
+        if (!state.selectedDuelId || !state.selectedDuel) {
+          throw new Error('Sélectionne un duel.');
+        }
+        var reasonInput = refs.duelDetail.querySelector('#duelJokerReasonInput');
+        var reason = reasonInput ? String(reasonInput.value || '').trim() : '';
+        var payload = {};
+        if (reason) {
+          payload.reason = reason;
+        }
+        await api('/duels/' + state.selectedDuelId + '/jokers/request', {
+          method: 'POST',
+          body: payload
+        });
+        await loadDuels();
+        await loadDuelDetail(state.selectedDuelId);
+        setStatus('Demande de sursis envoyée.', 'ok');
+      }
+
+      async function respondJokerFromUi(jokerId, decision) {
+        if (!state.selectedDuelId) {
+          throw new Error('Sélectionne un duel.');
+        }
+        if (!jokerId) {
+          throw new Error('Joker introuvable.');
+        }
+        await api('/duels/' + state.selectedDuelId + '/jokers/' + jokerId + '/respond', {
+          method: 'POST',
+          body: { decision: decision }
+        });
+        await loadDuels();
+        await loadDuelDetail(state.selectedDuelId);
+        setStatus(
+          decision === 'grant' ? 'Sursis accordé.' : 'Sursis refusé.',
+          decision === 'grant' ? 'ok' : 'info'
+        );
       }
 
       function getGoalFromUi() {
@@ -2706,6 +2799,18 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           if (action === 'load-round-questions') {
             await loadRoundQuestions();
             setStatus('Questions de manche chargées.', 'info');
+            return;
+          }
+          if (action === 'request-joker') {
+            await requestJokerFromUi();
+            return;
+          }
+          if (action === 'respond-joker-grant') {
+            await respondJokerFromUi(btn.getAttribute('data-joker-id'), 'grant');
+            return;
+          }
+          if (action === 'respond-joker-reject') {
+            await respondJokerFromUi(btn.getAttribute('data-joker-id'), 'reject');
             return;
           }
           if (action === 'submit-round-answer') {
