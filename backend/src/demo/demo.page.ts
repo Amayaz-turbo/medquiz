@@ -413,6 +413,59 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       gap: 8px;
     }
 
+    .toast-stack {
+      position: fixed;
+      top: 18px;
+      right: 18px;
+      z-index: 50;
+      display: grid;
+      gap: 10px;
+      width: min(360px, calc(100vw - 36px));
+      pointer-events: none;
+    }
+
+    .toast-card {
+      pointer-events: auto;
+      border: 1px solid rgba(255, 255, 255, 0.65);
+      border-left: 5px solid #f59e0b;
+      border-radius: 14px;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.96);
+      box-shadow: 0 18px 34px rgba(3, 27, 45, 0.2);
+      display: grid;
+      gap: 8px;
+      animation: fade-in 220ms ease-out;
+    }
+
+    .toast-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .toast-body {
+      font-size: 13px;
+      color: var(--ink);
+      line-height: 1.45;
+    }
+
+    .toast-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .toast-close {
+      width: auto;
+      min-width: 0;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #edf4f9;
+      color: var(--ink-soft);
+      font-weight: 700;
+    }
+
     .focus-list {
       display: grid;
       gap: 8px;
@@ -661,6 +714,13 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       .row { grid-template-columns: 1fr; }
       .stats { grid-template-columns: 1fr 1fr; }
       .stat .v { font-size: 19px; }
+      .toast-stack {
+        top: auto;
+        bottom: 12px;
+        right: 12px;
+        left: 12px;
+        width: auto;
+      }
     }
   </style>
 </head>
@@ -897,6 +957,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       </section>
     </main>
   </div>
+  <div id="notificationToastStack" class="toast-stack"></div>
 
   <script>
     (function () {
@@ -921,6 +982,8 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         history: [],
         lastCompletedSession: null,
         lastSessionSetup: null,
+        notificationSeeded: false,
+        notificationToasts: [],
         notifications: [],
         duels: [],
         selectedDuelId: null,
@@ -971,6 +1034,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         notificationsUnreadChip: document.getElementById('notificationsUnreadChip'),
         refreshNotificationsBtn: document.getElementById('refreshNotificationsBtn'),
         notificationsList: document.getElementById('notificationsList'),
+        notificationToastStack: document.getElementById('notificationToastStack'),
         duelModeSelect: document.getElementById('duelModeSelect'),
         duelOpponentInput: document.getElementById('duelOpponentInput'),
         duelStatusFilterSelect: document.getElementById('duelStatusFilterSelect'),
@@ -981,6 +1045,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       };
 
       var notificationPollHandle = null;
+      var notificationToastTimers = {};
 
       function setStatus(msg, tone) {
         refs.statusBox.className = 'status ' + (tone || 'info');
@@ -1816,15 +1881,95 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         }).join('');
       }
 
+      function renderNotificationToasts() {
+        if (!state.notificationToasts.length) {
+          refs.notificationToastStack.innerHTML = '';
+          return;
+        }
+
+        refs.notificationToastStack.innerHTML = state.notificationToasts.map(function (item) {
+          var payload = item.payload && typeof item.payload === 'object' ? item.payload : {};
+          var duelId = typeof payload.duelId === 'string' ? payload.duelId : '';
+          var openBtn = duelId
+            ? '<button class="btn-primary btn-inline" data-toast-action="open" data-toast-id="' + escapeHtml(item.id) + '">Ouvrir</button>'
+            : '<button class="btn-secondary btn-inline" data-toast-action="read" data-toast-id="' + escapeHtml(item.id) + '">Marquer lu</button>';
+
+          return '<div class="toast-card">'
+            + '<div class="toast-top">'
+            + '<div><b>' + escapeHtml(getNotificationTypeLabel(item.type)) + '</b><div class="mini">' + escapeHtml(formatDateTime(item.createdAt)) + '</div></div>'
+            + '<button class="toast-close" data-toast-action="dismiss" data-toast-id="' + escapeHtml(item.id) + '">×</button>'
+            + '</div>'
+            + '<div class="toast-body">' + escapeHtml(getNotificationSummary(item)) + '</div>'
+            + '<div class="toast-actions">' + openBtn + '</div>'
+            + '</div>';
+        }).join('');
+      }
+
+      function dismissNotificationToast(notificationId) {
+        if (!notificationId) {
+          return;
+        }
+        if (notificationToastTimers[notificationId]) {
+          clearTimeout(notificationToastTimers[notificationId]);
+          delete notificationToastTimers[notificationId];
+        }
+        state.notificationToasts = state.notificationToasts.filter(function (item) {
+          return item.id !== notificationId;
+        });
+        renderNotificationToasts();
+      }
+
+      function enqueueNotificationToasts(items) {
+        if (!Array.isArray(items) || !items.length) {
+          return;
+        }
+
+        var fresh = items.filter(function (item) {
+          return !state.notificationToasts.some(function (current) {
+            return current.id === item.id;
+          });
+        }).slice(0, 3);
+
+        if (!fresh.length) {
+          return;
+        }
+
+        state.notificationToasts = fresh.concat(state.notificationToasts).slice(0, 3);
+        renderNotificationToasts();
+
+        fresh.forEach(function (item) {
+          if (notificationToastTimers[item.id]) {
+            clearTimeout(notificationToastTimers[item.id]);
+          }
+          notificationToastTimers[item.id] = window.setTimeout(function () {
+            dismissNotificationToast(item.id);
+          }, 9000);
+        });
+      }
+
       async function loadNotifications(options) {
         if (!state.token) {
           state.notifications = [];
+          state.notificationSeeded = false;
           renderNotifications();
+          renderNotificationToasts();
           return;
         }
+        var previousIds = state.notifications.map(function (item) { return item.id; });
         var result = await api('/notifications?limit=12');
-        state.notifications = result.items || [];
+        var nextItems = result.items || [];
+        var newItems = [];
+        if (state.notificationSeeded) {
+          newItems = nextItems.filter(function (item) {
+            return item.status !== 'read' && previousIds.indexOf(item.id) === -1;
+          });
+        }
+        state.notifications = nextItems;
+        state.notificationSeeded = true;
         renderNotifications();
+        if (newItems.length) {
+          enqueueNotificationToasts(newItems);
+        }
         if (!(options && options.silent)) {
           setStatus('Notifications rafraîchies.', 'info');
         }
@@ -1850,6 +1995,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           };
         });
         renderNotifications();
+        dismissNotificationToast(notificationId);
         if (!(options && options.silent)) {
           setStatus('Notification marquée comme lue.', 'ok');
         }
@@ -1885,6 +2031,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         if (item.status !== 'read') {
           await markNotificationRead(notificationId, { silent: true });
         }
+        dismissNotificationToast(notificationId);
 
         var payload = item.payload && typeof item.payload === 'object' ? item.payload : {};
         var duelId = typeof payload.duelId === 'string' ? payload.duelId : '';
@@ -2504,6 +2651,10 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
       refs.logoutBtn.addEventListener('click', function () {
         stopNotificationPolling();
+        Object.keys(notificationToastTimers).forEach(function (id) {
+          clearTimeout(notificationToastTimers[id]);
+          delete notificationToastTimers[id];
+        });
         saveToken('');
         state.me = null;
         state.dashboard = null;
@@ -2516,6 +2667,8 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         state.history = [];
         state.lastCompletedSession = null;
         state.lastSessionSetup = null;
+        state.notificationSeeded = false;
+        state.notificationToasts = [];
         state.notifications = [];
         state.duels = [];
         state.selectedDuelId = null;
@@ -2533,6 +2686,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         refs.notificationsList.innerHTML = '';
         refs.notificationsUnreadChip.className = 'chip';
         refs.notificationsUnreadChip.textContent = '0 non lues';
+        refs.notificationToastStack.innerHTML = '';
         refs.suggestedModeLabel.textContent = 'Mode conseillé: -';
         refs.applySuggestedModeBtn.disabled = true;
         refs.applySuggestedModeBtn.removeAttribute('data-mode');
@@ -2731,6 +2885,37 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         }
       });
 
+      refs.notificationToastStack.addEventListener('click', async function (event) {
+        var target = event.target;
+        if (!target || typeof target.closest !== 'function') {
+          return;
+        }
+        var btn = target.closest('button[data-toast-action]');
+        if (!btn) {
+          return;
+        }
+        var action = btn.getAttribute('data-toast-action');
+        var notificationId = btn.getAttribute('data-toast-id');
+        if (!action || !notificationId) {
+          return;
+        }
+        try {
+          if (action === 'dismiss') {
+            dismissNotificationToast(notificationId);
+            return;
+          }
+          if (action === 'read') {
+            await markNotificationRead(notificationId);
+            return;
+          }
+          if (action === 'open') {
+            await openNotification(notificationId);
+          }
+        } catch (err) {
+          setStatus(err.message || String(err), 'err');
+        }
+      });
+
       refs.duelDetail.addEventListener('click', async function (event) {
         var target = event.target;
         if (!target || typeof target.closest !== 'function') {
@@ -2856,6 +3041,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           renderHistory();
           renderFocus();
           renderNotifications();
+          renderNotificationToasts();
           renderSessionGoal();
           renderCompletion();
           renderSetupGuide();
