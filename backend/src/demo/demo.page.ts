@@ -214,6 +214,262 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       gap: 12px;
     }
 
+    .dashboard-shell {
+      display: grid;
+      gap: 12px;
+    }
+
+    .dashboard-hero {
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      border-radius: 22px;
+      padding: 18px;
+      background:
+        radial-gradient(circle at 86% 10%, rgba(255, 255, 255, 0.16), transparent 28%),
+        radial-gradient(circle at 14% 85%, rgba(245, 158, 11, 0.16), transparent 28%),
+        linear-gradient(135deg, rgba(8, 40, 59, 0.95), rgba(11, 93, 97, 0.92));
+      color: #f5fcff;
+      display: grid;
+      grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr);
+      gap: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    .dashboard-hero-copy {
+      display: grid;
+      gap: 10px;
+      align-content: start;
+    }
+
+    .dashboard-hero-kicker {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.34px;
+      font-weight: 800;
+      color: rgba(231, 250, 255, 0.75);
+    }
+
+    .dashboard-hero-title {
+      font-size: clamp(28px, 4vw, 42px);
+      font-weight: 800;
+      line-height: 0.98;
+      letter-spacing: -0.02em;
+    }
+
+    .dashboard-hero-text {
+      font-size: 14px;
+      line-height: 1.55;
+      color: rgba(233, 250, 255, 0.88);
+      max-width: 64ch;
+    }
+
+    .dashboard-hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .dashboard-hero-actions .btn-inline {
+      min-width: 0;
+    }
+
+    .dashboard-hero-actions .btn-primary {
+      box-shadow: 0 10px 24px rgba(7, 29, 48, 0.28);
+    }
+
+    .dashboard-hero-panel {
+      border-radius: 18px;
+      padding: 14px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      display: grid;
+      gap: 12px;
+      align-content: start;
+      backdrop-filter: blur(10px);
+    }
+
+    .dashboard-hero-panel-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .dashboard-hero-panel-title {
+      display: grid;
+      gap: 3px;
+    }
+
+    .dashboard-hero-panel-title b {
+      font-size: 15px;
+      line-height: 1.2;
+    }
+
+    .dashboard-hero-panel-title span {
+      font-size: 12px;
+      line-height: 1.4;
+      color: rgba(232, 250, 255, 0.82);
+    }
+
+    .dashboard-hero-score {
+      text-align: right;
+      display: grid;
+      gap: 2px;
+      min-width: 84px;
+    }
+
+    .dashboard-hero-score .v {
+      font-size: 28px;
+      font-weight: 800;
+      line-height: 1;
+      color: #ffffff;
+    }
+
+    .dashboard-hero-score .k {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.26px;
+      color: rgba(231, 250, 255, 0.7);
+    }
+
+    .dashboard-hero-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .dashboard-hero-list-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      border-top: 1px solid rgba(255, 255, 255, 0.14);
+      padding-top: 8px;
+      font-size: 13px;
+      color: rgba(240, 251, 255, 0.92);
+    }
+
+    .dashboard-hero-list-item:first-child {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .dashboard-hero-list-item b {
+      color: #ffffff;
+      font-size: 14px;
+      line-height: 1.2;
+      text-align: right;
+    }
+
+    .dashboard-subgrid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+      gap: 12px;
+    }
+
+    .dashboard-pulse-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 10px;
+    }
+
+    .dashboard-pulse-card {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px;
+      background:
+        radial-gradient(circle at top right, rgba(15, 118, 110, 0.08), transparent 34%),
+        linear-gradient(180deg, #ffffff, #f7fbff);
+      display: grid;
+      gap: 6px;
+    }
+
+    .dashboard-pulse-card .k {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.26px;
+      color: var(--ink-soft);
+      font-weight: 800;
+    }
+
+    .dashboard-pulse-card .v {
+      font-size: 26px;
+      font-weight: 800;
+      line-height: 1;
+      color: var(--ink);
+    }
+
+    .dashboard-pulse-card .n {
+      font-size: 12px;
+      line-height: 1.42;
+      color: var(--ink-soft);
+    }
+
+    .dashboard-lane {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px;
+      background: linear-gradient(180deg, #ffffff, #f8fbfe);
+      display: grid;
+      gap: 12px;
+    }
+
+    .dashboard-lane-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .dashboard-lane-copy {
+      display: grid;
+      gap: 3px;
+    }
+
+    .dashboard-lane-copy b {
+      font-size: 18px;
+      line-height: 1.08;
+      color: var(--ink);
+    }
+
+    .dashboard-lane-copy span {
+      font-size: 12px;
+      line-height: 1.42;
+      color: var(--ink-soft);
+    }
+
+    .dashboard-lane-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .dashboard-lane-item {
+      border: 1px solid #dce7ef;
+      border-radius: 15px;
+      padding: 12px;
+      background: linear-gradient(180deg, #ffffff, #f7fbff);
+      display: grid;
+      gap: 7px;
+    }
+
+    .dashboard-lane-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .dashboard-lane-title {
+      font-size: 15px;
+      font-weight: 800;
+      line-height: 1.15;
+      color: var(--ink);
+    }
+
+    .dashboard-lane-note {
+      font-size: 12px;
+      line-height: 1.4;
+      color: var(--ink-soft);
+    }
+
     .dashboard-card {
       border: 1px solid #d7e6f0;
       border-radius: 18px;
@@ -1705,6 +1961,10 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       .app-toolbar {
         flex-direction: column;
       }
+      .dashboard-hero,
+      .dashboard-subgrid {
+        grid-template-columns: 1fr;
+      }
       .app-toolbar-actions {
         width: 100%;
         justify-content: flex-start;
@@ -1756,6 +2016,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         display: grid;
         grid-template-columns: 1fr;
       }
+      .dashboard-pulse-grid,
       .dashboard-grid,
       .completion-actions,
       .duel-actions,
@@ -1779,6 +2040,15 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       .duel-player-tags .chip {
         white-space: normal;
         justify-content: flex-start;
+      }
+      .dashboard-hero-panel-top,
+      .dashboard-lane-head,
+      .dashboard-lane-top {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .dashboard-hero-score {
+        text-align: left;
       }
       .question-exit-row {
         justify-content: stretch;
@@ -1937,13 +2207,37 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         </div>
 
         <section id="dashboardScreen" class="screen-view">
-          <section class="panel">
-            <div class="section-head">
-              <h3>Dashboard</h3>
-              <span class="section-note">Point d’entrée principal</span>
+          <div class="dashboard-shell">
+            <section class="panel">
+              <div id="dashboardHero"></div>
+            </section>
+
+            <div class="dashboard-subgrid">
+              <section class="panel">
+                <div class="section-head">
+                  <h3>Pouls Du Moment</h3>
+                  <span class="section-note">Lecture rapide de ta situation</span>
+                </div>
+                <div id="dashboardPulse" class="dashboard-pulse-grid"></div>
+              </section>
+
+              <section class="panel">
+                <div class="section-head">
+                  <h3>Trajectoire Conseillée</h3>
+                  <span class="section-note">Par où repartir maintenant</span>
+                </div>
+                <div id="dashboardJourney"></div>
+              </section>
             </div>
-            <div id="dashboardCards" class="dashboard-grid"></div>
-          </section>
+
+            <section class="panel">
+              <div class="section-head">
+                <h3>Catégories</h3>
+                <span class="section-note">Point d’entrée principal</span>
+              </div>
+              <div id="dashboardCards" class="dashboard-grid"></div>
+            </section>
+          </div>
         </section>
 
         <section id="trainingScreen" class="screen-view hidden">
@@ -2224,6 +2518,9 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         homeNavBtn: document.getElementById('homeNavBtn'),
         quickTrainingNavBtn: document.getElementById('quickTrainingNavBtn'),
         quickDuelNavBtn: document.getElementById('quickDuelNavBtn'),
+        dashboardHero: document.getElementById('dashboardHero'),
+        dashboardPulse: document.getElementById('dashboardPulse'),
+        dashboardJourney: document.getElementById('dashboardJourney'),
         dashboardCards: document.getElementById('dashboardCards'),
         profileSummary: document.getElementById('profileSummary'),
         profileAvatarSummary: document.getElementById('profileAvatarSummary'),
@@ -2469,13 +2766,199 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         return String(plan).toUpperCase() + ' · ' + status;
       }
 
+      function getDashboardOverview() {
+        return state.dashboard && state.dashboard.overview ? state.dashboard.overview : null;
+      }
+
+      function getGreetingLabel() {
+        var hours = new Date().getHours();
+        if (hours < 12) {
+          return 'Bonjour';
+        }
+        if (hours < 18) {
+          return 'Bon après-midi';
+        }
+        return 'Bonsoir';
+      }
+
+      function pulseCardHtml(label, value, note) {
+        return '<div class="dashboard-pulse-card">'
+          + '<div class="k">' + escapeHtml(label) + '</div>'
+          + '<div class="v">' + escapeHtml(value) + '</div>'
+          + '<div class="n">' + escapeHtml(note) + '</div>'
+          + '</div>';
+      }
+
+      function renderDashboardHero() {
+        if (!state.token) {
+          refs.dashboardHero.innerHTML = '<div class="muted">Connecte-toi pour afficher ton hall d’entrée.</div>';
+          return;
+        }
+
+        var overview = getDashboardOverview();
+        var name = getPreferredPlayerName();
+        var stageName = state.myAvatar && state.myAvatar.currentStage ? state.myAvatar.currentStage.name : 'Début du parcours';
+        var nextStage = state.myAvatar && state.myAvatar.nextStage ? state.myAvatar.nextStage.name : '';
+        var suggestedMode = overview && overview.suggestedMode ? getModeLabel(overview.suggestedMode) : 'À déterminer';
+        var successRate = overview && overview.successRatePct != null ? (overview.successRatePct + '%') : '—';
+        var unreadNotifications = getUnreadNotificationsCount();
+        var activeDuels = getActiveDuelsCount();
+        var refreshNeed = 0;
+
+        if (state.dashboard && Array.isArray(state.dashboard.subjects)) {
+          refreshNeed = state.dashboard.subjects.reduce(function (sum, subject) {
+            return sum + Number(subject.questionsToReinforceCount || 0);
+          }, 0);
+        }
+
+        var chips = [
+          '<span class="pill">' + escapeHtml(stageName) + '</span>',
+          '<span class="pill">' + escapeHtml(getSubscriptionLabel()) + '</span>',
+          '<span class="pill">' + escapeHtml('Mode conseillé: ' + suggestedMode) + '</span>'
+        ].join('');
+
+        refs.dashboardHero.innerHTML =
+          '<div class="dashboard-hero">'
+          + '<div class="dashboard-hero-copy">'
+          + '<div class="dashboard-hero-kicker">Hall d’entrée</div>'
+          + '<div class="dashboard-hero-title">' + escapeHtml(getGreetingLabel() + ', ' + name) + '</div>'
+          + '<div class="dashboard-hero-text">'
+          + escapeHtml(
+            refreshNeed > 0
+              ? ('Tu as ' + refreshNeed + ' question' + (refreshNeed > 1 ? 's' : '') + ' à retravailler. Le plus simple est de repartir sur une session ' + suggestedMode.toLowerCase() + ' et de garder un oeil sur tes duels en attente.')
+              : ('Ton espace est prêt. Tu peux repartir sur un entraînement, vérifier tes défis asynchrones ou continuer à personnaliser ton profil.')
+          )
+          + '</div>'
+          + '<div class="dashboard-hero-actions">'
+          + '<button class="btn-primary btn-inline" data-nav-screen="training">Reprendre l’entraînement</button>'
+          + '<button class="btn-secondary btn-inline" data-nav-screen="duel">Voir mes duels</button>'
+          + '<button class="btn-secondary btn-inline" data-nav-screen="profile">Voir mon profil</button>'
+          + '</div>'
+          + '<div class="dashboard-meta">' + chips + '</div>'
+          + '</div>'
+          + '<div class="dashboard-hero-panel">'
+          + '<div class="dashboard-hero-panel-top">'
+          + '<div class="dashboard-hero-panel-title">'
+          + '<b>Indice de confiance actuel</b>'
+          + '<span>Lecture synthétique basée sur tes sessions récentes et ton activité.</span>'
+          + '</div>'
+          + '<div class="dashboard-hero-score"><div class="v">' + escapeHtml(successRate) + '</div><div class="k">Réussite cumulée</div></div>'
+          + '</div>'
+          + '<div class="dashboard-hero-list">'
+          + '<div class="dashboard-hero-list-item"><span>Couverture du programme travaillé</span><b>' + escapeHtml(overview ? (overview.chapterCoveragePct + '%') : '—') + '</b></div>'
+          + '<div class="dashboard-hero-list-item"><span>Duels actifs / notifications</span><b>' + escapeHtml(String(activeDuels) + ' / ' + String(unreadNotifications)) + '</b></div>'
+          + '<div class="dashboard-hero-list-item"><span>Étape avatar suivante</span><b>' + escapeHtml(nextStage || 'Continuer à progresser') + '</b></div>'
+          + '</div>'
+          + '</div>'
+          + '</div>';
+      }
+
+      function renderDashboardPulse() {
+        if (!state.token) {
+          refs.dashboardPulse.innerHTML = '<div class="muted">Connecte-toi pour afficher les indicateurs du moment.</div>';
+          return;
+        }
+
+        var overview = getDashboardOverview();
+        var unreadNotifications = getUnreadNotificationsCount();
+        var activeDuels = getActiveDuelsCount();
+        refs.dashboardPulse.innerHTML = [
+          pulseCardHtml(
+            'Sessions récentes',
+            String(overview ? overview.sessions7dCount : 0),
+            'Nombre de sessions réalisées sur les 7 derniers jours.'
+          ),
+          pulseCardHtml(
+            'Tentatives',
+            String(overview ? overview.attemptsCount : 0),
+            'Volume global de réponses déjà jouées dans ton espace.'
+          ),
+          pulseCardHtml(
+            'Couverture',
+            overview ? (overview.chapterCoveragePct + '%') : '—',
+            'Part du programme déjà travaillée dans tes matières.'
+          ),
+          pulseCardHtml(
+            'Veille duel',
+            activeDuels ? String(activeDuels) : '0',
+            unreadNotifications
+              ? (String(unreadNotifications) + ' notification' + (unreadNotifications > 1 ? 's' : '') + ' à lire.')
+              : 'Aucune notification en attente pour le moment.'
+          )
+        ].join('');
+      }
+
+      function renderDashboardJourney() {
+        if (!state.token) {
+          refs.dashboardJourney.innerHTML = '<div class="muted">Connecte-toi pour afficher les prochains meilleurs pas.</div>';
+          return;
+        }
+
+        var overview = getDashboardOverview();
+        var suggestedMode = overview && overview.suggestedMode ? getModeLabel(overview.suggestedMode) : 'Apprentissage';
+        var unreadNotifications = getUnreadNotificationsCount();
+        var activeDuels = getActiveDuelsCount();
+        var nextStage = state.myAvatar && state.myAvatar.nextStage ? state.myAvatar.nextStage.name : '';
+
+        var steps = [
+          {
+            title: 'Relancer une session utile',
+            note: 'Le mode le plus pertinent actuellement semble être ' + suggestedMode.toLowerCase() + '.',
+            chip: suggestedMode,
+            screen: 'training',
+            actionLabel: 'Aller à l’entraînement'
+          },
+          {
+            title: unreadNotifications ? 'Répondre à tes alertes duel' : 'Garder un oeil sur les duels',
+            note: unreadNotifications
+              ? ('Tu as ' + unreadNotifications + ' notification' + (unreadNotifications > 1 ? 's' : '') + ' à traiter, avec ' + activeDuels + ' duel' + (activeDuels > 1 ? 's' : '') + ' actif' + (activeDuels > 1 ? 's' : '') + '.')
+              : 'Même sans alerte immédiate, le centre duel reste ton point de suivi challenge.',
+            chip: unreadNotifications ? (String(unreadNotifications) + ' alerte' + (unreadNotifications > 1 ? 's' : '')) : 'Duel',
+            chipTone: unreadNotifications ? 'warn' : '',
+            screen: 'duel',
+            actionLabel: 'Ouvrir duel'
+          },
+          {
+            title: nextStage ? ('Préparer ' + nextStage) : 'Soigner ton profil joueur',
+            note: 'Ton profil et ton avatar portent la progression de l’app. C’est aussi là que l’expérience devient plus personnelle.',
+            chip: state.myAvatar && state.myAvatar.currentStage ? state.myAvatar.currentStage.name : 'Profil',
+            screen: 'profile',
+            actionLabel: 'Ouvrir profil'
+          }
+        ];
+
+        refs.dashboardJourney.innerHTML =
+          '<div class="dashboard-lane">'
+          + '<div class="dashboard-lane-head">'
+          + '<div class="dashboard-lane-copy"><b>Ce que je te ferais faire maintenant</b><span>Un chemin simple en 3 pas pour repartir sans te perdre dans l’interface.</span></div>'
+          + '<span class="chip">Guidé</span>'
+          + '</div>'
+          + '<div class="dashboard-lane-list">' + steps.map(function (step, index) {
+            var chipClass = step.chipTone ? ('chip ' + step.chipTone) : 'chip';
+            return '<div class="dashboard-lane-item">'
+              + '<div class="dashboard-lane-top">'
+              + '<div>'
+              + '<div class="dashboard-lane-title">' + escapeHtml(String(index + 1) + '. ' + step.title) + '</div>'
+              + '<div class="dashboard-lane-note">' + escapeHtml(step.note) + '</div>'
+              + '</div>'
+              + '<span class="' + chipClass + '">' + escapeHtml(step.chip) + '</span>'
+              + '</div>'
+              + '<button class="btn-secondary btn-inline" data-nav-screen="' + escapeHtml(step.screen) + '">' + escapeHtml(step.actionLabel) + '</button>'
+              + '</div>';
+          }).join('') + '</div>'
+          + '</div>';
+      }
+
       function renderDashboardCards() {
         if (!state.token) {
+          refs.dashboardHero.innerHTML = '<div class="muted">Connecte-toi pour retrouver ton tableau de bord.</div>';
+          refs.dashboardPulse.innerHTML = '<div class="muted">Connecte-toi pour retrouver ton tableau de bord.</div>';
+          refs.dashboardJourney.innerHTML = '<div class="muted">Connecte-toi pour retrouver ton tableau de bord.</div>';
           refs.dashboardCards.innerHTML = '<div class="muted">Connecte-toi pour retrouver ton tableau de bord.</div>';
           return;
         }
 
-        var overview = state.dashboard && state.dashboard.overview ? state.dashboard.overview : null;
+        var overview = getDashboardOverview();
         var suggestedMode = overview && overview.suggestedMode ? getModeLabel(overview.suggestedMode) : 'À déterminer';
         var successRate = overview && overview.successRatePct != null ? (overview.successRatePct + '%') : 'Prêt';
         var coverage = overview ? (overview.chapterCoveragePct + '%') : '-';
@@ -2484,6 +2967,10 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         var stageName = state.myAvatar && state.myAvatar.currentStage ? state.myAvatar.currentStage.name : 'Début du parcours';
         var nextStage = state.myAvatar && state.myAvatar.nextStage ? state.myAvatar.nextStage.name : '';
         var settingsValue = state.me && state.me.timezone ? state.me.timezone : 'Europe/Paris';
+
+        renderDashboardHero();
+        renderDashboardPulse();
+        renderDashboardJourney();
 
         var cards = [
           {
@@ -4793,6 +5280,9 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         refs.chaptersList.innerHTML = '';
         refs.stats.innerHTML = '';
         refs.focusList.innerHTML = '';
+        refs.dashboardHero.innerHTML = '';
+        refs.dashboardPulse.innerHTML = '';
+        refs.dashboardJourney.innerHTML = '';
         refs.dashboardCards.innerHTML = '';
         refs.profileSummary.innerHTML = '';
         refs.profileAvatarSummary.innerHTML = '';
@@ -4830,7 +5320,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         setActiveScreen('duel');
       });
 
-      refs.dashboardCards.addEventListener('click', function (event) {
+      function handleDashboardNavClick(event) {
         var target = event.target;
         if (!target || typeof target.closest !== 'function') {
           return;
@@ -4844,7 +5334,11 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           return;
         }
         setActiveScreen(screen);
-      });
+      }
+
+      refs.dashboardHero.addEventListener('click', handleDashboardNavClick);
+      refs.dashboardJourney.addEventListener('click', handleDashboardNavClick);
+      refs.dashboardCards.addEventListener('click', handleDashboardNavClick);
 
       refs.createSessionBtn.addEventListener('click', async function () {
         try {
