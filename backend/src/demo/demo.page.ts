@@ -316,10 +316,56 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       gap: 10px;
     }
 
+    .completion-card-rich {
+      background:
+        radial-gradient(circle at top right, rgba(15, 118, 110, 0.08), transparent 34%),
+        linear-gradient(180deg, #ffffff, #f7fbff);
+      border-color: #cfe3f1;
+      padding: 14px;
+    }
+
     .completion-title {
       margin: 0;
       font-size: 15px;
       color: var(--ink);
+    }
+
+    .completion-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      width: fit-content;
+      border-radius: 999px;
+      border: 1px solid #bfe7e2;
+      background: #edf9f7;
+      color: #0b5f58;
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.25px;
+    }
+
+    .completion-badge.warn {
+      border-color: #ffd48a;
+      background: #fff6df;
+      color: #8a4b00;
+    }
+
+    .completion-summary {
+      display: grid;
+      gap: 5px;
+    }
+
+    .completion-summary .lead {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--ink);
+      line-height: 1.15;
+    }
+
+    .completion-summary .muted {
+      font-size: 13px;
     }
 
     .completion-kpis {
@@ -475,9 +521,26 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
     .focus-item {
       border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 9px;
-      background: #fff;
+      border-radius: 16px;
+      padding: 12px;
+      background:
+        radial-gradient(circle at top right, rgba(15, 118, 110, 0.06), transparent 34%),
+        #fff;
+      display: grid;
+      gap: 8px;
+    }
+
+    .focus-rank {
+      width: 34px;
+      height: 34px;
+      border-radius: 11px;
+      background: linear-gradient(145deg, #0f766e, #0b2f47);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 13px;
+      font-weight: 800;
+      box-shadow: 0 10px 18px rgba(11, 47, 71, 0.16);
     }
 
     .focus-top {
@@ -486,6 +549,36 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       align-items: center;
       gap: 8px;
       margin-bottom: 4px;
+    }
+
+    .focus-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .focus-title-copy {
+      display: grid;
+      gap: 2px;
+    }
+
+    .focus-title-copy b {
+      font-size: 15px;
+      line-height: 1.1;
+    }
+
+    .focus-meter {
+      height: 8px;
+      border-radius: 999px;
+      background: #e6eff6;
+      overflow: hidden;
+      border: 1px solid #d5e3ee;
+    }
+
+    .focus-meter-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #f59e0b, #ef4444);
     }
 
     .btn-inline {
@@ -501,16 +594,58 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
     .setup-step {
       border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 8px 10px;
-      background: #fff;
+      border-radius: 16px;
+      padding: 12px;
+      background: linear-gradient(180deg, #ffffff, #f8fbfe);
       font-size: 13px;
+      color: var(--ink);
+      display: grid;
+      gap: 8px;
+    }
+
+    .setup-step-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .setup-step-index {
+      width: 30px;
+      height: 30px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      background: #eef4f8;
+      color: #254557;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.2px;
+    }
+
+    .setup-step-status {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.22px;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+    }
+
+    .setup-step-copy {
+      display: grid;
+      gap: 4px;
+    }
+
+    .setup-step-label {
+      font-size: 14px;
+      font-weight: 800;
       color: var(--ink);
     }
 
-    .setup-step b {
+    .setup-step-detail {
+      color: var(--ink-soft);
       font-size: 12px;
-      margin-right: 6px;
+      line-height: 1.35;
     }
 
     .setup-step.done {
@@ -521,6 +656,16 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
     .setup-step.todo {
       border-color: #f5d3a3;
       background: #fffaf1;
+    }
+
+    .setup-step.done .setup-step-index {
+      background: #dff6e8;
+      color: #16723a;
+    }
+
+    .setup-step.todo .setup-step-index {
+      background: #fff0cc;
+      color: #8a4b00;
     }
 
     .preset-grid {
@@ -1038,11 +1183,14 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
     .q-card {
       border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 14px;
+      border-radius: 18px;
+      padding: 16px;
       margin-bottom: 10px;
-      background: #fff;
-      min-height: 190px;
+      background:
+        radial-gradient(circle at top right, rgba(15, 118, 110, 0.08), transparent 30%),
+        linear-gradient(180deg, #ffffff, #f7fbff);
+      min-height: 220px;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5);
     }
 
     .q-type {
@@ -1058,15 +1206,102 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       font-weight: 700;
     }
 
+    .question-stage {
+      display: grid;
+      gap: 14px;
+    }
+
+    .question-stage.empty {
+      place-items: center;
+      text-align: center;
+    }
+
+    .q-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .q-header-main {
+      display: grid;
+      gap: 7px;
+      min-width: 0;
+    }
+
+    .q-meta-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .q-prompt {
+      margin: 0;
+      font-size: clamp(21px, 2vw, 28px);
+      line-height: 1.2;
+      letter-spacing: -0.01em;
+      color: var(--ink);
+    }
+
+    .q-support {
+      border: 1px solid #d8e8f2;
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: #f3faff;
+      color: #315061;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .q-answer-shell {
+      display: grid;
+      gap: 10px;
+    }
+
+    .q-empty-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--ink);
+      line-height: 1.15;
+    }
+
+    .q-empty-copy {
+      max-width: 54ch;
+      color: var(--ink-soft);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
     .choice-list { display: grid; gap: 7px; margin-top: 9px; }
 
     .choice {
       border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 9px;
+      border-radius: 14px;
+      padding: 12px;
       display: flex;
       gap: 8px;
       align-items: flex-start;
+      background: #fff;
+      transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+    }
+
+    .choice:hover {
+      border-color: #9fd6cf;
+      box-shadow: 0 10px 18px rgba(8, 31, 49, 0.08);
+      transform: translateY(-1px);
+    }
+
+    .choice input {
+      margin-top: 2px;
+      accent-color: var(--brand);
+    }
+
+    .open-answer-box {
+      min-height: 130px;
+      border-radius: 14px;
+      padding: 12px 14px;
       background: #fff;
     }
 
@@ -1098,10 +1333,152 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
     .history-item {
       border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 9px 10px;
-      background: #fff;
+      border-radius: 16px;
+      padding: 12px;
+      background: linear-gradient(180deg, #ffffff, #f8fbfe);
       font-size: 13px;
+      display: grid;
+      gap: 7px;
+    }
+
+    .history-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .history-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.22px;
+      white-space: nowrap;
+    }
+
+    .history-pill.ok {
+      background: #e8f8ee;
+      color: #16723a;
+      border: 1px solid #bfe6ca;
+    }
+
+    .history-pill.err {
+      background: #fff0f3;
+      color: #a0113d;
+      border: 1px solid #f3c7d4;
+    }
+
+    .history-prompt {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--ink);
+      line-height: 1.35;
+    }
+
+    .question-actions-row {
+      margin-top: 2px;
+    }
+
+    .question-exit-row {
+      margin-top: 10px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .question-exit-row button {
+      width: auto;
+      min-width: 180px;
+    }
+
+    .session-brief {
+      margin-top: 10px;
+      border: 1px solid #cfe3f1;
+      border-radius: 18px;
+      padding: 14px;
+      background:
+        radial-gradient(circle at top right, rgba(15, 118, 110, 0.08), transparent 34%),
+        linear-gradient(180deg, #ffffff, #f7fbff);
+      display: grid;
+      gap: 12px;
+    }
+
+    .session-brief.empty {
+      border-style: dashed;
+      background: linear-gradient(180deg, #fbfeff, #f4f9fd);
+    }
+
+    .session-brief-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .session-brief-copy {
+      display: grid;
+      gap: 5px;
+      min-width: 0;
+    }
+
+    .session-brief-eyebrow {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.28px;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+    }
+
+    .session-brief-title {
+      font-size: 20px;
+      font-weight: 800;
+      line-height: 1.15;
+      color: var(--ink);
+    }
+
+    .session-brief-text {
+      font-size: 13px;
+      color: var(--ink-soft);
+      line-height: 1.45;
+    }
+
+    .session-brief-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .session-brief-kpis {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 8px;
+    }
+
+    .session-brief-kpi {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.84);
+      display: grid;
+      gap: 4px;
+    }
+
+    .session-brief-kpi .k {
+      font-size: 11px;
+      color: var(--ink-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.24px;
+    }
+
+    .session-brief-kpi .v {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--ink);
+      line-height: 1.1;
     }
 
     .history-item b.ok { color: var(--ok); }
@@ -1157,7 +1534,10 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       .notification-top,
       .notification-meta,
       .duel-item-top,
-      .focus-top {
+      .focus-top,
+      .session-brief-top,
+      .history-top,
+      .q-header {
         flex-direction: column;
         align-items: flex-start;
       }
@@ -1182,7 +1562,8 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       .duel-stage-list,
       .duel-round-strip,
       .completion-kpis,
-      .preset-grid {
+      .preset-grid,
+      .session-brief-kpis {
         grid-template-columns: 1fr;
       }
       .duel-detail-card,
@@ -1197,6 +1578,13 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       .duel-player-tags .chip {
         white-space: normal;
         justify-content: flex-start;
+      }
+      .question-exit-row {
+        justify-content: stretch;
+      }
+      .question-exit-row button {
+        width: 100%;
+        min-width: 0;
       }
       .duel-player-head {
         align-items: flex-start;
@@ -1262,7 +1650,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
     </header>
 
     <main class="grid">
-      <section class="panel" id="leftPanel">
+      <section class="panel session-design-panel" id="leftPanel">
         <h2>Contrôle Session</h2>
 
         <div class="section">
@@ -1293,8 +1681,8 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
         <div class="section">
           <div class="section-head">
-            <h3>Configuration Session</h3>
-            <span class="section-note">Modes selon ton besoin</span>
+            <h3>Studio De Session</h3>
+            <span class="section-note">Cadre ton entraînement avant de lancer</span>
           </div>
           <div class="auth-grid">
             <div>
@@ -1326,7 +1714,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
         <div class="section">
           <div class="section-head">
-            <h3>Assistant De Démarrage</h3>
+            <h3>Plan De Départ</h3>
             <span id="setupStateChip" class="chip">À configurer</span>
           </div>
           <div id="setupChecklist" class="setup-list"></div>
@@ -1340,7 +1728,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         <div class="section">
           <div class="section-head">
             <h3>Matières</h3>
-            <span class="section-note">Filtre global</span>
+            <span class="section-note">Choisis ton terrain de jeu</span>
           </div>
           <div id="subjectsList" class="subject-list"></div>
         </div>
@@ -1348,22 +1736,22 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         <div class="section">
           <div class="section-head">
             <h3>Chapitres</h3>
-            <span class="section-note">Filtre fin</span>
+            <span class="section-note">Affine si tu veux cibler</span>
           </div>
           <div id="chaptersList" class="chapter-list"></div>
         </div>
       </section>
 
-      <section class="panel">
-        <h2>Entraînement En Cours</h2>
+      <section class="panel training-panel">
+        <h2>Studio D'Entraînement</h2>
 
         <div class="section">
           <div class="section-head">
-            <h3>Performance</h3>
-            <span class="section-note">Vision immédiate</span>
+            <h3>Cockpit Session</h3>
+            <span class="section-note">Ton état de jeu en un coup d'oeil</span>
           </div>
           <div class="stats" id="stats"></div>
-          <div id="sessionSummary" class="muted">Aucune session active.</div>
+          <div id="sessionSummary" class="session-brief empty"></div>
           <div class="goal-block">
             <div class="goal-row">
               <div id="sessionGoalLabel" class="muted">Objectif: session libre</div>
@@ -1377,23 +1765,23 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
         <div class="section">
           <div class="section-head">
-            <h3>Question Active</h3>
-            <span class="section-note">Réponse + correction</span>
+            <h3>Scène De Question</h3>
+            <span class="section-note">Lecture, réponse, correction immédiate</span>
           </div>
-          <div id="questionContainer" class="q-card hidden"></div>
-          <div class="row" id="questionActions">
+          <div id="questionContainer" class="q-card question-stage hidden"></div>
+          <div class="row question-actions-row" id="questionActions">
             <button class="btn-primary" id="submitAnswerBtn" disabled>Valider réponse</button>
             <button class="btn-secondary" id="nextQuestionBtn" disabled>Question suivante</button>
           </div>
-          <div style="margin-top:8px">
+          <div class="question-exit-row">
             <button class="btn-danger" id="completeSessionBtn" disabled>Terminer session</button>
           </div>
         </div>
 
         <div class="section">
           <div class="section-head">
-            <h3>Priorités De Révision</h3>
-            <span class="section-note">Résultats cumulés</span>
+            <h3>Coach De Révision</h3>
+            <span class="section-note">Ce que tes résultats suggèrent ensuite</span>
           </div>
           <div id="focusList" class="focus-list"></div>
           <div class="goal-row" style="margin-top:8px">
@@ -1411,16 +1799,16 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
         <div id="completionSection" class="section hidden">
           <div class="section-head">
-            <h3>Résultat De Session</h3>
-            <span class="section-note">Bilan immédiat</span>
+            <h3>Débrief De Session</h3>
+            <span class="section-note">Bilan utile et relance immédiate</span>
           </div>
-          <div id="completionContent" class="completion-card"></div>
+          <div id="completionContent" class="completion-card completion-card-rich"></div>
         </div>
 
         <div class="section">
           <div class="section-head">
-            <h3>Historique immédiat</h3>
-            <span class="section-note">12 dernières réponses</span>
+            <h3>Trace Immédiate</h3>
+            <span class="section-note">Tes 12 dernières réponses commentées</span>
           </div>
           <div id="historyList" class="history-list"></div>
         </div>
@@ -1716,15 +2104,17 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         }
         var o = d.overview;
         refs.stats.innerHTML = [
-          statHtml('Tentatives', String(o.attemptsCount)),
-          statHtml('Taux réussite', (o.successRatePct == null ? '-' : o.successRatePct + '%')),
-          statHtml('Sessions 7j', String(o.sessions7dCount)),
-          statHtml('Couverture chapitres', String(o.chapterCoveragePct) + '%')
+          statHtml('Tentatives', String(o.attemptsCount), 'Total cumulé'),
+          statHtml('Taux réussite', (o.successRatePct == null ? '-' : o.successRatePct + '%'), 'Tous quiz confondus'),
+          statHtml('Sessions 7j', String(o.sessions7dCount), 'Rythme récent'),
+          statHtml('Couverture chapitres', String(o.chapterCoveragePct) + '%', 'Matière déjà vue')
         ].join('');
       }
 
-      function statHtml(label, value) {
-        return '<div class="stat"><div class="k">' + escapeHtml(label) + '</div><div class="v">' + escapeHtml(value) + '</div></div>';
+      function statHtml(label, value, note) {
+        return '<div class="stat"><div class="k">' + escapeHtml(label) + '</div><div class="v">' + escapeHtml(value) + '</div>'
+          + (note ? ('<div class="subject-meta">' + escapeHtml(note) + '</div>') : '')
+          + '</div>';
       }
 
       function getModeLabel(mode) {
@@ -2148,10 +2538,19 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         return 'Toutes les matières actives';
       }
 
-      function setupStepHtml(label, done, detail) {
+      function setupStepHtml(index, label, done, detail) {
         var klass = done ? 'setup-step done' : 'setup-step todo';
-        var marker = done ? 'OK' : 'À faire';
-        return '<div class="' + klass + '"><b>' + marker + '</b>' + escapeHtml(label) + ' · ' + escapeHtml(detail) + '</div>';
+        var marker = done ? 'Prêt' : 'À régler';
+        return '<div class="' + klass + '">'
+          + '<div class="setup-step-top">'
+          + '<div class="setup-step-index">' + escapeHtml(String(index)) + '</div>'
+          + '<div class="setup-step-status">' + escapeHtml(marker) + '</div>'
+          + '</div>'
+          + '<div class="setup-step-copy">'
+          + '<div class="setup-step-label">' + escapeHtml(label) + '</div>'
+          + '<div class="setup-step-detail">' + escapeHtml(detail) + '</div>'
+          + '</div>'
+          + '</div>';
       }
 
       function renderSetupGuide() {
@@ -2165,10 +2564,10 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           : (stopRule === 'fixed_10' ? '10 questions' : 'Jusqu\'à arrêt');
 
         refs.setupChecklist.innerHTML = [
-          setupStepHtml('Mode', modeReady, getModeLabel(mode)),
-          setupStepHtml('Durée', durationValid, durationText),
-          setupStepHtml('Périmètre', true, getSessionScopeLabel()),
-          setupStepHtml('Prêt à démarrer', connected && durationValid, connected ? (durationValid ? 'Session prête' : 'Corriger la durée') : 'Connexion requise')
+          setupStepHtml(1, 'Mode', modeReady, getModeLabel(mode)),
+          setupStepHtml(2, 'Durée', durationValid, durationText),
+          setupStepHtml(3, 'Périmètre', true, getSessionScopeLabel()),
+          setupStepHtml(4, 'Prêt à démarrer', connected && durationValid, connected ? (durationValid ? 'Session prête à lancer' : 'Corrige la durée de session') : 'Connecte-toi pour activer le lancement')
         ].join('');
 
         if (!connected) {
@@ -2296,6 +2695,77 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         }
 
         return items.slice(0, 3);
+      }
+
+      function getQuestionTypeLabel(type) {
+        var labels = {
+          single_choice: 'QCM simple',
+          multi_choice: 'QCM multiple',
+          open_text: 'Réponse ouverte'
+        };
+        return labels[type] || type;
+      }
+
+      function getQuestionInstruction(type) {
+        if (type === 'single_choice') {
+          return 'Choisis une seule réponse. Va au plus juste, sans te précipiter.';
+        }
+        if (type === 'multi_choice') {
+          return 'Sélectionne toutes les réponses exactes. Ici, l’exactitude complète compte.';
+        }
+        return 'Rédige une réponse claire et brève. Le but est de mobiliser activement ton souvenir.';
+      }
+
+      function renderSessionSummary() {
+        if (!state.session || !state.session.id) {
+          refs.sessionSummary.innerHTML =
+            '<div class="session-brief empty">'
+            + '<div class="session-brief-top">'
+            + '<div class="session-brief-copy">'
+            + '<div class="session-brief-eyebrow">Prêt à démarrer</div>'
+            + '<div class="session-brief-title">Aucune session active</div>'
+            + '<div class="session-brief-text">Choisis un mode, un périmètre, puis lance une session courte ou longue selon ton moment disponible.</div>'
+            + '</div>'
+            + '<div class="session-brief-chips">'
+            + '<span class="chip neutral">Mode libre</span>'
+            + '<span class="chip neutral">' + escapeHtml(getSessionScopeLabel()) + '</span>'
+            + '</div>'
+            + '</div>'
+            + '</div>';
+          return;
+        }
+
+        var progress = state.session.progress || {};
+        var attempts = Number(progress.attempts || 0);
+        var correct = Number(progress.correct || 0);
+        var successRate = attempts > 0 ? Math.round((correct / attempts) * 100) : 0;
+        var goal = getGoalFromSession() || getGoalFromUi();
+        var goalText = goal && goal.target ? (attempts + '/' + goal.target) : 'Libre';
+        var title = attempts === 0 ? 'Session lancée, première question à jouer' : 'Session en cours, garde le rythme';
+        var summaryText = attempts === 0
+          ? ('Mode ' + getModeLabel(state.session.mode) + ' · ' + getSessionScopeLabel())
+          : ('Déjà ' + attempts + ' réponse(s) jouée(s) avec ' + correct + ' juste(s).');
+
+        refs.sessionSummary.innerHTML =
+          '<div class="session-brief">'
+          + '<div class="session-brief-top">'
+          + '<div class="session-brief-copy">'
+          + '<div class="session-brief-eyebrow">Session active</div>'
+          + '<div class="session-brief-title">' + escapeHtml(title) + '</div>'
+          + '<div class="session-brief-text">' + escapeHtml(summaryText) + '</div>'
+          + '</div>'
+          + '<div class="session-brief-chips">'
+          + '<span class="chip">' + escapeHtml(getModeLabel(state.session.mode)) + '</span>'
+          + '<span class="chip neutral">' + escapeHtml(getSessionScopeLabel()) + '</span>'
+          + '<span class="chip neutral">' + escapeHtml(goalText) + '</span>'
+          + '</div>'
+          + '</div>'
+          + '<div class="session-brief-kpis">'
+          + '<div class="session-brief-kpi"><div class="k">Bonnes réponses</div><div class="v">' + escapeHtml(String(correct)) + '</div></div>'
+          + '<div class="session-brief-kpi"><div class="k">Tentatives</div><div class="v">' + escapeHtml(String(attempts)) + '</div></div>'
+          + '<div class="session-brief-kpi"><div class="k">Réussite live</div><div class="v">' + escapeHtml(String(successRate)) + '%</div></div>'
+          + '</div>'
+          + '</div>';
       }
 
       async function applyPresetDiscovery(options) {
@@ -2429,14 +2899,22 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         if (!focus.length) {
           refs.focusList.innerHTML = '<div class="muted">Commence quelques sessions pour obtenir des priorités automatiques.</div>';
         } else {
-          refs.focusList.innerHTML = focus.map(function (item) {
+          refs.focusList.innerHTML = focus.map(function (item, index) {
             var reinforce = Number(item.questionsToReinforceCount || 0);
             var success = item.successRatePct == null ? '-' : item.successRatePct + '%';
             var chipClass = reinforce > 0 ? 'chip warn' : 'chip';
             var chipText = reinforce > 0 ? (reinforce + ' à revoir') : 'Stable';
+            var pressurePct = Math.max(6, Math.min(100, reinforce > 0 ? reinforce * 8 : 14));
             return '<div class="focus-item">'
-              + '<div class="focus-top"><b>' + escapeHtml(item.name) + '</b><span class="' + chipClass + '">' + escapeHtml(chipText) + '</span></div>'
-              + '<div class="subject-meta">Réussite ' + escapeHtml(String(success)) + ' · Tentatives ' + escapeHtml(String(item.attemptsCount || 0)) + ' · ' + escapeHtml(item.momentumLabel || 'Progression en cours') + '</div>'
+              + '<div class="focus-top">'
+              + '<div class="focus-title">'
+              + '<div class="focus-rank">' + escapeHtml(String(index + 1).padStart(2, '0')) + '</div>'
+              + '<div class="focus-title-copy"><b>' + escapeHtml(item.name) + '</b><div class="subject-meta">' + escapeHtml(item.momentumLabel || 'Progression en cours') + '</div></div>'
+              + '</div>'
+              + '<span class="' + chipClass + '">' + escapeHtml(chipText) + '</span>'
+              + '</div>'
+              + '<div class="focus-meter"><div class="focus-meter-fill" style="width:' + escapeHtml(String(pressurePct)) + '%"></div></div>'
+              + '<div class="subject-meta">Réussite ' + escapeHtml(String(success)) + ' · Tentatives ' + escapeHtml(String(item.attemptsCount || 0)) + ' · ' + escapeHtml(reinforce ? (reinforce + ' question(s) à retravailler') : 'Socle déjà solide') + '</div>'
               + '</div>';
           }).join('');
         }
@@ -3262,6 +3740,12 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         var correct = Number(result.correct || 0);
         var successRate = attempts > 0 ? Math.round((correct / attempts) * 1000) / 10 : 0;
         var label = successRate >= 80 ? 'Très solide' : (successRate >= 60 ? 'En progression' : 'À renforcer');
+        var badgeClass = successRate >= 80 ? 'completion-badge' : 'completion-badge warn';
+        var summaryLine = successRate >= 80
+          ? 'Très belle session. Tu peux consolider ou monter en difficulté.'
+          : (successRate >= 60
+            ? 'Bon rythme. Une session de consolidation peut vraiment fixer les points fragiles.'
+            : 'Tu as identifié une vraie marge de progression. Le rattrapage ciblé est le bon enchaînement.');
         var actions = getCompletionActions(successRate);
         var actionsHtml = actions.map(function (item) {
           return '<button class="btn-primary completion-action-btn" data-completion-action="' + escapeHtml(item.key) + '">' + escapeHtml(item.label) + '</button>';
@@ -3269,14 +3753,18 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
         refs.completionSection.classList.remove('hidden');
         refs.completionContent.innerHTML =
-          '<h4 class="completion-title">Session terminée</h4>'
+          '<div class="' + badgeClass + '">' + escapeHtml(label) + '</div>'
+          + '<div class="completion-summary">'
+          + '<div class="lead">Session terminée, lecture claire du résultat</div>'
+          + '<div class="muted">' + escapeHtml(summaryLine) + '</div>'
+          + '</div>'
           + '<div class="completion-kpis">'
           + '<div class="completion-kpi"><div class="k">Bonnes réponses</div><div class="v">' + escapeHtml(String(correct)) + '</div></div>'
           + '<div class="completion-kpi"><div class="k">Tentatives</div><div class="v">' + escapeHtml(String(attempts)) + '</div></div>'
           + '<div class="completion-kpi"><div class="k">Taux de réussite</div><div class="v">' + escapeHtml(String(successRate)) + '%</div></div>'
           + '</div>'
           + (actionsHtml ? ('<div class="completion-actions">' + actionsHtml + '</div>') : '')
-          + '<div class="muted">Lecture rapide: <b>' + escapeHtml(label) + '</b>. Relance une session pour continuer.</div>';
+          + '<div class="muted">Relance une session juste après ce débrief pour capitaliser sur l’élan.</div>';
       }
 
       function renderSubjects() {
@@ -3409,6 +3897,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         state.lastCompletedSession = null;
         renderCompletion();
         renderHistory();
+        renderSessionSummary();
         refs.completeSessionBtn.disabled = false;
         refs.nextQuestionBtn.disabled = false;
         refs.submitAnswerBtn.disabled = false;
@@ -3422,8 +3911,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         }
         var sessionDetails = await api('/trainings/sessions/' + state.session.id);
         state.session = sessionDetails;
-        refs.sessionSummary.textContent = 'Mode: ' + sessionDetails.mode + ' · Stop: ' + sessionDetails.stopRule + ' · Progression: '
-          + sessionDetails.progress.correct + '/' + sessionDetails.progress.attempts;
+        renderSessionSummary();
         renderSessionGoal();
 
         var next = await api('/trainings/sessions/' + state.session.id + '/next-question');
@@ -3436,11 +3924,22 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         var q = state.currentQuestion;
         if (!q) {
           refs.questionContainer.classList.remove('hidden');
-          refs.questionContainer.innerHTML = '<div class="muted">Plus de question disponible avec les filtres actuels. Termine la session ou change de mode/filtres.</div>';
+          refs.questionContainer.classList.add('empty');
+          if (!state.session) {
+            refs.questionContainer.innerHTML = '<div class="q-empty-title">Lance une session pour entrer dans le vif du sujet</div>'
+              + '<div class="q-empty-copy">Le studio de question affichera ici la prochaine question, son format, et les consignes utiles pour répondre sans te disperser.</div>';
+            refs.submitAnswerBtn.disabled = true;
+            refs.nextQuestionBtn.disabled = true;
+            return;
+          }
+          refs.questionContainer.innerHTML = '<div class="q-empty-title">Plus de question disponible dans cette configuration</div>'
+            + '<div class="q-empty-copy">Tu peux terminer la session pour voir ton débrief, ou ajuster le mode et les filtres pour repartir sur un autre angle de révision.</div>';
           refs.submitAnswerBtn.disabled = true;
           refs.nextQuestionBtn.disabled = true;
           return;
         }
+
+        refs.questionContainer.classList.remove('empty');
 
         var type = q.questionType;
         var choicesHtml = '';
@@ -3454,13 +3953,26 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
             return '<label class="choice"><input type="checkbox" name="multiChoice" value="' + c.id + '" /> <span>' + escapeHtml(c.label) + '</span></label>';
           }).join('') + '</div>';
         } else {
-          choicesHtml = '<textarea id="openAnswerInput" rows="4" placeholder="Écris ta réponse..."></textarea>';
+          choicesHtml = '<textarea id="openAnswerInput" class="open-answer-box" rows="4" placeholder="Écris ta réponse..."></textarea>';
         }
 
+        var currentAttemptNo = state.session && state.session.progress
+          ? Number(state.session.progress.attempts || 0) + 1
+          : 1;
         refs.questionContainer.classList.remove('hidden');
-        refs.questionContainer.innerHTML = '<div class="q-type">' + escapeHtml(type) + '</div>'
-          + '<h3 style="margin:0 0 8px">' + escapeHtml(q.prompt) + '</h3>'
-          + choicesHtml;
+        refs.questionContainer.innerHTML =
+          '<div class="q-header">'
+          + '<div class="q-header-main">'
+          + '<div class="q-meta-strip">'
+          + '<div class="q-type">' + escapeHtml(getQuestionTypeLabel(type)) + '</div>'
+          + '<span class="chip neutral">Question ' + escapeHtml(String(currentAttemptNo)) + '</span>'
+          + '</div>'
+          + '<h3 class="q-prompt">' + escapeHtml(q.prompt) + '</h3>'
+          + '</div>'
+          + '<div class="session-brief-chips"><span class="chip neutral">' + escapeHtml(getSessionScopeLabel()) + '</span></div>'
+          + '</div>'
+          + '<div class="q-support">' + escapeHtml(getQuestionInstruction(type)) + '</div>'
+          + '<div class="q-answer-shell">' + choicesHtml + '</div>';
 
         refs.submitAnswerBtn.disabled = false;
       }
@@ -3527,7 +4039,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
             correctionText = '<div class="muted">Attendu: ' + escapeHtml((item.correction.expectedAnswers || []).join(' · ')) + '</div>';
           }
           return '<div class="history-item">'
-            + '<div><b class="' + (item.isCorrect ? 'ok' : 'err') + '">' + (item.isCorrect ? 'Correct' : 'Incorrect') + '</b> · ' + escapeHtml(item.prompt) + '</div>'
+            + '<div class="history-top"><div class="history-prompt">' + escapeHtml(item.prompt) + '</div><div class="history-pill ' + (item.isCorrect ? 'ok' : 'err') + '">' + (item.isCorrect ? 'Correct' : 'Incorrect') + '</div></div>'
             + '<div class="muted">' + escapeHtml(item.explanation || '') + '</div>'
             + correctionText
             + '</div>';
@@ -3547,7 +4059,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         refs.submitAnswerBtn.disabled = true;
         state.session = null;
         state.currentQuestion = null;
-        refs.sessionSummary.textContent = 'Session clôturée. Tu peux en démarrer une nouvelle.';
+        renderSessionSummary();
         renderSessionGoal();
         renderSetupGuide();
         renderQuestion();
@@ -3570,6 +4082,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         await ensureDemoCatalogReady();
         await loadDashboard();
         await loadSubjects();
+        renderSessionSummary();
         await loadNotifications({ silent: true });
         await loadDuels();
         startNotificationPolling();
@@ -3652,7 +4165,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         refs.suggestedModeLabel.textContent = 'Mode conseillé: -';
         refs.applySuggestedModeBtn.disabled = true;
         refs.applySuggestedModeBtn.removeAttribute('data-mode');
-        refs.sessionSummary.textContent = 'Aucune session active.';
+        renderSessionSummary();
         refs.questionContainer.innerHTML = '';
         refs.questionContainer.classList.add('hidden');
         refs.duelsList.innerHTML = '';
@@ -4000,6 +4513,8 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           setDuelModeUi();
           renderDuelsList();
           renderDuelDetail();
+          renderSessionSummary();
+          renderQuestion();
           renderHistory();
           renderFocus();
           renderNotifications();
