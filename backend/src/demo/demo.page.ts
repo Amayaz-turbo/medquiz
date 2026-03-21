@@ -362,6 +362,57 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       text-align: center;
     }
 
+    .notification-list {
+      display: grid;
+      gap: 8px;
+      max-height: 260px;
+      overflow: auto;
+      padding-right: 2px;
+    }
+
+    .notification-item {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      background: #fff;
+      display: grid;
+      gap: 7px;
+    }
+
+    .notification-item.unread {
+      border-color: #f5d3a3;
+      background: #fffaf1;
+    }
+
+    .notification-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .notification-body {
+      font-size: 13px;
+      color: var(--ink);
+      line-height: 1.45;
+    }
+
+    .notification-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      color: var(--ink-soft);
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    .notification-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
     .focus-list {
       display: grid;
       gap: 8px;
@@ -796,6 +847,18 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
         <div class="section">
           <div class="section-head">
+            <h3>Notifications</h3>
+            <span id="notificationsUnreadChip" class="chip">0 non lues</span>
+          </div>
+          <div class="goal-row">
+            <div class="muted">Tours de duel, sursis, fins de partie.</div>
+            <button class="btn-secondary btn-inline" id="refreshNotificationsBtn" disabled>Rafraîchir</button>
+          </div>
+          <div id="notificationsList" class="notification-list"></div>
+        </div>
+
+        <div class="section">
+          <div class="section-head">
             <h3>Duel Asynchrone</h3>
             <span class="section-note">5 manches x 3 questions</span>
           </div>
@@ -858,6 +921,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         history: [],
         lastCompletedSession: null,
         lastSessionSetup: null,
+        notifications: [],
         duels: [],
         selectedDuelId: null,
         selectedDuel: null,
@@ -904,6 +968,9 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         completionSection: document.getElementById('completionSection'),
         completionContent: document.getElementById('completionContent'),
         historyList: document.getElementById('historyList'),
+        notificationsUnreadChip: document.getElementById('notificationsUnreadChip'),
+        refreshNotificationsBtn: document.getElementById('refreshNotificationsBtn'),
+        notificationsList: document.getElementById('notificationsList'),
         duelModeSelect: document.getElementById('duelModeSelect'),
         duelOpponentInput: document.getElementById('duelOpponentInput'),
         duelStatusFilterSelect: document.getElementById('duelStatusFilterSelect'),
@@ -912,6 +979,8 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         duelsList: document.getElementById('duelsList'),
         duelDetail: document.getElementById('duelDetail')
       };
+
+      var notificationPollHandle = null;
 
       function setStatus(msg, tone) {
         refs.statusBox.className = 'status ' + (tone || 'info');
@@ -973,6 +1042,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         var connected = !!state.token;
         refs.refreshDashboardBtn.disabled = !connected;
         refs.logoutBtn.classList.toggle('hidden', !connected);
+        refs.refreshNotificationsBtn.disabled = !connected;
         refs.createDuelBtn.disabled = !connected;
         refs.refreshDuelsBtn.disabled = !connected;
         if (!connected) {
@@ -1058,6 +1128,98 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           expired: 'Expiré'
         };
         return labels[status] || status;
+      }
+
+      function getNotificationTypeLabel(type) {
+        var labels = {
+          duel_turn: 'À toi de jouer',
+          duel_joker_request: 'Demande de sursis',
+          duel_joker_granted: 'Sursis accordé',
+          duel_finished: 'Duel terminé',
+          review_reminder: 'Rappel de révision'
+        };
+        return labels[type] || type;
+      }
+
+      function getNotificationStatusLabel(status) {
+        var labels = {
+          pending: 'En attente',
+          sent: 'Nouvelle',
+          failed: 'Échec',
+          read: 'Lue'
+        };
+        return labels[status] || status;
+      }
+
+      function formatDateTime(value) {
+        if (!value) {
+          return '-';
+        }
+        var date = new Date(value);
+        if (!Number.isFinite(date.getTime())) {
+          return String(value);
+        }
+        return new Intl.DateTimeFormat('fr-FR', {
+          day: '2-digit',
+          month: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        }).format(date);
+      }
+
+      function getNotificationSummary(item) {
+        var payload = item && item.payload && typeof item.payload === 'object' ? item.payload : {};
+        var duelShort = payload.duelId ? 'Duel ' + String(payload.duelId).slice(0, 8) : 'Le duel';
+        var reason = typeof payload.reason === 'string' ? payload.reason : '';
+        var roundNo = payload.roundNo ? 'Manche ' + String(payload.roundNo) + '. ' : '';
+
+        if (item.type === 'duel_turn') {
+          if (reason === 'duel_created_random') {
+            return duelShort + ' créé en matchmaking aléatoire. Tu peux lancer l\'opener.';
+          }
+          if (reason === 'duel_accepted') {
+            return duelShort + ' accepté. Le duel peut commencer.';
+          }
+          if (reason === 'opener_decision_made') {
+            return duelShort + ' prêt. À toi de choisir la matière de la première manche.';
+          }
+          if (reason === 'timeout_subject_choice') {
+            return duelShort + '. L\'adversaire a dépassé le délai de choix, la main revient vers toi.';
+          }
+          if (reason === 'turn_ready') {
+            return duelShort + '. ' + roundNo + 'Ton adversaire a terminé, c\'est ton tour.';
+          }
+          if (reason === 'new_round') {
+            return duelShort + '. Nouvelle manche disponible, à toi de lancer la suite.';
+          }
+          return duelShort + '. C\'est ton tour.';
+        }
+
+        if (item.type === 'duel_joker_request') {
+          var jokerReason = reason ? (' Motif: ' + reason + '.') : '';
+          return duelShort + '. Ton adversaire demande un sursis de 24h.' + jokerReason;
+        }
+
+        if (item.type === 'duel_joker_granted') {
+          var deadline = payload.newDeadlineAt ? (' Nouvelle deadline: ' + formatDateTime(String(payload.newDeadlineAt)) + '.') : '';
+          return duelShort + '. Ton sursis a été accordé.' + deadline;
+        }
+
+        if (item.type === 'duel_finished') {
+          if (reason === 'declined') {
+            return duelShort + ' a été refusé.';
+          }
+          if (reason === 'forfeit') {
+            return duelShort + ' est terminé sur abandon.';
+          }
+          return duelShort + ' est terminé.';
+        }
+
+        if (item.type === 'review_reminder') {
+          return 'Petit rappel: une session courte peut t\'aider à garder le rythme.';
+        }
+
+        return 'Nouvelle notification disponible.';
       }
 
       function isSessionSetupDurationValid() {
@@ -1549,6 +1711,143 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           + '<div class="duel-actions">' + actions.join('') + '</div>'
           + openerBlock
           + roundBlock;
+      }
+
+      function renderNotifications() {
+        if (!state.token) {
+          refs.notificationsUnreadChip.className = 'chip';
+          refs.notificationsUnreadChip.textContent = '0 non lues';
+          refs.notificationsList.innerHTML = '<div class="muted">Connecte-toi pour voir tes notifications.</div>';
+          return;
+        }
+
+        var unreadCount = state.notifications.filter(function (item) {
+          return item.status !== 'read';
+        }).length;
+
+        refs.notificationsUnreadChip.className = unreadCount > 0 ? 'chip warn' : 'chip';
+        refs.notificationsUnreadChip.textContent = unreadCount > 0
+          ? (unreadCount + ' non lue' + (unreadCount > 1 ? 's' : ''))
+          : 'Tout lu';
+
+        if (!state.notifications.length) {
+          refs.notificationsList.innerHTML = '<div class="muted">Aucune notification pour le moment.</div>';
+          return;
+        }
+
+        refs.notificationsList.innerHTML = state.notifications.map(function (item) {
+          var payload = item.payload && typeof item.payload === 'object' ? item.payload : {};
+          var duelId = typeof payload.duelId === 'string' ? payload.duelId : '';
+          var isUnread = item.status !== 'read';
+          var openBtn = duelId
+            ? '<button class="btn-primary btn-inline" data-notification-action="open" data-notification-id="' + escapeHtml(item.id) + '">Ouvrir duel</button>'
+            : '';
+          var readBtn = isUnread
+            ? '<button class="btn-secondary btn-inline" data-notification-action="read" data-notification-id="' + escapeHtml(item.id) + '">Marquer lu</button>'
+            : '';
+
+          return '<div class="notification-item' + (isUnread ? ' unread' : '') + '">'
+            + '<div class="notification-top">'
+            + '<div><b>' + escapeHtml(getNotificationTypeLabel(item.type)) + '</b></div>'
+            + '<span class="' + (isUnread ? 'chip warn' : 'chip') + '">' + escapeHtml(getNotificationStatusLabel(item.status)) + '</span>'
+            + '</div>'
+            + '<div class="notification-body">' + escapeHtml(getNotificationSummary(item)) + '</div>'
+            + '<div class="notification-meta">'
+            + '<span>' + escapeHtml(formatDateTime(item.createdAt)) + '</span>'
+            + '<span>' + escapeHtml(duelId ? ('Duel ' + duelId.slice(0, 8)) : 'Notification générale') + '</span>'
+            + '</div>'
+            + ((openBtn || readBtn) ? ('<div class="notification-actions">' + openBtn + readBtn + '</div>') : '')
+            + '</div>';
+        }).join('');
+      }
+
+      async function loadNotifications(options) {
+        if (!state.token) {
+          state.notifications = [];
+          renderNotifications();
+          return;
+        }
+        var result = await api('/notifications?limit=12');
+        state.notifications = result.items || [];
+        renderNotifications();
+        if (!(options && options.silent)) {
+          setStatus('Notifications rafraîchies.', 'info');
+        }
+      }
+
+      async function markNotificationRead(notificationId, options) {
+        if (!notificationId) {
+          return;
+        }
+        var result = await api('/notifications/' + notificationId + '/read', { method: 'POST' });
+        state.notifications = state.notifications.map(function (item) {
+          if (item.id !== notificationId) {
+            return item;
+          }
+          return {
+            id: item.id,
+            type: item.type,
+            status: result.status,
+            payload: item.payload,
+            createdAt: item.createdAt,
+            sentAt: item.sentAt,
+            readAt: result.readAt
+          };
+        });
+        renderNotifications();
+        if (!(options && options.silent)) {
+          setStatus('Notification marquée comme lue.', 'ok');
+        }
+      }
+
+      function stopNotificationPolling() {
+        if (notificationPollHandle) {
+          clearInterval(notificationPollHandle);
+          notificationPollHandle = null;
+        }
+      }
+
+      function startNotificationPolling() {
+        stopNotificationPolling();
+        if (!state.token) {
+          return;
+        }
+        notificationPollHandle = window.setInterval(function () {
+          loadNotifications({ silent: true }).catch(function () {
+            // silent polling errors: manual refresh stays available
+          });
+        }, 30000);
+      }
+
+      async function openNotification(notificationId) {
+        var item = state.notifications.find(function (current) {
+          return current.id === notificationId;
+        });
+        if (!item) {
+          throw new Error('Notification introuvable.');
+        }
+
+        if (item.status !== 'read') {
+          await markNotificationRead(notificationId, { silent: true });
+        }
+
+        var payload = item.payload && typeof item.payload === 'object' ? item.payload : {};
+        var duelId = typeof payload.duelId === 'string' ? payload.duelId : '';
+        if (duelId && isUuidV4(duelId)) {
+          await loadDuels();
+          await loadDuelDetail(duelId);
+          if (state.selectedDuel && state.selectedDuel.status === 'in_progress') {
+            try {
+              await loadCurrentRound();
+            } catch (err) {
+              // duel can change state between two requests, keep current detail loaded
+            }
+          }
+          setStatus('Notification ouverte: duel chargé.', 'info');
+          return;
+        }
+
+        setStatus('Notification ouverte.', 'info');
       }
 
       async function loadDuels() {
@@ -2070,7 +2369,9 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         await loadMe();
         await loadDashboard();
         await loadSubjects();
+        await loadNotifications({ silent: true });
         await loadDuels();
+        startNotificationPolling();
         setDuelModeUi();
         setStatus('Prêt. Lance une session d\'entraînement.', 'info');
       }
@@ -2109,6 +2410,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       });
 
       refs.logoutBtn.addEventListener('click', function () {
+        stopNotificationPolling();
         saveToken('');
         state.me = null;
         state.dashboard = null;
@@ -2121,6 +2423,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         state.history = [];
         state.lastCompletedSession = null;
         state.lastSessionSetup = null;
+        state.notifications = [];
         state.duels = [];
         state.selectedDuelId = null;
         state.selectedDuel = null;
@@ -2134,6 +2437,9 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         refs.chaptersList.innerHTML = '';
         refs.stats.innerHTML = '';
         refs.focusList.innerHTML = '';
+        refs.notificationsList.innerHTML = '';
+        refs.notificationsUnreadChip.className = 'chip';
+        refs.notificationsUnreadChip.textContent = '0 non lues';
         refs.suggestedModeLabel.textContent = 'Mode conseillé: -';
         refs.applySuggestedModeBtn.disabled = true;
         refs.applySuggestedModeBtn.removeAttribute('data-mode');
@@ -2163,6 +2469,14 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           await loadDashboard();
           await loadSubjects();
           setStatus('Dashboard rafraîchi.', 'info');
+        } catch (err) {
+          setStatus(err.message || String(err), 'err');
+        }
+      });
+
+      refs.refreshNotificationsBtn.addEventListener('click', async function () {
+        try {
+          await loadNotifications();
         } catch (err) {
           setStatus(err.message || String(err), 'err');
         }
@@ -2297,6 +2611,33 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         }
       });
 
+      refs.notificationsList.addEventListener('click', async function (event) {
+        var target = event.target;
+        if (!target || typeof target.closest !== 'function') {
+          return;
+        }
+        var btn = target.closest('button[data-notification-action]');
+        if (!btn) {
+          return;
+        }
+        var action = btn.getAttribute('data-notification-action');
+        var notificationId = btn.getAttribute('data-notification-id');
+        if (!action || !notificationId) {
+          return;
+        }
+        try {
+          if (action === 'read') {
+            await markNotificationRead(notificationId);
+            return;
+          }
+          if (action === 'open') {
+            await openNotification(notificationId);
+          }
+        } catch (err) {
+          setStatus(err.message || String(err), 'err');
+        }
+      });
+
       refs.duelDetail.addEventListener('click', async function (event) {
         var target = event.target;
         if (!target || typeof target.closest !== 'function') {
@@ -2409,6 +2750,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           renderDuelDetail();
           renderHistory();
           renderFocus();
+          renderNotifications();
           renderSessionGoal();
           renderCompletion();
           renderSetupGuide();
