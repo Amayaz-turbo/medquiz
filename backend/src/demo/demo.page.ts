@@ -1123,6 +1123,13 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         refs.userBadge.textContent = state.me.email + ' · connecté';
       }
 
+      async function ensureDemoCatalogReady() {
+        if (!state.token) {
+          return;
+        }
+        await api('/demo/bootstrap-data', { method: 'POST', body: {} });
+      }
+
       async function loadDashboard() {
         state.dashboard = await api('/trainings/dashboard');
         renderStats();
@@ -2607,6 +2614,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       async function bootstrapConnectedState() {
         ensureAuthUi();
         await loadMe();
+        await ensureDemoCatalogReady();
         await loadDashboard();
         await loadSubjects();
         await loadNotifications({ silent: true });
