@@ -169,6 +169,27 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       min-height: 100%;
     }
 
+    .app-frame {
+      border-radius: 30px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.42);
+      background:
+        radial-gradient(circle at top right, rgba(15, 118, 110, 0.08), transparent 32%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(239, 246, 252, 0.96));
+      box-shadow: 0 30px 58px rgba(4, 24, 39, 0.22);
+      display: grid;
+      gap: 0;
+    }
+
+    .app-scroll-area {
+      display: grid;
+      gap: 14px;
+      padding: 14px;
+      background:
+        radial-gradient(circle at top left, rgba(15, 118, 110, 0.06), transparent 28%),
+        linear-gradient(180deg, #f8fcff, #eef5fb);
+    }
+
     .welcome-story-panel {
       border: 1px solid rgba(255, 255, 255, 0.18);
       background:
@@ -613,6 +634,14 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       align-items: flex-start;
       justify-content: space-between;
       gap: 16px;
+      margin: 0;
+      border-radius: 0;
+      border: 0;
+      border-bottom: 1px solid rgba(13, 48, 67, 0.08);
+      box-shadow: none;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(246, 251, 255, 0.96));
+      padding: 14px 16px 12px;
     }
 
     .screen-title-block {
@@ -646,6 +675,93 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       background: linear-gradient(130deg, var(--brand), #0f9f8f);
       color: #ffffff;
       box-shadow: 0 10px 22px rgba(15, 118, 110, 0.22);
+    }
+
+    .app-top-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .app-top-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.22px;
+      background: #eaf5fb;
+      color: #184258;
+      border: 1px solid #d5e4ef;
+    }
+
+    .app-top-chip-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #0f766e;
+      flex: none;
+    }
+
+    .app-top-action {
+      width: auto;
+      min-width: 0;
+      padding-inline: 12px;
+    }
+
+    .app-bottom-nav {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      padding: 10px 10px 12px;
+      border-top: 1px solid rgba(13, 48, 67, 0.08);
+      background:
+        linear-gradient(180deg, rgba(248, 252, 255, 0.98), rgba(238, 246, 251, 0.98));
+    }
+
+    .app-tab {
+      border: 0;
+      border-radius: 18px;
+      min-height: 66px;
+      padding: 10px 8px;
+      background: transparent;
+      color: #496475;
+      display: grid;
+      justify-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      box-shadow: none;
+    }
+
+    .app-tab:hover {
+      transform: none;
+      filter: none;
+      box-shadow: none;
+    }
+
+    .app-tab-dot {
+      width: 22px;
+      height: 22px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, #d8e9f1, #c6dce8);
+      transition: transform 130ms ease, opacity 130ms ease, background 130ms ease;
+      opacity: 0.9;
+    }
+
+    .app-tab.is-active {
+      background: linear-gradient(180deg, #eaf8f5, #f7fbff);
+      color: #0f6e64;
+      box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.16);
+    }
+
+    .app-tab.is-active .app-tab-dot {
+      background: linear-gradient(135deg, #0f766e, #22c7af);
+      transform: translateY(-1px);
+      opacity: 1;
     }
 
     .dashboard-grid {
@@ -2391,6 +2507,49 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       font-size: 13px;
     }
 
+    body[data-auth="connected"] {
+      padding: 12px;
+    }
+
+    body[data-auth="connected"] .shell {
+      max-width: 560px;
+      gap: 10px;
+    }
+
+    body[data-auth="connected"] .hero {
+      padding: 12px 14px;
+      border-radius: 26px;
+    }
+
+    body[data-auth="connected"] .hero h1 {
+      font-size: 22px;
+    }
+
+    body[data-auth="connected"] .hero p {
+      display: none;
+    }
+
+    body[data-auth="connected"] .hero-meta {
+      min-width: 0;
+      justify-items: end;
+    }
+
+    body[data-auth="connected"] .hero-meta .pill:first-child,
+    body[data-auth="connected"] .hero-meta .pill:nth-child(2) {
+      display: none;
+    }
+
+    body[data-auth="connected"] #appShell .grid,
+    body[data-auth="connected"] #appShell .dashboard-subgrid,
+    body[data-auth="connected"] #appShell .dashboard-hero {
+      grid-template-columns: 1fr;
+    }
+
+    body[data-auth="connected"] #appShell .panel {
+      border-radius: 20px;
+      padding: 14px;
+    }
+
     .hidden { display: none !important; }
 
     @keyframes fade-in {
@@ -2413,6 +2572,9 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       .grid { grid-template-columns: 1fr; }
       .welcome-grid { grid-template-columns: 1fr; }
       .panel { border-radius: 16px; }
+      .app-frame {
+        border-radius: 26px;
+      }
       .welcome-title {
         max-width: none;
       }
@@ -2428,6 +2590,9 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       .dashboard-hero,
       .dashboard-subgrid {
         grid-template-columns: 1fr;
+      }
+      .app-bottom-nav {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
       }
       .app-toolbar-actions {
         width: 100%;
@@ -2512,6 +2677,14 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       .dashboard-lane-top {
         flex-direction: column;
         align-items: flex-start;
+      }
+      .app-bottom-nav {
+        gap: 6px;
+        padding: 9px 8px 10px;
+      }
+      .app-tab {
+        min-height: 62px;
+        padding: 9px 6px;
       }
       .dashboard-hero-score {
         text-align: left;
@@ -2729,275 +2902,286 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       </section>
 
       <section id="appShell" class="screen-pane hidden">
-        <div class="app-toolbar panel">
-          <div class="screen-title-block">
-            <div class="session-brief-eyebrow">Navigation</div>
-            <div id="screenTitle" class="screen-title">Dashboard</div>
-            <div id="screenSubtitle" class="screen-subtitle">Choisis où tu veux entrer dans l’application.</div>
-          </div>
-          <div class="app-toolbar-actions">
-            <button class="btn-secondary btn-inline" id="homeNavBtn">Dashboard</button>
-            <button class="btn-secondary btn-inline" id="quickTrainingNavBtn">Entraînement</button>
-            <button class="btn-secondary btn-inline" id="quickDuelNavBtn">Duel</button>
-            <button class="btn-danger hidden" id="logoutBtn">Déconnexion</button>
-          </div>
-        </div>
-
-        <section id="dashboardScreen" class="screen-view">
-          <div class="dashboard-shell">
-            <section class="panel">
-              <div id="dashboardHero"></div>
-            </section>
-
-            <div class="dashboard-subgrid">
-              <section class="panel">
-                <div class="section-head">
-                  <h3>Pouls Du Moment</h3>
-                  <span class="section-note">Lecture rapide de ta situation</span>
-                </div>
-                <div id="dashboardPulse" class="dashboard-pulse-grid"></div>
-              </section>
-
-              <section class="panel">
-                <div class="section-head">
-                  <h3>Trajectoire Conseillée</h3>
-                  <span class="section-note">Par où repartir maintenant</span>
-                </div>
-                <div id="dashboardJourney"></div>
-              </section>
+        <div class="app-frame">
+          <div class="app-toolbar panel">
+            <div class="screen-title-block">
+              <div class="session-brief-eyebrow">MedQuiz App</div>
+              <div id="screenTitle" class="screen-title">Dashboard</div>
+              <div id="screenSubtitle" class="screen-subtitle">Choisis où tu veux entrer dans l’application.</div>
             </div>
-
-            <section class="panel">
-              <div class="section-head">
-                <h3>Catégories</h3>
-                <span class="section-note">Point d’entrée principal</span>
+            <div class="app-toolbar-actions">
+              <div class="app-top-meta">
+                <span class="app-top-chip"><span class="app-top-chip-dot"></span>Mode app</span>
+                <button class="btn-danger hidden btn-inline app-top-action" id="logoutBtn">Déconnexion</button>
               </div>
-              <div id="dashboardCards" class="dashboard-grid"></div>
+            </div>
+          </div>
+          <div class="app-scroll-area">
+            <section id="dashboardScreen" class="screen-view">
+              <div class="dashboard-shell">
+                <section class="panel">
+                  <div id="dashboardHero"></div>
+                </section>
+
+                <div class="dashboard-subgrid">
+                  <section class="panel">
+                    <div class="section-head">
+                      <h3>Pouls Du Moment</h3>
+                      <span class="section-note">Lecture rapide de ta situation</span>
+                    </div>
+                    <div id="dashboardPulse" class="dashboard-pulse-grid"></div>
+                  </section>
+
+                  <section class="panel">
+                    <div class="section-head">
+                      <h3>Trajectoire Conseillée</h3>
+                      <span class="section-note">Par où repartir maintenant</span>
+                    </div>
+                    <div id="dashboardJourney"></div>
+                  </section>
+                </div>
+
+                <section class="panel">
+                  <div class="section-head">
+                    <h3>Catégories</h3>
+                    <span class="section-note">Point d’entrée principal</span>
+                  </div>
+                  <div id="dashboardCards" class="dashboard-grid"></div>
+                </section>
+              </div>
+            </section>
+
+            <section id="trainingScreen" class="screen-view hidden">
+              <div class="grid">
+                <section class="panel session-design-panel" id="leftPanel">
+                  <h2>Contrôle Session</h2>
+
+                  <div class="section">
+                    <div class="section-head">
+                      <h3>Studio De Session</h3>
+                      <span class="section-note">Cadre ton entraînement avant de lancer</span>
+                    </div>
+                    <div class="auth-grid">
+                      <div>
+                        <label class="label" for="modeSelect">Mode</label>
+                        <select id="modeSelect">
+                          <option value="learning">Apprentissage</option>
+                          <option value="discovery">Découverte</option>
+                          <option value="review">Révision</option>
+                          <option value="par_coeur">Par coeur</option>
+                          <option value="rattrapage">A revoir</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label class="label" for="stopRuleSelect">Durée de session</label>
+                        <select id="stopRuleSelect">
+                          <option value="fixed_10">10 questions</option>
+                          <option value="fixed_custom">Choisir nombre</option>
+                          <option value="until_stop">Jusqu'à arrêt</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label class="label" for="targetCountInput">Nombre de questions (mode personnalisé)</label>
+                        <input id="targetCountInput" type="number" min="1" max="200" value="20" placeholder="Nombre de questions" />
+                      </div>
+                      <button class="btn-primary" id="createSessionBtn" disabled>Démarrer entraînement</button>
+                      <button class="btn-secondary" id="refreshDashboardBtn" disabled>Rafraîchir dashboard</button>
+                    </div>
+                  </div>
+
+                  <div class="section">
+                    <div class="section-head">
+                      <h3>Plan De Départ</h3>
+                      <span id="setupStateChip" class="chip">À configurer</span>
+                    </div>
+                    <div id="setupChecklist" class="setup-list"></div>
+                    <div class="preset-grid">
+                      <button class="btn-secondary wide" id="presetRecommendedBtn" disabled>Preset conseillé</button>
+                      <button class="btn-secondary" id="presetDiscoveryBtn" disabled>Découverte 10</button>
+                      <button class="btn-secondary" id="presetReviewBtn" disabled>Révision libre</button>
+                    </div>
+                  </div>
+
+                  <div class="section">
+                    <div class="section-head">
+                      <h3>Matières</h3>
+                      <span class="section-note">Choisis ton terrain de jeu</span>
+                    </div>
+                    <div id="subjectsList" class="subject-list"></div>
+                  </div>
+
+                  <div class="section">
+                    <div class="section-head">
+                      <h3>Chapitres</h3>
+                      <span class="section-note">Affine si tu veux cibler</span>
+                    </div>
+                    <div id="chaptersList" class="chapter-list"></div>
+                  </div>
+                </section>
+
+                <section class="panel training-panel">
+                  <h2>Studio D'Entraînement</h2>
+
+                  <div class="section">
+                    <div class="section-head">
+                      <h3>Cockpit Session</h3>
+                      <span class="section-note">Ton état de jeu en un coup d'oeil</span>
+                    </div>
+                    <div class="stats" id="stats"></div>
+                    <div id="sessionSummary" class="session-brief empty"></div>
+                    <div class="goal-block">
+                      <div class="goal-row">
+                        <div id="sessionGoalLabel" class="muted">Objectif: session libre</div>
+                        <div id="sessionGoalChip" class="chip">Libre</div>
+                      </div>
+                      <div class="progress-track">
+                        <div id="sessionGoalProgressBar" class="progress-fill"></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="section">
+                    <div class="section-head">
+                      <h3>Scène De Question</h3>
+                      <span class="section-note">Lecture, réponse, correction immédiate</span>
+                    </div>
+                    <div id="questionContainer" class="q-card question-stage hidden"></div>
+                    <div class="row question-actions-row" id="questionActions">
+                      <button class="btn-primary" id="submitAnswerBtn" disabled>Valider réponse</button>
+                      <button class="btn-secondary" id="nextQuestionBtn" disabled>Question suivante</button>
+                    </div>
+                    <div class="question-exit-row">
+                      <button class="btn-danger" id="completeSessionBtn" disabled>Terminer session</button>
+                    </div>
+                  </div>
+
+                  <div class="section">
+                    <div class="section-head">
+                      <h3>Coach De Révision</h3>
+                      <span class="section-note">Ce que tes résultats suggèrent ensuite</span>
+                    </div>
+                    <div id="focusList" class="focus-list"></div>
+                    <div class="goal-row" style="margin-top:8px">
+                      <div id="suggestedModeLabel" class="muted">Mode conseillé: -</div>
+                      <button class="btn-secondary btn-inline" id="applySuggestedModeBtn" disabled>Appliquer</button>
+                    </div>
+                  </div>
+
+                  <div class="section">
+                    <div class="section-head">
+                      <h3>État système</h3>
+                    </div>
+                    <div id="statusBox" class="status info">Connecte-toi pour commencer.</div>
+                  </div>
+
+                  <div id="completionSection" class="section hidden">
+                    <div class="section-head">
+                      <h3>Débrief De Session</h3>
+                      <span class="section-note">Bilan utile et relance immédiate</span>
+                    </div>
+                    <div id="completionContent" class="completion-card completion-card-rich"></div>
+                  </div>
+
+                  <div class="section">
+                    <div class="section-head">
+                      <h3>Trace Immédiate</h3>
+                      <span class="section-note">Tes 12 dernières réponses commentées</span>
+                    </div>
+                    <div id="historyList" class="history-list"></div>
+                  </div>
+                </section>
+              </div>
+            </section>
+
+            <section id="duelScreen" class="screen-view hidden">
+              <div class="grid">
+                <section class="panel">
+                  <h2>Notifications</h2>
+                  <div class="section">
+                    <div class="section-head">
+                      <h3>Centre De Notifications</h3>
+                      <span id="notificationsUnreadChip" class="chip">0 non lues</span>
+                    </div>
+                    <div class="goal-row">
+                      <div class="muted">Tours de duel, sursis, fins de partie.</div>
+                      <button class="btn-secondary btn-inline" id="refreshNotificationsBtn" disabled>Rafraîchir</button>
+                    </div>
+                    <div id="notificationsList" class="notification-list"></div>
+                  </div>
+                </section>
+
+                <section class="panel">
+                  <h2>Duel Asynchrone</h2>
+                  <div class="section">
+                    <div class="section-head">
+                      <h3>Duel Asynchrone</h3>
+                      <span class="section-note">5 manches x 3 questions</span>
+                    </div>
+                    <div class="auth-grid">
+                      <div>
+                        <label class="label" for="duelModeSelect">Type de duel</label>
+                        <select id="duelModeSelect">
+                          <option value="friend_invite">Ami (invitation)</option>
+                          <option value="random_free">Aléatoire</option>
+                          <option value="random_level">Niveau proche</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label class="label" for="duelOpponentInput">Opponent userId (UUID pour ami)</label>
+                        <input id="duelOpponentInput" type="text" placeholder="UUID adversaire" />
+                      </div>
+                      <div>
+                        <label class="label" for="duelStatusFilterSelect">Filtre liste</label>
+                        <select id="duelStatusFilterSelect">
+                          <option value="all">Tous</option>
+                          <option value="pending_opener">pending_opener</option>
+                          <option value="in_progress">in_progress</option>
+                          <option value="completed">completed</option>
+                          <option value="cancelled">cancelled</option>
+                          <option value="expired">expired</option>
+                        </select>
+                      </div>
+                      <div class="row">
+                        <button class="btn-primary" id="createDuelBtn" disabled>Créer duel</button>
+                        <button class="btn-secondary" id="refreshDuelsBtn" disabled>Rafraîchir duels</button>
+                      </div>
+                    </div>
+                    <div id="duelsList" class="duel-list" style="margin-top:8px"></div>
+                    <div id="duelDetail" class="duel-detail-card hidden" style="margin-top:8px"></div>
+                  </div>
+                </section>
+              </div>
+            </section>
+
+            <section id="profileScreen" class="screen-view hidden">
+              <div class="grid">
+                <section class="panel">
+                  <h2>Profil</h2>
+                  <div id="profileSummary" class="section"></div>
+                </section>
+                <section class="panel">
+                  <h2>Avatar</h2>
+                  <div id="profileAvatarSummary" class="section"></div>
+                </section>
+              </div>
+            </section>
+
+            <section id="settingsScreen" class="screen-view hidden">
+              <section class="panel">
+                <h2>Paramètres</h2>
+                <div id="settingsSummary" class="section"></div>
+              </section>
             </section>
           </div>
-        </section>
 
-        <section id="trainingScreen" class="screen-view hidden">
-          <div class="grid">
-            <section class="panel session-design-panel" id="leftPanel">
-              <h2>Contrôle Session</h2>
-
-              <div class="section">
-                <div class="section-head">
-                  <h3>Studio De Session</h3>
-                  <span class="section-note">Cadre ton entraînement avant de lancer</span>
-                </div>
-                <div class="auth-grid">
-                  <div>
-                    <label class="label" for="modeSelect">Mode</label>
-                    <select id="modeSelect">
-                      <option value="learning">Apprentissage</option>
-                      <option value="discovery">Découverte</option>
-                      <option value="review">Révision</option>
-                      <option value="par_coeur">Par coeur</option>
-                      <option value="rattrapage">A revoir</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label class="label" for="stopRuleSelect">Durée de session</label>
-                    <select id="stopRuleSelect">
-                      <option value="fixed_10">10 questions</option>
-                      <option value="fixed_custom">Choisir nombre</option>
-                      <option value="until_stop">Jusqu'à arrêt</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label class="label" for="targetCountInput">Nombre de questions (mode personnalisé)</label>
-                    <input id="targetCountInput" type="number" min="1" max="200" value="20" placeholder="Nombre de questions" />
-                  </div>
-                  <button class="btn-primary" id="createSessionBtn" disabled>Démarrer entraînement</button>
-                  <button class="btn-secondary" id="refreshDashboardBtn" disabled>Rafraîchir dashboard</button>
-                </div>
-              </div>
-
-              <div class="section">
-                <div class="section-head">
-                  <h3>Plan De Départ</h3>
-                  <span id="setupStateChip" class="chip">À configurer</span>
-                </div>
-                <div id="setupChecklist" class="setup-list"></div>
-                <div class="preset-grid">
-                  <button class="btn-secondary wide" id="presetRecommendedBtn" disabled>Preset conseillé</button>
-                  <button class="btn-secondary" id="presetDiscoveryBtn" disabled>Découverte 10</button>
-                  <button class="btn-secondary" id="presetReviewBtn" disabled>Révision libre</button>
-                </div>
-              </div>
-
-              <div class="section">
-                <div class="section-head">
-                  <h3>Matières</h3>
-                  <span class="section-note">Choisis ton terrain de jeu</span>
-                </div>
-                <div id="subjectsList" class="subject-list"></div>
-              </div>
-
-              <div class="section">
-                <div class="section-head">
-                  <h3>Chapitres</h3>
-                  <span class="section-note">Affine si tu veux cibler</span>
-                </div>
-                <div id="chaptersList" class="chapter-list"></div>
-              </div>
-            </section>
-
-            <section class="panel training-panel">
-              <h2>Studio D'Entraînement</h2>
-
-              <div class="section">
-                <div class="section-head">
-                  <h3>Cockpit Session</h3>
-                  <span class="section-note">Ton état de jeu en un coup d'oeil</span>
-                </div>
-                <div class="stats" id="stats"></div>
-                <div id="sessionSummary" class="session-brief empty"></div>
-                <div class="goal-block">
-                  <div class="goal-row">
-                    <div id="sessionGoalLabel" class="muted">Objectif: session libre</div>
-                    <div id="sessionGoalChip" class="chip">Libre</div>
-                  </div>
-                  <div class="progress-track">
-                    <div id="sessionGoalProgressBar" class="progress-fill"></div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="section">
-                <div class="section-head">
-                  <h3>Scène De Question</h3>
-                  <span class="section-note">Lecture, réponse, correction immédiate</span>
-                </div>
-                <div id="questionContainer" class="q-card question-stage hidden"></div>
-                <div class="row question-actions-row" id="questionActions">
-                  <button class="btn-primary" id="submitAnswerBtn" disabled>Valider réponse</button>
-                  <button class="btn-secondary" id="nextQuestionBtn" disabled>Question suivante</button>
-                </div>
-                <div class="question-exit-row">
-                  <button class="btn-danger" id="completeSessionBtn" disabled>Terminer session</button>
-                </div>
-              </div>
-
-              <div class="section">
-                <div class="section-head">
-                  <h3>Coach De Révision</h3>
-                  <span class="section-note">Ce que tes résultats suggèrent ensuite</span>
-                </div>
-                <div id="focusList" class="focus-list"></div>
-                <div class="goal-row" style="margin-top:8px">
-                  <div id="suggestedModeLabel" class="muted">Mode conseillé: -</div>
-                  <button class="btn-secondary btn-inline" id="applySuggestedModeBtn" disabled>Appliquer</button>
-                </div>
-              </div>
-
-              <div class="section">
-                <div class="section-head">
-                  <h3>État système</h3>
-                </div>
-                <div id="statusBox" class="status info">Connecte-toi pour commencer.</div>
-              </div>
-
-              <div id="completionSection" class="section hidden">
-                <div class="section-head">
-                  <h3>Débrief De Session</h3>
-                  <span class="section-note">Bilan utile et relance immédiate</span>
-                </div>
-                <div id="completionContent" class="completion-card completion-card-rich"></div>
-              </div>
-
-              <div class="section">
-                <div class="section-head">
-                  <h3>Trace Immédiate</h3>
-                  <span class="section-note">Tes 12 dernières réponses commentées</span>
-                </div>
-                <div id="historyList" class="history-list"></div>
-              </div>
-            </section>
-          </div>
-        </section>
-
-        <section id="duelScreen" class="screen-view hidden">
-          <div class="grid">
-            <section class="panel">
-              <h2>Notifications</h2>
-              <div class="section">
-                <div class="section-head">
-                  <h3>Centre De Notifications</h3>
-                  <span id="notificationsUnreadChip" class="chip">0 non lues</span>
-                </div>
-                <div class="goal-row">
-                  <div class="muted">Tours de duel, sursis, fins de partie.</div>
-                  <button class="btn-secondary btn-inline" id="refreshNotificationsBtn" disabled>Rafraîchir</button>
-                </div>
-                <div id="notificationsList" class="notification-list"></div>
-              </div>
-            </section>
-
-            <section class="panel">
-              <h2>Duel Asynchrone</h2>
-              <div class="section">
-                <div class="section-head">
-                  <h3>Duel Asynchrone</h3>
-                  <span class="section-note">5 manches x 3 questions</span>
-                </div>
-                <div class="auth-grid">
-                  <div>
-                    <label class="label" for="duelModeSelect">Type de duel</label>
-                    <select id="duelModeSelect">
-                      <option value="friend_invite">Ami (invitation)</option>
-                      <option value="random_free">Aléatoire</option>
-                      <option value="random_level">Niveau proche</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label class="label" for="duelOpponentInput">Opponent userId (UUID pour ami)</label>
-                    <input id="duelOpponentInput" type="text" placeholder="UUID adversaire" />
-                  </div>
-                  <div>
-                    <label class="label" for="duelStatusFilterSelect">Filtre liste</label>
-                    <select id="duelStatusFilterSelect">
-                      <option value="all">Tous</option>
-                      <option value="pending_opener">pending_opener</option>
-                      <option value="in_progress">in_progress</option>
-                      <option value="completed">completed</option>
-                      <option value="cancelled">cancelled</option>
-                      <option value="expired">expired</option>
-                    </select>
-                  </div>
-                  <div class="row">
-                    <button class="btn-primary" id="createDuelBtn" disabled>Créer duel</button>
-                    <button class="btn-secondary" id="refreshDuelsBtn" disabled>Rafraîchir duels</button>
-                  </div>
-                </div>
-                <div id="duelsList" class="duel-list" style="margin-top:8px"></div>
-                <div id="duelDetail" class="duel-detail-card hidden" style="margin-top:8px"></div>
-              </div>
-            </section>
-          </div>
-        </section>
-
-        <section id="profileScreen" class="screen-view hidden">
-          <div class="grid">
-            <section class="panel">
-              <h2>Profil</h2>
-              <div id="profileSummary" class="section"></div>
-            </section>
-            <section class="panel">
-              <h2>Avatar</h2>
-              <div id="profileAvatarSummary" class="section"></div>
-            </section>
-          </div>
-        </section>
-
-        <section id="settingsScreen" class="screen-view hidden">
-          <section class="panel">
-            <h2>Paramètres</h2>
-            <div id="settingsSummary" class="section"></div>
-          </section>
-        </section>
+          <nav class="app-bottom-nav">
+            <button class="app-tab" id="homeNavBtn"><span class="app-tab-dot"></span><span>Accueil</span></button>
+            <button class="app-tab" id="quickTrainingNavBtn"><span class="app-tab-dot"></span><span>Train</span></button>
+            <button class="app-tab" id="quickDuelNavBtn"><span class="app-tab-dot"></span><span>Duel</span></button>
+            <button class="app-tab" id="profileNavBtn"><span class="app-tab-dot"></span><span>Profil</span></button>
+            <button class="app-tab" id="settingsNavBtn"><span class="app-tab-dot"></span><span>Réglages</span></button>
+          </nav>
+        </div>
       </section>
     </main>
   </div>
@@ -3055,6 +3239,8 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         homeNavBtn: document.getElementById('homeNavBtn'),
         quickTrainingNavBtn: document.getElementById('quickTrainingNavBtn'),
         quickDuelNavBtn: document.getElementById('quickDuelNavBtn'),
+        profileNavBtn: document.getElementById('profileNavBtn'),
+        settingsNavBtn: document.getElementById('settingsNavBtn'),
         dashboardHero: document.getElementById('dashboardHero'),
         dashboardPulse: document.getElementById('dashboardPulse'),
         dashboardJourney: document.getElementById('dashboardJourney'),
@@ -3188,6 +3374,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
         state.activeScreen = active;
         document.body.setAttribute('data-screen', active);
+        document.body.setAttribute('data-auth', connected ? 'connected' : 'guest');
         refs.welcomeScreen.classList.toggle('hidden', connected);
         refs.appShell.classList.toggle('hidden', !connected);
 
@@ -3204,6 +3391,8 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         setNavButtonActive(refs.homeNavBtn, active === 'dashboard');
         setNavButtonActive(refs.quickTrainingNavBtn, active === 'training');
         setNavButtonActive(refs.quickDuelNavBtn, active === 'duel');
+        setNavButtonActive(refs.profileNavBtn, active === 'profile');
+        setNavButtonActive(refs.settingsNavBtn, active === 'settings');
       }
 
       function setActiveScreen(screenKey) {
@@ -5862,6 +6051,14 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
       refs.quickDuelNavBtn.addEventListener('click', function () {
         setActiveScreen('duel');
+      });
+
+      refs.profileNavBtn.addEventListener('click', function () {
+        setActiveScreen('profile');
+      });
+
+      refs.settingsNavBtn.addEventListener('click', function () {
+        setActiveScreen('settings');
       });
 
       function handleDashboardNavClick(event) {
