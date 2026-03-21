@@ -187,6 +187,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       border: 0;
       padding: 10px 12px;
       font-weight: 700;
+      min-height: 42px;
       cursor: pointer;
       transition: transform 130ms ease, filter 130ms ease, box-shadow 130ms ease;
     }
@@ -459,6 +460,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
     .toast-close {
       width: auto;
       min-width: 0;
+      min-height: 0;
       padding: 4px 8px;
       border-radius: 999px;
       background: #edf4f9;
@@ -724,6 +726,10 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       gap: 6px;
     }
 
+    .duel-player-tags .chip {
+      max-width: 100%;
+    }
+
     .chip.neutral {
       background: #eef4f8;
       color: #315061;
@@ -968,12 +974,70 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       .user-badge { text-align: left; }
       .grid { grid-template-columns: 1fr; }
       .panel { border-radius: 16px; }
+      .notification-list,
+      .duel-list,
+      .subject-list,
+      .chapter-list,
+      .history-list {
+        max-height: none;
+        overflow: visible;
+        padding-right: 0;
+      }
+      .completion-actions,
+      .duel-actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .duel-player-grid {
+        grid-template-columns: 1fr;
+      }
+      .duel-stage-list,
+      .duel-round-strip {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .notification-top,
+      .notification-meta,
+      .duel-item-top,
+      .focus-top {
+        flex-direction: column;
+        align-items: flex-start;
+      }
     }
 
     @media (max-width: 640px) {
       .row { grid-template-columns: 1fr; }
       .stats { grid-template-columns: 1fr 1fr; }
       .stat .v { font-size: 19px; }
+      .goal-row,
+      .duel-player-fact {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .notification-actions,
+      .toast-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+      }
+      .completion-actions,
+      .duel-actions,
+      .duel-stage-list,
+      .duel-round-strip,
+      .completion-kpis,
+      .preset-grid {
+        grid-template-columns: 1fr;
+      }
+      .duel-detail-card,
+      .duel-guide,
+      .duel-question,
+      .notification-item,
+      .toast-card,
+      .history-item,
+      .focus-item {
+        padding: 12px;
+      }
+      .duel-player-tags .chip {
+        white-space: normal;
+        justify-content: flex-start;
+      }
       .duel-player-head {
         align-items: flex-start;
         flex-direction: column;
