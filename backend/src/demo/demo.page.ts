@@ -764,6 +764,97 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       opacity: 1;
     }
 
+    .app-collapsible {
+      margin-top: 12px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: linear-gradient(180deg, #ffffff, #f8fbfe);
+      overflow: hidden;
+    }
+
+    .app-collapsible:first-child {
+      margin-top: 0;
+    }
+
+    .app-collapsible > summary {
+      list-style: none;
+      cursor: pointer;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px;
+    }
+
+    .app-collapsible > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .app-collapsible-head {
+      display: grid;
+      gap: 3px;
+      min-width: 0;
+    }
+
+    .app-collapsible-kicker {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.24px;
+      color: var(--ink-soft);
+      font-weight: 800;
+    }
+
+    .app-collapsible-title {
+      font-size: 16px;
+      line-height: 1.15;
+      font-weight: 800;
+      color: var(--ink);
+    }
+
+    .app-collapsible-note {
+      font-size: 12px;
+      line-height: 1.45;
+      color: var(--ink-soft);
+    }
+
+    .app-collapsible-meta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .app-collapsible-arrow {
+      width: 26px;
+      height: 26px;
+      border-radius: 10px;
+      background: #eef5fb;
+      border: 1px solid #d8e5ef;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #315164;
+      font-size: 12px;
+      transition: transform 130ms ease;
+      flex: none;
+    }
+
+    .app-collapsible[open] .app-collapsible-arrow {
+      transform: rotate(180deg);
+    }
+
+    .app-collapsible-content {
+      padding: 0 14px 14px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .app-collapsible[open] > summary {
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, #fbfeff, #f3f9fd);
+    }
+
     .dashboard-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -2956,67 +3047,85 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
                 <section class="panel session-design-panel" id="leftPanel">
                   <h2>Contrôle Session</h2>
 
-                  <div class="section">
-                    <div class="section-head">
-                      <h3>Studio De Session</h3>
-                      <span class="section-note">Cadre ton entraînement avant de lancer</span>
-                    </div>
-                    <div class="auth-grid">
-                      <div>
-                        <label class="label" for="modeSelect">Mode</label>
-                        <select id="modeSelect">
-                          <option value="learning">Apprentissage</option>
-                          <option value="discovery">Découverte</option>
-                          <option value="review">Révision</option>
-                          <option value="par_coeur">Par coeur</option>
-                          <option value="rattrapage">A revoir</option>
-                        </select>
+                  <details class="app-collapsible" open>
+                    <summary>
+                      <div class="app-collapsible-head">
+                        <div class="app-collapsible-kicker">Session</div>
+                        <div class="app-collapsible-title">Configurer mon entraînement</div>
+                        <div class="app-collapsible-note">Mode, durée et lancement de la session.</div>
                       </div>
-                      <div>
-                        <label class="label" for="stopRuleSelect">Durée de session</label>
-                        <select id="stopRuleSelect">
-                          <option value="fixed_10">10 questions</option>
-                          <option value="fixed_custom">Choisir nombre</option>
-                          <option value="until_stop">Jusqu'à arrêt</option>
-                        </select>
+                      <div class="app-collapsible-meta">
+                        <span id="setupStateChip" class="chip">À configurer</span>
+                        <span class="app-collapsible-arrow">⌄</span>
                       </div>
-                      <div>
-                        <label class="label" for="targetCountInput">Nombre de questions (mode personnalisé)</label>
-                        <input id="targetCountInput" type="number" min="1" max="200" value="20" placeholder="Nombre de questions" />
+                    </summary>
+                    <div class="app-collapsible-content">
+                      <div class="auth-grid">
+                        <div>
+                          <label class="label" for="modeSelect">Mode</label>
+                          <select id="modeSelect">
+                            <option value="learning">Apprentissage</option>
+                            <option value="discovery">Découverte</option>
+                            <option value="review">Révision</option>
+                            <option value="par_coeur">Par coeur</option>
+                            <option value="rattrapage">A revoir</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label class="label" for="stopRuleSelect">Durée de session</label>
+                          <select id="stopRuleSelect">
+                            <option value="fixed_10">10 questions</option>
+                            <option value="fixed_custom">Choisir nombre</option>
+                            <option value="until_stop">Jusqu'à arrêt</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label class="label" for="targetCountInput">Nombre de questions (mode personnalisé)</label>
+                          <input id="targetCountInput" type="number" min="1" max="200" value="20" placeholder="Nombre de questions" />
+                        </div>
+                        <button class="btn-primary" id="createSessionBtn" disabled>Démarrer entraînement</button>
+                        <button class="btn-secondary" id="refreshDashboardBtn" disabled>Rafraîchir dashboard</button>
                       </div>
-                      <button class="btn-primary" id="createSessionBtn" disabled>Démarrer entraînement</button>
-                      <button class="btn-secondary" id="refreshDashboardBtn" disabled>Rafraîchir dashboard</button>
+                      <div id="setupChecklist" class="setup-list"></div>
+                      <div class="preset-grid">
+                        <button class="btn-secondary wide" id="presetRecommendedBtn" disabled>Preset conseillé</button>
+                        <button class="btn-secondary" id="presetDiscoveryBtn" disabled>Découverte 10</button>
+                        <button class="btn-secondary" id="presetReviewBtn" disabled>Révision libre</button>
+                      </div>
                     </div>
-                  </div>
+                  </details>
 
-                  <div class="section">
-                    <div class="section-head">
-                      <h3>Plan De Départ</h3>
-                      <span id="setupStateChip" class="chip">À configurer</span>
+                  <details class="app-collapsible">
+                    <summary>
+                      <div class="app-collapsible-head">
+                        <div class="app-collapsible-kicker">Filtres</div>
+                        <div class="app-collapsible-title">Matières</div>
+                        <div class="app-collapsible-note">Choisis ton terrain de jeu.</div>
+                      </div>
+                      <div class="app-collapsible-meta">
+                        <span class="app-collapsible-arrow">⌄</span>
+                      </div>
+                    </summary>
+                    <div class="app-collapsible-content">
+                      <div id="subjectsList" class="subject-list"></div>
                     </div>
-                    <div id="setupChecklist" class="setup-list"></div>
-                    <div class="preset-grid">
-                      <button class="btn-secondary wide" id="presetRecommendedBtn" disabled>Preset conseillé</button>
-                      <button class="btn-secondary" id="presetDiscoveryBtn" disabled>Découverte 10</button>
-                      <button class="btn-secondary" id="presetReviewBtn" disabled>Révision libre</button>
-                    </div>
-                  </div>
+                  </details>
 
-                  <div class="section">
-                    <div class="section-head">
-                      <h3>Matières</h3>
-                      <span class="section-note">Choisis ton terrain de jeu</span>
+                  <details class="app-collapsible">
+                    <summary>
+                      <div class="app-collapsible-head">
+                        <div class="app-collapsible-kicker">Filtres</div>
+                        <div class="app-collapsible-title">Chapitres</div>
+                        <div class="app-collapsible-note">Affine si tu veux cibler précisément.</div>
+                      </div>
+                      <div class="app-collapsible-meta">
+                        <span class="app-collapsible-arrow">⌄</span>
+                      </div>
+                    </summary>
+                    <div class="app-collapsible-content">
+                      <div id="chaptersList" class="chapter-list"></div>
                     </div>
-                    <div id="subjectsList" class="subject-list"></div>
-                  </div>
-
-                  <div class="section">
-                    <div class="section-head">
-                      <h3>Chapitres</h3>
-                      <span class="section-note">Affine si tu veux cibler</span>
-                    </div>
-                    <div id="chaptersList" class="chapter-list"></div>
-                  </div>
+                  </details>
                 </section>
 
                 <section class="panel training-panel">
@@ -3055,17 +3164,25 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
                     </div>
                   </div>
 
-                  <div class="section">
-                    <div class="section-head">
-                      <h3>Coach De Révision</h3>
-                      <span class="section-note">Ce que tes résultats suggèrent ensuite</span>
+                  <details class="app-collapsible">
+                    <summary>
+                      <div class="app-collapsible-head">
+                        <div class="app-collapsible-kicker">Suite</div>
+                        <div class="app-collapsible-title">Coach de révision</div>
+                        <div class="app-collapsible-note">Ce que tes résultats suggèrent ensuite.</div>
+                      </div>
+                      <div class="app-collapsible-meta">
+                        <span class="app-collapsible-arrow">⌄</span>
+                      </div>
+                    </summary>
+                    <div class="app-collapsible-content">
+                      <div id="focusList" class="focus-list"></div>
+                      <div class="goal-row" style="margin-top:8px">
+                        <div id="suggestedModeLabel" class="muted">Mode conseillé: -</div>
+                        <button class="btn-secondary btn-inline" id="applySuggestedModeBtn" disabled>Appliquer</button>
+                      </div>
                     </div>
-                    <div id="focusList" class="focus-list"></div>
-                    <div class="goal-row" style="margin-top:8px">
-                      <div id="suggestedModeLabel" class="muted">Mode conseillé: -</div>
-                      <button class="btn-secondary btn-inline" id="applySuggestedModeBtn" disabled>Appliquer</button>
-                    </div>
-                  </div>
+                  </details>
 
                   <div class="section">
                     <div class="section-head">
@@ -3082,13 +3199,21 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
                     <div id="completionContent" class="completion-card completion-card-rich"></div>
                   </div>
 
-                  <div class="section">
-                    <div class="section-head">
-                      <h3>Trace Immédiate</h3>
-                      <span class="section-note">Tes 12 dernières réponses commentées</span>
+                  <details class="app-collapsible">
+                    <summary>
+                      <div class="app-collapsible-head">
+                        <div class="app-collapsible-kicker">Réponses</div>
+                        <div class="app-collapsible-title">Historique immédiat</div>
+                        <div class="app-collapsible-note">Tes 12 dernières réponses commentées.</div>
+                      </div>
+                      <div class="app-collapsible-meta">
+                        <span class="app-collapsible-arrow">⌄</span>
+                      </div>
+                    </summary>
+                    <div class="app-collapsible-content">
+                      <div id="historyList" class="history-list"></div>
                     </div>
-                    <div id="historyList" class="history-list"></div>
-                  </div>
+                  </details>
                 </section>
               </div>
             </section>
@@ -3097,54 +3222,78 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
               <div class="grid">
                 <section class="panel">
                   <h2>Notifications</h2>
-                  <div class="section">
-                    <div class="section-head">
-                      <h3>Centre De Notifications</h3>
-                      <span id="notificationsUnreadChip" class="chip">0 non lues</span>
+                  <details class="app-collapsible">
+                    <summary>
+                      <div class="app-collapsible-head">
+                        <div class="app-collapsible-kicker">Centre</div>
+                        <div class="app-collapsible-title">Notifications duel</div>
+                        <div class="app-collapsible-note">Tours, sursis et fins de partie.</div>
+                      </div>
+                      <div class="app-collapsible-meta">
+                        <span id="notificationsUnreadChip" class="chip">0 non lues</span>
+                        <span class="app-collapsible-arrow">⌄</span>
+                      </div>
+                    </summary>
+                    <div class="app-collapsible-content">
+                      <div class="goal-row">
+                        <div class="muted">Rafraîchis si tu veux vérifier immédiatement l’état des alertes.</div>
+                        <button class="btn-secondary btn-inline" id="refreshNotificationsBtn" disabled>Rafraîchir</button>
+                      </div>
+                      <div id="notificationsList" class="notification-list"></div>
                     </div>
-                    <div class="goal-row">
-                      <div class="muted">Tours de duel, sursis, fins de partie.</div>
-                      <button class="btn-secondary btn-inline" id="refreshNotificationsBtn" disabled>Rafraîchir</button>
-                    </div>
-                    <div id="notificationsList" class="notification-list"></div>
-                  </div>
+                  </details>
                 </section>
 
                 <section class="panel">
                   <h2>Duel Asynchrone</h2>
+                  <details class="app-collapsible">
+                    <summary>
+                      <div class="app-collapsible-head">
+                        <div class="app-collapsible-kicker">Nouveau duel</div>
+                        <div class="app-collapsible-title">Créer ou filtrer un défi</div>
+                        <div class="app-collapsible-note">Invitation ami, aléatoire ou niveau proche.</div>
+                      </div>
+                      <div class="app-collapsible-meta">
+                        <span class="app-collapsible-arrow">⌄</span>
+                      </div>
+                    </summary>
+                    <div class="app-collapsible-content">
+                      <div class="auth-grid">
+                        <div>
+                          <label class="label" for="duelModeSelect">Type de duel</label>
+                          <select id="duelModeSelect">
+                            <option value="friend_invite">Ami (invitation)</option>
+                            <option value="random_free">Aléatoire</option>
+                            <option value="random_level">Niveau proche</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label class="label" for="duelOpponentInput">Opponent userId (UUID pour ami)</label>
+                          <input id="duelOpponentInput" type="text" placeholder="UUID adversaire" />
+                        </div>
+                        <div>
+                          <label class="label" for="duelStatusFilterSelect">Filtre liste</label>
+                          <select id="duelStatusFilterSelect">
+                            <option value="all">Tous</option>
+                            <option value="pending_opener">pending_opener</option>
+                            <option value="in_progress">in_progress</option>
+                            <option value="completed">completed</option>
+                            <option value="cancelled">cancelled</option>
+                            <option value="expired">expired</option>
+                          </select>
+                        </div>
+                        <div class="row">
+                          <button class="btn-primary" id="createDuelBtn" disabled>Créer duel</button>
+                          <button class="btn-secondary" id="refreshDuelsBtn" disabled>Rafraîchir duels</button>
+                        </div>
+                      </div>
+                    </div>
+                  </details>
+
                   <div class="section">
                     <div class="section-head">
-                      <h3>Duel Asynchrone</h3>
-                      <span class="section-note">5 manches x 3 questions</span>
-                    </div>
-                    <div class="auth-grid">
-                      <div>
-                        <label class="label" for="duelModeSelect">Type de duel</label>
-                        <select id="duelModeSelect">
-                          <option value="friend_invite">Ami (invitation)</option>
-                          <option value="random_free">Aléatoire</option>
-                          <option value="random_level">Niveau proche</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label class="label" for="duelOpponentInput">Opponent userId (UUID pour ami)</label>
-                        <input id="duelOpponentInput" type="text" placeholder="UUID adversaire" />
-                      </div>
-                      <div>
-                        <label class="label" for="duelStatusFilterSelect">Filtre liste</label>
-                        <select id="duelStatusFilterSelect">
-                          <option value="all">Tous</option>
-                          <option value="pending_opener">pending_opener</option>
-                          <option value="in_progress">in_progress</option>
-                          <option value="completed">completed</option>
-                          <option value="cancelled">cancelled</option>
-                          <option value="expired">expired</option>
-                        </select>
-                      </div>
-                      <div class="row">
-                        <button class="btn-primary" id="createDuelBtn" disabled>Créer duel</button>
-                        <button class="btn-secondary" id="refreshDuelsBtn" disabled>Rafraîchir duels</button>
-                      </div>
+                      <h3>Duels</h3>
+                      <span class="section-note">Liste et détail du duel sélectionné</span>
                     </div>
                     <div id="duelsList" class="duel-list" style="margin-top:8px"></div>
                     <div id="duelDetail" class="duel-detail-card hidden" style="margin-top:8px"></div>
