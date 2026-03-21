@@ -237,15 +237,18 @@ export class DemoService {
       };
     }
 
+    const openTextSupported = await this.hasTable("question_open_text_answers");
+
     await this.db.withTransaction(async (client) => {
       for (let idx = 0; idx < DEMO_SUBJECTS.length; idx += 1) {
-        await this.seedSubjectCatalog(client, DEMO_SUBJECTS[idx], idx, createdByUserId);
+        await this.seedSubjectCatalog(client, DEMO_SUBJECTS[idx], idx, createdByUserId, openTextSupported);
       }
     });
 
     const after = await this.getCatalogStats();
     return {
       seeded: true,
+      openTextSupported,
       ...after
     };
   }
@@ -281,14 +284,28 @@ export class DemoService {
     client: PoolClient,
     subject: DemoSubjectSeed,
     index: number,
-    createdByUserId: string
+    createdByUserId: string,
+    openTextSupported: boolean
   ): Promise<void> {
     const subjectId = await this.upsertSubject(client, subject, index);
     const chapterId = await this.upsertChapter(client, subjectId, subject);
 
     for (const question of subject.questions) {
+      if (question.type === "open_text" && !openTextSupported) {
+        continue;
+      }
       await this.insertQuestion(client, subjectId, chapterId, question, createdByUserId);
     }
+  }
+
+  private async hasTable(tableName: string): Promise<boolean> {
+    const result = await this.db.query<{ exists: string | null }>(
+      `
+        SELECT to_regclass($1) AS exists
+      `,
+      [`public.${tableName}`]
+    );
+    return Boolean(result.rows[0]?.exists);
   }
 
   private async upsertSubject(
