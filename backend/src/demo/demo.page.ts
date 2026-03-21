@@ -160,12 +160,239 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
     }
 
     .welcome-grid {
-      grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr);
+      grid-template-columns: minmax(0, 1.35fr) minmax(340px, 0.92fr);
+      align-items: start;
     }
 
     .auth-landing-panel {
       align-content: start;
       min-height: 100%;
+    }
+
+    .welcome-story-panel {
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background:
+        radial-gradient(circle at 88% 10%, rgba(255, 255, 255, 0.16), transparent 28%),
+        radial-gradient(circle at 12% 86%, rgba(245, 158, 11, 0.18), transparent 28%),
+        linear-gradient(135deg, rgba(8, 40, 59, 0.95), rgba(11, 93, 97, 0.92));
+      color: #f5fcff;
+      display: grid;
+      gap: 16px;
+    }
+
+    .welcome-story-top {
+      display: grid;
+      gap: 10px;
+    }
+
+    .welcome-kicker {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.34px;
+      font-weight: 800;
+      color: rgba(233, 250, 255, 0.78);
+    }
+
+    .welcome-title {
+      font-size: clamp(32px, 4.8vw, 54px);
+      font-weight: 800;
+      line-height: 0.96;
+      letter-spacing: -0.03em;
+      max-width: 10ch;
+    }
+
+    .welcome-text {
+      max-width: 62ch;
+      font-size: 14px;
+      line-height: 1.62;
+      color: rgba(234, 250, 255, 0.9);
+    }
+
+    .welcome-story-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .welcome-story-chips .pill {
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    .welcome-feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+    }
+
+    .welcome-feature-card {
+      border-radius: 18px;
+      padding: 14px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      display: grid;
+      gap: 6px;
+      backdrop-filter: blur(10px);
+    }
+
+    .welcome-feature-kicker {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.26px;
+      text-transform: uppercase;
+      color: rgba(231, 250, 255, 0.72);
+    }
+
+    .welcome-feature-value {
+      font-size: 22px;
+      font-weight: 800;
+      line-height: 1.02;
+      color: #ffffff;
+    }
+
+    .welcome-feature-copy {
+      font-size: 12px;
+      line-height: 1.45;
+      color: rgba(233, 250, 255, 0.86);
+    }
+
+    .welcome-lane {
+      border-radius: 20px;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      display: grid;
+      gap: 12px;
+    }
+
+    .welcome-lane-head {
+      display: grid;
+      gap: 4px;
+    }
+
+    .welcome-lane-head b {
+      font-size: 18px;
+      line-height: 1.08;
+      color: #ffffff;
+    }
+
+    .welcome-lane-head span {
+      font-size: 12px;
+      line-height: 1.45;
+      color: rgba(233, 250, 255, 0.82);
+    }
+
+    .welcome-lane-list {
+      display: grid;
+      gap: 9px;
+    }
+
+    .welcome-lane-item {
+      display: grid;
+      grid-template-columns: 44px 1fr;
+      gap: 10px;
+      align-items: start;
+      border-top: 1px solid rgba(255, 255, 255, 0.14);
+      padding-top: 9px;
+    }
+
+    .welcome-lane-item:first-child {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .welcome-step {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      font-weight: 800;
+      color: #ffffff;
+    }
+
+    .welcome-lane-copy {
+      display: grid;
+      gap: 3px;
+    }
+
+    .welcome-lane-copy b {
+      font-size: 15px;
+      line-height: 1.2;
+      color: #ffffff;
+    }
+
+    .welcome-lane-copy span {
+      font-size: 12px;
+      line-height: 1.45;
+      color: rgba(233, 250, 255, 0.86);
+    }
+
+    .welcome-auth-panel {
+      display: grid;
+      gap: 12px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(245, 251, 255, 0.94));
+    }
+
+    .welcome-auth-head {
+      display: grid;
+      gap: 6px;
+    }
+
+    .welcome-auth-head h2 {
+      margin: 0;
+      font-size: 28px;
+      line-height: 1.02;
+    }
+
+    .welcome-auth-text {
+      font-size: 14px;
+      line-height: 1.52;
+      color: var(--ink-soft);
+    }
+
+    .welcome-auth-card {
+      margin-top: 0;
+      display: grid;
+      gap: 10px;
+    }
+
+    .welcome-status {
+      margin-top: 4px;
+    }
+
+    .welcome-auth-note {
+      font-size: 12px;
+      line-height: 1.45;
+      color: var(--ink-soft);
+    }
+
+    .welcome-note-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .welcome-note-card {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 13px;
+      background: linear-gradient(180deg, #ffffff, #f7fbff);
+      display: grid;
+      gap: 8px;
+    }
+
+    .welcome-note-card b {
+      font-size: 15px;
+      line-height: 1.15;
+      color: var(--ink);
+    }
+
+    .welcome-note-card span {
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--ink-soft);
     }
 
     .app-toolbar {
@@ -1958,6 +2185,12 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       .grid { grid-template-columns: 1fr; }
       .welcome-grid { grid-template-columns: 1fr; }
       .panel { border-radius: 16px; }
+      .welcome-title {
+        max-width: none;
+      }
+      .welcome-feature-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
       .app-toolbar {
         flex-direction: column;
       }
@@ -2018,6 +2251,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       }
       .dashboard-pulse-grid,
       .dashboard-grid,
+      .welcome-feature-grid,
       .completion-actions,
       .duel-actions,
       .duel-stage-list,
@@ -2049,6 +2283,9 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       }
       .dashboard-hero-score {
         text-align: left;
+      }
+      .welcome-lane-item {
+        grid-template-columns: 1fr;
       }
       .question-exit-row {
         justify-content: stretch;
@@ -2123,10 +2360,81 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
     <main class="screen-root">
       <section id="welcomeScreen" class="screen-pane">
         <div class="grid welcome-grid">
-          <section class="panel auth-landing-panel">
-            <h2>Accueil</h2>
+          <section class="panel auth-landing-panel welcome-story-panel">
+            <div class="welcome-story-top">
+              <div class="welcome-kicker">MedQuiz</div>
+              <div class="welcome-title">Réviser la médecine avec un déroulé simple et motivant.</div>
+              <div class="welcome-text">
+                L’idée est d’ouvrir l’application, te connecter, tomber sur un dashboard clair puis choisir
+                immédiatement entre entraînement, duel, profil ou paramètres. On garde une ambiance sérieuse,
+                rassurante et sans pression inutile.
+              </div>
+              <div class="welcome-story-chips">
+                <span class="pill">Entraînement guidé</span>
+                <span class="pill">Duel asynchrone</span>
+                <span class="pill">Profil évolutif</span>
+              </div>
+            </div>
 
-            <div class="section">
+            <div class="welcome-feature-grid">
+              <div class="welcome-feature-card">
+                <div class="welcome-feature-kicker">Révision</div>
+                <div class="welcome-feature-value">Sessions courtes</div>
+                <div class="welcome-feature-copy">10 questions, nombre personnalisé ou entraînement libre selon le moment.</div>
+              </div>
+              <div class="welcome-feature-card">
+                <div class="welcome-feature-kicker">Challenge</div>
+                <div class="welcome-feature-value">Duel fluide</div>
+                <div class="welcome-feature-copy">Une vraie boucle asynchrone avec opener, manches, sursis et notifications.</div>
+              </div>
+              <div class="welcome-feature-card">
+                <div class="welcome-feature-kicker">Progression</div>
+                <div class="welcome-feature-value">Avatar vivant</div>
+                <div class="welcome-feature-copy">Ton profil avance dans les études de médecine et gagne en identité.</div>
+              </div>
+            </div>
+
+            <div class="welcome-lane">
+              <div class="welcome-lane-head">
+                <b>Comment l’app se vit</b>
+                <span>Un chemin lisible, sans écran fourre-tout, pour que l’expérience reste naturelle dès l’ouverture.</span>
+              </div>
+              <div class="welcome-lane-list">
+                <div class="welcome-lane-item">
+                  <div class="welcome-step">01</div>
+                  <div class="welcome-lane-copy">
+                    <b>Accueil</b>
+                    <span>Tu entres par une page de connexion propre, qui explique tout de suite ce que l’application propose.</span>
+                  </div>
+                </div>
+                <div class="welcome-lane-item">
+                  <div class="welcome-step">02</div>
+                  <div class="welcome-lane-copy">
+                    <b>Dashboard</b>
+                    <span>Une fois connecté, tu arrives sur un hall d’entrée qui te dit où tu en es et quoi faire ensuite.</span>
+                  </div>
+                </div>
+                <div class="welcome-lane-item">
+                  <div class="welcome-step">03</div>
+                  <div class="welcome-lane-copy">
+                    <b>Écrans dédiés</b>
+                    <span>Chaque grande brique a sa propre page: entraînement, duel, profil et paramètres.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel auth-landing-panel welcome-auth-panel">
+            <div class="welcome-auth-head">
+              <h2>Entrer dans l’app</h2>
+              <div class="welcome-auth-text">
+                Connecte-toi à un compte existant ou crée ton profil. Le nom affiché sert au moment de l’inscription,
+                puis l’application t’ouvre directement sur le dashboard.
+              </div>
+            </div>
+
+            <div class="section welcome-auth-card">
               <div class="section-head">
                 <h3>Connexion</h3>
                 <span class="section-note">Entre dans MedQuiz</span>
@@ -2148,43 +2456,25 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
                   <button class="btn-secondary" id="registerBtn">Créer compte</button>
                   <button class="btn-primary" id="loginBtn">Se connecter</button>
                 </div>
+                <div id="welcomeStatusBox" class="status info welcome-status">Connecte-toi pour entrer dans l’application.</div>
+                <div class="welcome-auth-note">Si tu crées un compte, le nom affiché est utilisé pour construire ta première identité joueur.</div>
               </div>
             </div>
-          </section>
 
-          <section class="panel auth-landing-panel">
-            <h2>Vue Produit</h2>
-
-            <div class="section">
-              <div class="section-head">
-                <h3>Déroulé souhaité</h3>
-                <span class="section-note">Simple et naturel</span>
+            <div class="welcome-note-grid">
+              <div class="welcome-note-card">
+                <b>Ce que tu retrouves juste après</b>
+                <span>Un dashboard plus lisible, avec ton état actuel, tes raccourcis et un chemin conseillé pour repartir rapidement.</span>
+                <div class="summary-inline-chips">
+                  <span class="chip">Dashboard</span>
+                  <span class="chip">Coach de révision</span>
+                  <span class="chip">Raccourcis</span>
+                </div>
               </div>
-              <div class="focus-list">
-                <div class="focus-item">
-                  <div class="focus-top">
-                    <div class="focus-title">
-                      <div class="focus-rank">01</div>
-                      <div class="focus-title-copy"><b>Accueil</b><div class="subject-meta">Connexion et entrée dans l’application</div></div>
-                    </div>
-                  </div>
-                </div>
-                <div class="focus-item">
-                  <div class="focus-top">
-                    <div class="focus-title">
-                      <div class="focus-rank">02</div>
-                      <div class="focus-title-copy"><b>Dashboard</b><div class="subject-meta">Choix de la grande catégorie à explorer</div></div>
-                    </div>
-                  </div>
-                </div>
-                <div class="focus-item">
-                  <div class="focus-top">
-                    <div class="focus-title">
-                      <div class="focus-rank">03</div>
-                      <div class="focus-title-copy"><b>Écrans dédiés</b><div class="subject-meta">Entraînement, Duel, Profil, Paramètres</div></div>
-                    </div>
-                  </div>
-                </div>
+
+              <div class="welcome-note-card">
+                <b>L’esprit de l’app</b>
+                <span>Un endroit utile et propre pour travailler, progresser et se challenger, sans vocabulaire culpabilisant ni interface trop lourde.</span>
               </div>
             </div>
           </section>
@@ -2522,6 +2812,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         dashboardPulse: document.getElementById('dashboardPulse'),
         dashboardJourney: document.getElementById('dashboardJourney'),
         dashboardCards: document.getElementById('dashboardCards'),
+        welcomeStatusBox: document.getElementById('welcomeStatusBox'),
         profileSummary: document.getElementById('profileSummary'),
         profileAvatarSummary: document.getElementById('profileAvatarSummary'),
         settingsSummary: document.getElementById('settingsSummary'),
@@ -2602,8 +2893,13 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       };
 
       function setStatus(msg, tone) {
-        refs.statusBox.className = 'status ' + (tone || 'info');
+        var className = 'status ' + (tone || 'info');
+        refs.statusBox.className = className;
         refs.statusBox.textContent = msg;
+        if (refs.welcomeStatusBox) {
+          refs.welcomeStatusBox.className = className + ' welcome-status';
+          refs.welcomeStatusBox.textContent = msg;
+        }
       }
 
       function getUnreadNotificationsCount() {
