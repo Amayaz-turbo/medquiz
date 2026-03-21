@@ -88,6 +88,34 @@ interface DuelJokerRow {
   new_deadline_at: string | null;
 }
 
+interface DuelPlayerIdentityRow {
+  user_id: string;
+  display_label: string;
+  profile_color: string | null;
+  current_stage_code: string | null;
+  current_stage_name: string | null;
+  specialty_code: string | null;
+  specialty_name: string | null;
+  equipped_item_names: string[] | null;
+}
+
+export interface DuelPlayerView {
+  userId: string;
+  displayLabel: string;
+  profileColor: string | null;
+  avatar: {
+    currentStage: {
+      code: string;
+      name: string;
+    } | null;
+    specialty: {
+      code: string;
+      name: string;
+    } | null;
+    equipmentSummary: string[];
+  } | null;
+}
+
 export interface SubjectLite {
   id: string;
   name: string;
@@ -163,6 +191,8 @@ export class DuelsService {
     const result = await this.db.query<{
       id: string;
       status: DuelStatus;
+      player1_id: string;
+      player2_id: string;
       player1_score: number;
       player2_score: number;
       created_at: string;
@@ -172,6 +202,8 @@ export class DuelsService {
         SELECT
           d.id,
           d.status,
+          d.player1_id,
+          d.player2_id,
           d.player1_score,
           d.player2_score,
           d.created_at,
@@ -185,9 +217,19 @@ export class DuelsService {
       params
     );
 
+    const playerViews = await this.getDuelPlayerViews(this.db, result.rows.flatMap((row) => [
+      row.player1_id,
+      row.player2_id
+    ]));
+
     return result.rows.map((row) => ({
       id: row.id,
       status: row.status,
+      opponent:
+        playerViews.get(row.player1_id === userId ? row.player2_id : row.player1_id) ??
+        this.buildFallbackDuelPlayerView(row.player1_id === userId ? row.player2_id : row.player1_id),
+      meScore: row.player1_id === userId ? row.player1_score : row.player2_score,
+      opponentScore: row.player1_id === userId ? row.player2_score : row.player1_score,
       player1Score: row.player1_score,
       player2Score: row.player2_score,
       createdAt: row.created_at,
@@ -199,6 +241,7 @@ export class DuelsService {
     const duel = await this.getDuelForUser(this.db, duelId, userId);
     const opener = await this.getOpenerRow(this.db, duelId);
     const rounds = await this.getAllRounds(this.db, duelId);
+    const playerViews = await this.getDuelPlayerViews(this.db, [duel.player1_id, duel.player2_id]);
 
     const jokerUsage = await this.db.query<{
       requested_by_user_id: string;
@@ -239,6 +282,10 @@ export class DuelsService {
       matchmakingMode: duel.matchmaking_mode,
       player1Id: duel.player1_id,
       player2Id: duel.player2_id,
+      player1Profile:
+        playerViews.get(duel.player1_id) ?? this.buildFallbackDuelPlayerView(duel.player1_id),
+      player2Profile:
+        playerViews.get(duel.player2_id) ?? this.buildFallbackDuelPlayerView(duel.player2_id),
       currentRoundNo: duel.current_round_no,
       currentTurnUserId: duel.current_turn_user_id,
       turnDeadlineAt: duel.turn_deadline_at,
@@ -1925,6 +1972,107 @@ export class DuelsService {
       map.set(row.id, { id: row.id, name: row.name });
     }
     return map;
+  }
+
+  private async getDuelPlayerViews(
+    dbLike: Queryable,
+    userIds: string[]
+  ): Promise<Map<string, DuelPlayerView>> {
+    const uniqueIds = Array.from(new Set(userIds.filter(Boolean)));
+    if (!uniqueIds.length) {
+      return new Map();
+    }
+
+    const result = await dbLike.query<DuelPlayerIdentityRow>(
+      `
+        SELECT
+          u.id AS user_id,
+          COALESCE(
+            NULLIF(BTRIM(up.public_alias), ''),
+            NULLIF(BTRIM(u.display_name), ''),
+            'Etudiant MedQuiz'
+          ) AS display_label,
+          up.profile_color,
+          stage.code AS current_stage_code,
+          stage.name AS current_stage_name,
+          specialty.code AS specialty_code,
+          specialty.name AS specialty_name,
+          COALESCE(
+            ARRAY_REMOVE(ARRAY_AGG(DISTINCT item.name) FILTER (WHERE item.name IS NOT NULL), NULL),
+            ARRAY[]::text[]
+          ) AS equipped_item_names
+        FROM users u
+        LEFT JOIN user_profiles up
+          ON up.user_id = u.id
+        LEFT JOIN user_avatar_progress progress
+          ON progress.user_id = u.id
+        LEFT JOIN avatar_stages stage
+          ON stage.id = progress.current_stage_id
+        LEFT JOIN medical_specialties specialty
+          ON specialty.id = progress.specialty_id
+        LEFT JOIN user_avatar_equipment equipment
+          ON equipment.user_id = u.id
+        LEFT JOIN avatar_items item
+          ON item.id = equipment.item_id
+        WHERE u.id = ANY($1::uuid[])
+        GROUP BY
+          u.id,
+          up.public_alias,
+          u.display_name,
+          up.profile_color,
+          stage.code,
+          stage.name,
+          specialty.code,
+          specialty.name
+      `,
+      [uniqueIds]
+    );
+
+    const map = new Map<string, DuelPlayerView>();
+    for (const row of result.rows) {
+      map.set(row.user_id, {
+        userId: row.user_id,
+        displayLabel: row.display_label,
+        profileColor: row.profile_color,
+        avatar:
+          row.current_stage_code ||
+          row.current_stage_name ||
+          row.specialty_code ||
+          row.specialty_name ||
+          (Array.isArray(row.equipped_item_names) && row.equipped_item_names.length > 0)
+            ? {
+                currentStage:
+                  row.current_stage_code && row.current_stage_name
+                    ? {
+                        code: row.current_stage_code,
+                        name: row.current_stage_name
+                      }
+                    : null,
+                specialty:
+                  row.specialty_code && row.specialty_name
+                    ? {
+                        code: row.specialty_code,
+                        name: row.specialty_name
+                      }
+                    : null,
+                equipmentSummary: Array.isArray(row.equipped_item_names)
+                  ? row.equipped_item_names.slice(0, 3)
+                  : []
+              }
+            : null
+      });
+    }
+
+    return map;
+  }
+
+  private buildFallbackDuelPlayerView(userId: string): DuelPlayerView {
+    return {
+      userId,
+      displayLabel: "Etudiant MedQuiz",
+      profileColor: null,
+      avatar: null
+    };
   }
 
   private async getAllRounds(dbLike: Queryable, duelId: string): Promise<DuelRoundRow[]> {

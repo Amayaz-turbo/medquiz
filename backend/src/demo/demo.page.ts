@@ -1560,6 +1560,31 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           .slice(0, 3);
       }
 
+      function getDuelProfile(slotKey, duel) {
+        if (!duel) {
+          return null;
+        }
+        return slotKey === 'player1' ? (duel.player1Profile || null) : (duel.player2Profile || null);
+      }
+
+      function getDuelProfileStageName(profile) {
+        return profile && profile.avatar && profile.avatar.currentStage && profile.avatar.currentStage.name
+          ? profile.avatar.currentStage.name
+          : '';
+      }
+
+      function getDuelProfileSpecialtyName(profile) {
+        return profile && profile.avatar && profile.avatar.specialty && profile.avatar.specialty.name
+          ? profile.avatar.specialty.name
+          : '';
+      }
+
+      function getDuelProfileEquipmentSummary(profile) {
+        return profile && profile.avatar && Array.isArray(profile.avatar.equipmentSummary)
+          ? profile.avatar.equipmentSummary.slice(0, 3)
+          : [];
+      }
+
       function renderDuelPlayerCard(config) {
         var tagsHtml = (config.tags || []).length
           ? '<div class="duel-player-tags">' + config.tags.map(function (tag) {
@@ -2144,12 +2169,16 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
         refs.duelsList.innerHTML = state.duels.map(function (d) {
           var isSelected = state.selectedDuelId === d.id;
+          var opponent = d.opponent || null;
+          var opponentName = opponent && opponent.displayLabel ? opponent.displayLabel : 'Adversaire';
+          var opponentStage = getDuelProfileStageName(opponent) || 'Profil duel';
           return '<div class="duel-item">'
             + '<div class="duel-item-top">'
             + '<b>Duel ' + escapeHtml(d.id.slice(0, 8)) + '</b>'
             + '<span class="chip' + (isSelected ? '' : ' warn') + '">' + escapeHtml(getDuelStatusLabel(d.status)) + '</span>'
             + '</div>'
-            + '<div class="mini">Score ' + escapeHtml(String(d.player1Score)) + ' - ' + escapeHtml(String(d.player2Score)) + '</div>'
+            + '<div class="mini">Face à: ' + escapeHtml(opponentName) + ' · ' + escapeHtml(opponentStage) + '</div>'
+            + '<div class="mini">Score ' + escapeHtml(String(d.meScore != null ? d.meScore : d.player1Score)) + ' - ' + escapeHtml(String(d.opponentScore != null ? d.opponentScore : d.player2Score)) + '</div>'
             + '<div class="mini">Créé: ' + escapeHtml(String(d.createdAt || '').slice(0, 19).replace('T', ' ')) + '</div>'
             + '<button class="btn-secondary" data-duel-id="' + escapeHtml(d.id) + '">Ouvrir</button>'
             + '</div>';
@@ -2217,12 +2246,21 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           : '<div class="mini">Aucune manche initialisée pour l\'instant.</div>';
         var myScore = isPlayer1 ? d.score.player1 : d.score.player2;
         var opponentScore = isPlayer1 ? d.score.player2 : d.score.player1;
-        var myAccent = getSafeProfileColor(state.me && state.me.profileColor);
-        var myName = getPreferredPlayerName();
-        var myStage = state.myAvatar && state.myAvatar.currentStage ? state.myAvatar.currentStage.name : 'Stade en chargement';
-        var mySpecialty = state.myAvatar && state.myAvatar.specialty ? state.myAvatar.specialty.name : 'Spécialité non choisie';
-        var myLoadout = getAvatarLoadoutLabels();
-        var opponentName = getDuelOpponentTitle(d);
+        var myProfile = getDuelProfile(isPlayer1 ? 'player1' : 'player2', d);
+        var opponentProfile = getDuelProfile(isPlayer1 ? 'player2' : 'player1', d);
+        var myAccent = getSafeProfileColor((myProfile && myProfile.profileColor) || (state.me && state.me.profileColor));
+        var opponentAccent = getSafeProfileColor(opponentProfile && opponentProfile.profileColor);
+        var myName = myProfile && myProfile.displayLabel ? myProfile.displayLabel : getPreferredPlayerName();
+        var myStage = getDuelProfileStageName(myProfile) || (state.myAvatar && state.myAvatar.currentStage ? state.myAvatar.currentStage.name : 'Progression initiale');
+        var mySpecialty = getDuelProfileSpecialtyName(myProfile) || (state.myAvatar && state.myAvatar.specialty ? state.myAvatar.specialty.name : 'Spécialité non choisie');
+        var myLoadout = getDuelProfileEquipmentSummary(myProfile);
+        if (!myLoadout.length) {
+          myLoadout = getAvatarLoadoutLabels();
+        }
+        var opponentName = opponentProfile && opponentProfile.displayLabel ? opponentProfile.displayLabel : getDuelOpponentTitle(d);
+        var opponentStage = getDuelProfileStageName(opponentProfile) || 'Progression non visible';
+        var opponentSpecialty = getDuelProfileSpecialtyName(opponentProfile) || 'Spécialité non visible';
+        var opponentLoadout = getDuelProfileEquipmentSummary(opponentProfile);
         var playerCardsHtml =
           '<div class="duel-player-grid">'
           + renderDuelPlayerCard({
@@ -2231,7 +2269,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
             initials: getInitials(myName),
             role: 'Moi',
             name: myName,
-            subtitle: state.me && state.me.email ? state.me.email : 'Profil personnel',
+            subtitle: myStage + (mySpecialty !== 'Spécialité non choisie' ? (' · ' + mySpecialty) : ''),
             score: myScore,
             tags: [
               { label: isMyTurn ? 'À toi de jouer' : 'En attente', tone: isMyTurn ? 'default' : 'neutral' },
@@ -2247,20 +2285,25 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           })
           + renderDuelPlayerCard({
             variant: 'opponent',
-            accent: '#5b6f82',
+            accent: opponentAccent,
             initials: getInitials(opponentName),
             role: 'Adversaire',
             name: opponentName,
-            subtitle: d.acceptedAt ? 'Profil détaillé bientôt disponible côté duel.' : 'Le duel attend encore sa confirmation.',
+            subtitle: opponentStage + (opponentSpecialty !== 'Spécialité non visible' ? (' · ' + opponentSpecialty) : ''),
             score: opponentScore,
             tags: [
               { label: isMyTurn ? 'Attend ta réponse' : 'Joue maintenant', tone: isMyTurn ? 'neutral' : 'default' },
               { label: opponentJokerUsed ? 'Joker utilisé' : 'Joker dispo', tone: opponentJokerUsed ? 'warn' : 'default' }
-            ],
+            ].concat(opponentLoadout.map(function (itemName) {
+              return { label: itemName, tone: 'neutral' };
+            })),
             facts: [
-              { label: 'Type', value: getDuelModeLabel(d.matchmakingMode) },
-              { label: 'Statut', value: getDuelStatusLabel(d.status) },
-              { label: 'Repère duel', value: String((isPlayer1 ? d.player2Id : d.player1Id) || '-').slice(0, 8) || '-' }
+              { label: 'Stade', value: opponentStage },
+              { label: 'Spécialité', value: opponentSpecialty },
+              {
+                label: 'Style',
+                value: opponentLoadout.length ? opponentLoadout.join(' · ') : 'Aucun équipement visible'
+              }
             ]
           })
           + '</div>';

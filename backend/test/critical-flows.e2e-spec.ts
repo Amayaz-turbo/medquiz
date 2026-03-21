@@ -20,6 +20,17 @@ interface TestUserSession {
   refreshToken: string;
 }
 
+interface DuelPlayerProfileView {
+  userId: string;
+  displayLabel: string;
+  profileColor: string | null;
+  avatar: {
+    currentStage: { code: string; name: string } | null;
+    specialty: { code: string; name: string } | null;
+    equipmentSummary: string[];
+  } | null;
+}
+
 interface DuelView {
   id: string;
   status: string;
@@ -29,6 +40,8 @@ interface DuelView {
   rounds: Array<{ roundNo: number; status: string; chosenSubjectId: string | null }>;
   completedAt: string | null;
   winReason: string | null;
+  player1Profile?: DuelPlayerProfileView;
+  player2Profile?: DuelPlayerProfileView;
 }
 
 interface CurrentRoundView {
@@ -2217,6 +2230,46 @@ describe("Critical integration flows", () => {
     expect(["score", "tie_break_speed"]).toContain(duel.winReason);
   });
 
+  it("returns duel participant identities in detail and list views", async () => {
+    const player1 = await registerUser("Identity Player 1");
+    const player2 = await registerUser("Identity Player 2");
+
+    await prepareDuelIdentity(player1, "Atlas", "#123abc");
+    await prepareDuelIdentity(player2, "Nova", "#0f766e");
+
+    const duelId = await startInProgressDuel(player1, player2);
+    const duel = await getDuel(player1, duelId);
+
+    expect(duel.player1Profile?.userId).toBe(player1.userId);
+    expect(duel.player1Profile?.displayLabel).toBe("Atlas");
+    expect(duel.player1Profile?.profileColor).toBe("#123abc");
+    expect(duel.player1Profile?.avatar?.currentStage?.name).toBeTruthy();
+
+    expect(duel.player2Profile?.userId).toBe(player2.userId);
+    expect(duel.player2Profile?.displayLabel).toBe("Nova");
+    expect(duel.player2Profile?.profileColor).toBe("#0f766e");
+    expect(duel.player2Profile?.avatar?.currentStage?.name).toBeTruthy();
+
+    const duelsList = await request(app.getHttpServer())
+      .get("/v1/duels")
+      .set("Authorization", `Bearer ${player1.accessToken}`)
+      .expect(200);
+
+    const duelSummary = (duelsList.body.data.items as Array<{
+      id: string;
+      opponent: DuelPlayerProfileView;
+      meScore: number;
+      opponentScore: number;
+    }>).find((item) => item.id === duelId);
+
+    expect(duelSummary).toBeDefined();
+    expect(duelSummary?.opponent.userId).toBe(player2.userId);
+    expect(duelSummary?.opponent.displayLabel).toBe("Nova");
+    expect(duelSummary?.opponent.avatar?.currentStage?.name).toBeTruthy();
+    expect(duelSummary?.meScore).toBeGreaterThanOrEqual(0);
+    expect(duelSummary?.opponentScore).toBeGreaterThanOrEqual(0);
+  });
+
   it("handles joker request/grant and enforces one joker per player", async () => {
     const player1 = await registerUser("Joker Player 1");
     const player2 = await registerUser("Joker Player 2");
@@ -2379,6 +2432,26 @@ describe("Critical integration flows", () => {
       .expect(201);
 
     return duelId;
+  }
+
+  async function prepareDuelIdentity(
+    user: TestUserSession,
+    publicAlias: string,
+    profileColor: string
+  ): Promise<void> {
+    await request(app.getHttpServer())
+      .get("/v1/me/avatar")
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .patch("/v1/me/profile/customization")
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .send({
+        publicAlias,
+        profileColor
+      })
+      .expect(200);
   }
 
   async function playCurrentTurn(duelId: string, actor: TestUserSession): Promise<void> {
