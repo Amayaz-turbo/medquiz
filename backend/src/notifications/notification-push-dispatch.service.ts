@@ -34,10 +34,21 @@ interface DeliveryOutcome {
 export class NotificationPushDispatchService {
   private readonly logger = new Logger(NotificationPushDispatchService.name);
   private readonly cfg = env();
+  private pushSchemaReady: boolean | null = null;
+  private pushSchemaWarningLogged = false;
 
   constructor(private readonly db: DatabaseService) {}
 
   async dispatchPending(limit = this.cfg.pushNotificationsBatchSize): Promise<DispatchResult> {
+    if (!(await this.isPushSchemaReady())) {
+      return {
+        processed: 0,
+        sent: 0,
+        failed: 0,
+        retried: 0
+      };
+    }
+
     const safeLimit = Math.max(1, Math.min(limit, this.cfg.pushNotificationsBatchSize));
 
     return this.db.withTransaction(async (client) => {
@@ -91,6 +102,64 @@ export class NotificationPushDispatchService {
         retried
       };
     });
+  }
+
+  private async isPushSchemaReady(): Promise<boolean> {
+    if (this.pushSchemaReady !== null) {
+      return this.pushSchemaReady;
+    }
+
+    const result = await this.db.query<{
+      user_push_tokens_exists: boolean;
+      notifications_dispatch_attempt_count_exists: boolean;
+      notifications_next_dispatch_at_exists: boolean;
+      notifications_last_dispatch_error_exists: boolean;
+    }>(
+      `
+        SELECT
+          to_regclass('public.user_push_tokens') IS NOT NULL AS user_push_tokens_exists,
+          EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'notifications'
+              AND column_name = 'dispatch_attempt_count'
+          ) AS notifications_dispatch_attempt_count_exists,
+          EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'notifications'
+              AND column_name = 'next_dispatch_at'
+          ) AS notifications_next_dispatch_at_exists,
+          EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'notifications'
+              AND column_name = 'last_dispatch_error'
+          ) AS notifications_last_dispatch_error_exists
+      `
+    );
+
+    const row = result.rows[0];
+    const ready = Boolean(
+      row?.user_push_tokens_exists &&
+      row?.notifications_dispatch_attempt_count_exists &&
+      row?.notifications_next_dispatch_at_exists &&
+      row?.notifications_last_dispatch_error_exists
+    );
+
+    this.pushSchemaReady = ready;
+
+    if (!ready && !this.pushSchemaWarningLogged) {
+      this.pushSchemaWarningLogged = true;
+      this.logger.warn(
+        "push notifications worker skipped: local database schema is missing push dispatch tables or columns"
+      );
+    }
+
+    return ready;
   }
 
   private async listUserPushTokens(client: PoolClient, userId: string): Promise<PushTokenRow[]> {
