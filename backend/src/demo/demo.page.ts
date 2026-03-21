@@ -601,6 +601,156 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       line-height: 1.2;
     }
 
+    .duel-player-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 8px;
+    }
+
+    .duel-player-card {
+      --player-accent: #0f766e;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+      background: linear-gradient(180deg, #ffffff, #f7fbff);
+      display: grid;
+      gap: 10px;
+    }
+
+    .duel-player-card::after {
+      content: "";
+      position: absolute;
+      inset: 0 auto auto 0;
+      width: 100%;
+      height: 4px;
+      background: linear-gradient(90deg, var(--player-accent), rgba(255, 255, 255, 0));
+      opacity: 0.9;
+    }
+
+    .duel-player-card.me {
+      border-color: #bfe7e2;
+      box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.08);
+    }
+
+    .duel-player-card.opponent {
+      border-color: #d7e4ee;
+      background: linear-gradient(180deg, #ffffff, #f5f9fd);
+    }
+
+    .duel-player-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .duel-player-main {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .duel-player-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      background: linear-gradient(145deg, var(--player-accent), #0b2f47);
+      color: #ffffff;
+      display: grid;
+      place-items: center;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 0.4px;
+      box-shadow: 0 12px 24px rgba(8, 31, 49, 0.18);
+      flex: 0 0 auto;
+    }
+
+    .duel-player-identity {
+      min-width: 0;
+      display: grid;
+      gap: 2px;
+    }
+
+    .duel-player-role {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.35px;
+      color: var(--ink-soft);
+    }
+
+    .duel-player-name {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--ink);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .duel-player-subtitle {
+      font-size: 12px;
+      color: var(--ink-soft);
+      line-height: 1.3;
+    }
+
+    .duel-player-score {
+      min-width: 68px;
+      border-radius: 12px;
+      padding: 8px 10px;
+      background: rgba(15, 118, 110, 0.08);
+      color: #0c4f54;
+      display: grid;
+      justify-items: center;
+      line-height: 1;
+    }
+
+    .duel-player-score b {
+      font-size: 22px;
+    }
+
+    .duel-player-score span {
+      margin-top: 3px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.28px;
+    }
+
+    .duel-player-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .chip.neutral {
+      background: #eef4f8;
+      color: #315061;
+      border-color: #d6e4ee;
+    }
+
+    .duel-player-facts {
+      display: grid;
+      gap: 6px;
+    }
+
+    .duel-player-fact {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--ink-soft);
+    }
+
+    .duel-player-fact b {
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 700;
+      text-align: right;
+    }
+
     .duel-stage-list {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
@@ -824,6 +974,14 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       .row { grid-template-columns: 1fr; }
       .stats { grid-template-columns: 1fr 1fr; }
       .stat .v { font-size: 19px; }
+      .duel-player-head {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+      .duel-player-score {
+        width: 100%;
+        justify-items: start;
+      }
       .toast-stack {
         top: auto;
         bottom: 12px;
@@ -1081,6 +1239,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       var state = {
         token: persistedToken,
         me: null,
+        myAvatar: null,
         dashboard: null,
         subjects: [],
         chaptersBySubject: {},
@@ -1228,9 +1387,44 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         renderSetupGuide();
       }
 
+      function getPreferredPlayerName() {
+        if (!state.me) {
+          return 'Non connecté';
+        }
+        if (state.me.publicAlias) {
+          return String(state.me.publicAlias).trim();
+        }
+        if (state.me.displayName) {
+          return String(state.me.displayName).trim();
+        }
+        if (state.me.email) {
+          return String(state.me.email).split('@')[0];
+        }
+        return 'Joueur MedQuiz';
+      }
+
+      function renderUserBadge() {
+        if (!state.me) {
+          refs.userBadge.textContent = 'Non connecté';
+          return;
+        }
+        var name = getPreferredPlayerName();
+        var stage = state.myAvatar && state.myAvatar.currentStage ? state.myAvatar.currentStage.name : null;
+        refs.userBadge.textContent = stage ? (name + ' · ' + stage + ' · connecté') : (name + ' · connecté');
+      }
+
       async function loadMe() {
-        state.me = await api('/auth/me');
-        refs.userBadge.textContent = state.me.email + ' · connecté';
+        state.me = await api('/me');
+        renderUserBadge();
+      }
+
+      async function loadMyAvatar() {
+        try {
+          state.myAvatar = await api('/me/avatar');
+        } catch (err) {
+          state.myAvatar = null;
+        }
+        renderUserBadge();
       }
 
       async function ensureDemoCatalogReady() {
@@ -1321,6 +1515,76 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           scored_zero: 'Zéro automatique'
         };
         return labels[status] || status;
+      }
+
+      function getSafeProfileColor(value) {
+        var raw = String(value || '').trim();
+        if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(raw)) {
+          return raw;
+        }
+        return '#0f766e';
+      }
+
+      function getInitials(value) {
+        var text = String(value || '').trim();
+        if (!text) {
+          return 'MQ';
+        }
+        var words = text.split(/\s+/).filter(Boolean);
+        if (words.length === 1) {
+          return words[0].slice(0, 2).toUpperCase();
+        }
+        return (words[0].slice(0, 1) + words[1].slice(0, 1)).toUpperCase();
+      }
+
+      function getDuelOpponentTitle(duel) {
+        if (duel.matchmakingMode === 'friend_invite') {
+          return duel.acceptedAt ? 'Adversaire invité' : 'Invitation en attente';
+        }
+        if (duel.matchmakingMode === 'random_level') {
+          return 'Rival niveau proche';
+        }
+        return 'Rival aléatoire';
+      }
+
+      function getAvatarLoadoutLabels() {
+        if (!state.myAvatar || !state.myAvatar.equipment) {
+          return [];
+        }
+        var equipment = state.myAvatar.equipment;
+        return ['outfit', 'pose', 'object', 'background']
+          .map(function (type) {
+            return equipment[type] && equipment[type].name ? equipment[type].name : '';
+          })
+          .filter(Boolean)
+          .slice(0, 3);
+      }
+
+      function renderDuelPlayerCard(config) {
+        var tagsHtml = (config.tags || []).length
+          ? '<div class="duel-player-tags">' + config.tags.map(function (tag) {
+            var toneClass = tag.tone === 'warn' ? ' warn' : (tag.tone === 'neutral' ? ' neutral' : '');
+            return '<span class="chip' + toneClass + '">' + escapeHtml(tag.label) + '</span>';
+          }).join('') + '</div>'
+          : '';
+        var factsHtml = (config.facts || []).map(function (fact) {
+          return '<div class="duel-player-fact"><span>' + escapeHtml(fact.label) + '</span><b>' + escapeHtml(fact.value) + '</b></div>';
+        }).join('');
+        return '<div class="duel-player-card ' + escapeHtml(config.variant) + '" style="--player-accent:' + escapeHtml(config.accent) + ';">'
+          + '<div class="duel-player-head">'
+          + '<div class="duel-player-main">'
+          + '<div class="duel-player-avatar">' + escapeHtml(config.initials) + '</div>'
+          + '<div class="duel-player-identity">'
+          + '<div class="duel-player-role">' + escapeHtml(config.role) + '</div>'
+          + '<div class="duel-player-name">' + escapeHtml(config.name) + '</div>'
+          + '<div class="duel-player-subtitle">' + escapeHtml(config.subtitle) + '</div>'
+          + '</div>'
+          + '</div>'
+          + '<div class="duel-player-score"><b>' + escapeHtml(String(config.score)) + '</b><span>points</span></div>'
+          + '</div>'
+          + tagsHtml
+          + '<div class="duel-player-facts">' + factsHtml + '</div>'
+          + '</div>';
       }
 
       function getDuelGuideState(duel, meId) {
@@ -1951,6 +2215,55 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
               + '</div>';
           }).join('')
           : '<div class="mini">Aucune manche initialisée pour l\'instant.</div>';
+        var myScore = isPlayer1 ? d.score.player1 : d.score.player2;
+        var opponentScore = isPlayer1 ? d.score.player2 : d.score.player1;
+        var myAccent = getSafeProfileColor(state.me && state.me.profileColor);
+        var myName = getPreferredPlayerName();
+        var myStage = state.myAvatar && state.myAvatar.currentStage ? state.myAvatar.currentStage.name : 'Stade en chargement';
+        var mySpecialty = state.myAvatar && state.myAvatar.specialty ? state.myAvatar.specialty.name : 'Spécialité non choisie';
+        var myLoadout = getAvatarLoadoutLabels();
+        var opponentName = getDuelOpponentTitle(d);
+        var playerCardsHtml =
+          '<div class="duel-player-grid">'
+          + renderDuelPlayerCard({
+            variant: 'me',
+            accent: myAccent,
+            initials: getInitials(myName),
+            role: 'Moi',
+            name: myName,
+            subtitle: state.me && state.me.email ? state.me.email : 'Profil personnel',
+            score: myScore,
+            tags: [
+              { label: isMyTurn ? 'À toi de jouer' : 'En attente', tone: isMyTurn ? 'default' : 'neutral' },
+              { label: myJokerUsed ? 'Joker utilisé' : 'Joker dispo', tone: myJokerUsed ? 'warn' : 'default' }
+            ].concat(myLoadout.map(function (itemName) {
+              return { label: itemName, tone: 'neutral' };
+            })),
+            facts: [
+              { label: 'Stade', value: myStage },
+              { label: 'Spécialité', value: mySpecialty },
+              { label: 'Couleur profil', value: myAccent.toUpperCase() }
+            ]
+          })
+          + renderDuelPlayerCard({
+            variant: 'opponent',
+            accent: '#5b6f82',
+            initials: getInitials(opponentName),
+            role: 'Adversaire',
+            name: opponentName,
+            subtitle: d.acceptedAt ? 'Profil détaillé bientôt disponible côté duel.' : 'Le duel attend encore sa confirmation.',
+            score: opponentScore,
+            tags: [
+              { label: isMyTurn ? 'Attend ta réponse' : 'Joue maintenant', tone: isMyTurn ? 'neutral' : 'default' },
+              { label: opponentJokerUsed ? 'Joker utilisé' : 'Joker dispo', tone: opponentJokerUsed ? 'warn' : 'default' }
+            ],
+            facts: [
+              { label: 'Type', value: getDuelModeLabel(d.matchmakingMode) },
+              { label: 'Statut', value: getDuelStatusLabel(d.status) },
+              { label: 'Repère duel', value: String((isPlayer1 ? d.player2Id : d.player1Id) || '-').slice(0, 8) || '-' }
+            ]
+          })
+          + '</div>';
 
         var actions = [];
         if (canAccept) {
@@ -2084,6 +2397,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           + '<div class="duel-overview-card"><div class="k">Manche active</div><div class="v">' + escapeHtml(String(d.currentRoundNo)) + '/5</div></div>'
           + '<div class="duel-overview-card"><div class="k">Deadline</div><div class="v">' + escapeHtml(d.turnDeadlineAt ? formatDateTime(d.turnDeadlineAt) : '-') + '</div></div>'
           + '</div>'
+          + playerCardsHtml
           + '<div class="duel-stage-list">' + stageListHtml + '</div>'
           + '<div class="duel-callout"><b>' + escapeHtml(guideState.title) + '</b><div class="mini">' + escapeHtml(guideState.detail) + '</div></div>'
           + '<div class="duel-round-strip">' + roundsStripHtml + '</div>'
@@ -2875,6 +3189,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       async function bootstrapConnectedState() {
         ensureAuthUi();
         await loadMe();
+        await loadMyAvatar();
         await ensureDemoCatalogReady();
         await loadDashboard();
         await loadSubjects();
@@ -2926,6 +3241,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         });
         saveToken('');
         state.me = null;
+        state.myAvatar = null;
         state.dashboard = null;
         state.session = null;
         state.currentQuestion = null;
@@ -2947,7 +3263,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         state.currentRound = null;
         state.roundQuestions = [];
         state.roundQuestionShownAtBySlot = {};
-        refs.userBadge.textContent = 'Non connecté';
+        renderUserBadge();
         refs.subjectsList.innerHTML = '';
         refs.chaptersList.innerHTML = '';
         refs.stats.innerHTML = '';
