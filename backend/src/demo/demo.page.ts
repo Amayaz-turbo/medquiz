@@ -152,6 +152,196 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       font-size: 12px;
     }
 
+    .screen-root,
+    .screen-pane,
+    .screen-view {
+      display: grid;
+      gap: 14px;
+    }
+
+    .welcome-grid {
+      grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr);
+    }
+
+    .auth-landing-panel {
+      align-content: start;
+      min-height: 100%;
+    }
+
+    .app-toolbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .screen-title-block {
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .screen-title {
+      font-size: clamp(24px, 3vw, 34px);
+      font-weight: 800;
+      line-height: 1.05;
+      color: var(--ink);
+    }
+
+    .screen-subtitle {
+      font-size: 14px;
+      color: var(--ink-soft);
+      line-height: 1.4;
+      max-width: 62ch;
+    }
+
+    .app-toolbar-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .app-toolbar-actions .btn-inline.is-active {
+      background: linear-gradient(130deg, var(--brand), #0f9f8f);
+      color: #ffffff;
+      box-shadow: 0 10px 22px rgba(15, 118, 110, 0.22);
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+    }
+
+    .dashboard-card {
+      border: 1px solid #d7e6f0;
+      border-radius: 18px;
+      padding: 16px;
+      background:
+        radial-gradient(circle at top right, rgba(15, 118, 110, 0.1), transparent 34%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(244, 250, 255, 0.95));
+      display: grid;
+      gap: 12px;
+      min-height: 228px;
+    }
+
+    .dashboard-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .dashboard-kicker {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.26px;
+      color: var(--ink-soft);
+      font-weight: 800;
+    }
+
+    .dashboard-card-title {
+      margin-top: 4px;
+      font-size: 20px;
+      font-weight: 800;
+      line-height: 1.08;
+      color: var(--ink);
+    }
+
+    .dashboard-value {
+      font-size: clamp(24px, 3vw, 32px);
+      font-weight: 800;
+      line-height: 1.02;
+      color: var(--ink);
+      word-break: break-word;
+    }
+
+    .dashboard-copy {
+      font-size: 13px;
+      line-height: 1.45;
+      color: var(--ink-soft);
+    }
+
+    .dashboard-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .dashboard-card-actions {
+      margin-top: auto;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .summary-stack {
+      display: grid;
+      gap: 12px;
+    }
+
+    .summary-head {
+      display: grid;
+      gap: 8px;
+    }
+
+    .summary-title {
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 1.08;
+      color: var(--ink);
+    }
+
+    .summary-text {
+      font-size: 13px;
+      line-height: 1.45;
+      color: var(--ink-soft);
+    }
+
+    .summary-inline-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 10px;
+    }
+
+    .summary-card {
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      padding: 12px;
+      background: linear-gradient(180deg, #ffffff, #f7fbff);
+      display: grid;
+      gap: 5px;
+    }
+
+    .summary-card-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.24px;
+      color: var(--ink-soft);
+      font-weight: 800;
+    }
+
+    .summary-card-value {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--ink);
+      line-height: 1.2;
+      word-break: break-word;
+    }
+
+    .summary-card-note {
+      font-size: 12px;
+      line-height: 1.4;
+      color: var(--ink-soft);
+    }
+
     .auth-grid { display: grid; gap: 8px; }
 
     .label {
@@ -1510,7 +1700,15 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       }
       .user-badge { text-align: left; }
       .grid { grid-template-columns: 1fr; }
+      .welcome-grid { grid-template-columns: 1fr; }
       .panel { border-radius: 16px; }
+      .app-toolbar {
+        flex-direction: column;
+      }
+      .app-toolbar-actions {
+        width: 100%;
+        justify-content: flex-start;
+      }
       .notification-list,
       .duel-list,
       .subject-list,
@@ -1537,6 +1735,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       .focus-top,
       .session-brief-top,
       .history-top,
+      .dashboard-card-top,
       .q-header {
         flex-direction: column;
         align-items: flex-start;
@@ -1557,12 +1756,14 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         display: grid;
         grid-template-columns: 1fr;
       }
+      .dashboard-grid,
       .completion-actions,
       .duel-actions,
       .duel-stage-list,
       .duel-round-strip,
       .completion-kpis,
       .preset-grid,
+      .summary-grid,
       .session-brief-kpis {
         grid-template-columns: 1fr;
       }
@@ -1649,219 +1850,323 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       </div>
     </header>
 
-    <main class="grid">
-      <section class="panel session-design-panel" id="leftPanel">
-        <h2>Contrôle Session</h2>
+    <main class="screen-root">
+      <section id="welcomeScreen" class="screen-pane">
+        <div class="grid welcome-grid">
+          <section class="panel auth-landing-panel">
+            <h2>Accueil</h2>
 
-        <div class="section">
-          <div class="section-head">
-            <h3>Connexion</h3>
-            <span class="section-note">Compte test ou réel</span>
+            <div class="section">
+              <div class="section-head">
+                <h3>Connexion</h3>
+                <span class="section-note">Entre dans MedQuiz</span>
+              </div>
+              <div class="auth-grid">
+                <div>
+                  <label class="label" for="emailInput">Email</label>
+                  <input id="emailInput" type="email" placeholder="email" />
+                </div>
+                <div>
+                  <label class="label" for="passwordInput">Mot de passe</label>
+                  <input id="passwordInput" type="password" placeholder="mot de passe" />
+                </div>
+                <div>
+                  <label class="label" for="displayNameInput">Nom affiché (inscription)</label>
+                  <input id="displayNameInput" type="text" placeholder="nom affiché" />
+                </div>
+                <div class="row">
+                  <button class="btn-secondary" id="registerBtn">Créer compte</button>
+                  <button class="btn-primary" id="loginBtn">Se connecter</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel auth-landing-panel">
+            <h2>Vue Produit</h2>
+
+            <div class="section">
+              <div class="section-head">
+                <h3>Déroulé souhaité</h3>
+                <span class="section-note">Simple et naturel</span>
+              </div>
+              <div class="focus-list">
+                <div class="focus-item">
+                  <div class="focus-top">
+                    <div class="focus-title">
+                      <div class="focus-rank">01</div>
+                      <div class="focus-title-copy"><b>Accueil</b><div class="subject-meta">Connexion et entrée dans l’application</div></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="focus-item">
+                  <div class="focus-top">
+                    <div class="focus-title">
+                      <div class="focus-rank">02</div>
+                      <div class="focus-title-copy"><b>Dashboard</b><div class="subject-meta">Choix de la grande catégorie à explorer</div></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="focus-item">
+                  <div class="focus-top">
+                    <div class="focus-title">
+                      <div class="focus-rank">03</div>
+                      <div class="focus-title-copy"><b>Écrans dédiés</b><div class="subject-meta">Entraînement, Duel, Profil, Paramètres</div></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section id="appShell" class="screen-pane hidden">
+        <div class="app-toolbar panel">
+          <div class="screen-title-block">
+            <div class="session-brief-eyebrow">Navigation</div>
+            <div id="screenTitle" class="screen-title">Dashboard</div>
+            <div id="screenSubtitle" class="screen-subtitle">Choisis où tu veux entrer dans l’application.</div>
           </div>
-          <div class="auth-grid">
-            <div>
-              <label class="label" for="emailInput">Email</label>
-              <input id="emailInput" type="email" placeholder="email" />
-            </div>
-            <div>
-              <label class="label" for="passwordInput">Mot de passe</label>
-              <input id="passwordInput" type="password" placeholder="mot de passe" />
-            </div>
-            <div>
-              <label class="label" for="displayNameInput">Nom affiché (inscription)</label>
-              <input id="displayNameInput" type="text" placeholder="nom affiché" />
-            </div>
-            <div class="row">
-              <button class="btn-secondary" id="registerBtn">Créer compte</button>
-              <button class="btn-primary" id="loginBtn">Se connecter</button>
-            </div>
+          <div class="app-toolbar-actions">
+            <button class="btn-secondary btn-inline" id="homeNavBtn">Dashboard</button>
+            <button class="btn-secondary btn-inline" id="quickTrainingNavBtn">Entraînement</button>
+            <button class="btn-secondary btn-inline" id="quickDuelNavBtn">Duel</button>
             <button class="btn-danger hidden" id="logoutBtn">Déconnexion</button>
           </div>
         </div>
 
-        <div class="section">
-          <div class="section-head">
-            <h3>Studio De Session</h3>
-            <span class="section-note">Cadre ton entraînement avant de lancer</span>
-          </div>
-          <div class="auth-grid">
-            <div>
-              <label class="label" for="modeSelect">Mode</label>
-              <select id="modeSelect">
-                <option value="learning">Apprentissage</option>
-                <option value="discovery">Découverte</option>
-                <option value="review">Révision</option>
-                <option value="par_coeur">Par coeur</option>
-                <option value="rattrapage">A revoir</option>
-              </select>
+        <section id="dashboardScreen" class="screen-view">
+          <section class="panel">
+            <div class="section-head">
+              <h3>Dashboard</h3>
+              <span class="section-note">Point d’entrée principal</span>
             </div>
-            <div>
-              <label class="label" for="stopRuleSelect">Durée de session</label>
-              <select id="stopRuleSelect">
-                <option value="fixed_10">10 questions</option>
-                <option value="fixed_custom">Choisir nombre</option>
-                <option value="until_stop">Jusqu'à arrêt</option>
-              </select>
-            </div>
-            <div>
-              <label class="label" for="targetCountInput">Nombre de questions (mode personnalisé)</label>
-              <input id="targetCountInput" type="number" min="1" max="200" value="20" placeholder="Nombre de questions" />
-            </div>
-            <button class="btn-primary" id="createSessionBtn" disabled>Démarrer entraînement</button>
-            <button class="btn-secondary" id="refreshDashboardBtn" disabled>Rafraîchir dashboard</button>
-          </div>
-        </div>
+            <div id="dashboardCards" class="dashboard-grid"></div>
+          </section>
+        </section>
 
-        <div class="section">
-          <div class="section-head">
-            <h3>Plan De Départ</h3>
-            <span id="setupStateChip" class="chip">À configurer</span>
-          </div>
-          <div id="setupChecklist" class="setup-list"></div>
-          <div class="preset-grid">
-            <button class="btn-secondary wide" id="presetRecommendedBtn" disabled>Preset conseillé</button>
-            <button class="btn-secondary" id="presetDiscoveryBtn" disabled>Découverte 10</button>
-            <button class="btn-secondary" id="presetReviewBtn" disabled>Révision libre</button>
-          </div>
-        </div>
+        <section id="trainingScreen" class="screen-view hidden">
+          <div class="grid">
+            <section class="panel session-design-panel" id="leftPanel">
+              <h2>Contrôle Session</h2>
 
-        <div class="section">
-          <div class="section-head">
-            <h3>Matières</h3>
-            <span class="section-note">Choisis ton terrain de jeu</span>
-          </div>
-          <div id="subjectsList" class="subject-list"></div>
-        </div>
+              <div class="section">
+                <div class="section-head">
+                  <h3>Studio De Session</h3>
+                  <span class="section-note">Cadre ton entraînement avant de lancer</span>
+                </div>
+                <div class="auth-grid">
+                  <div>
+                    <label class="label" for="modeSelect">Mode</label>
+                    <select id="modeSelect">
+                      <option value="learning">Apprentissage</option>
+                      <option value="discovery">Découverte</option>
+                      <option value="review">Révision</option>
+                      <option value="par_coeur">Par coeur</option>
+                      <option value="rattrapage">A revoir</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="label" for="stopRuleSelect">Durée de session</label>
+                    <select id="stopRuleSelect">
+                      <option value="fixed_10">10 questions</option>
+                      <option value="fixed_custom">Choisir nombre</option>
+                      <option value="until_stop">Jusqu'à arrêt</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="label" for="targetCountInput">Nombre de questions (mode personnalisé)</label>
+                    <input id="targetCountInput" type="number" min="1" max="200" value="20" placeholder="Nombre de questions" />
+                  </div>
+                  <button class="btn-primary" id="createSessionBtn" disabled>Démarrer entraînement</button>
+                  <button class="btn-secondary" id="refreshDashboardBtn" disabled>Rafraîchir dashboard</button>
+                </div>
+              </div>
 
-        <div class="section">
-          <div class="section-head">
-            <h3>Chapitres</h3>
-            <span class="section-note">Affine si tu veux cibler</span>
-          </div>
-          <div id="chaptersList" class="chapter-list"></div>
-        </div>
-      </section>
+              <div class="section">
+                <div class="section-head">
+                  <h3>Plan De Départ</h3>
+                  <span id="setupStateChip" class="chip">À configurer</span>
+                </div>
+                <div id="setupChecklist" class="setup-list"></div>
+                <div class="preset-grid">
+                  <button class="btn-secondary wide" id="presetRecommendedBtn" disabled>Preset conseillé</button>
+                  <button class="btn-secondary" id="presetDiscoveryBtn" disabled>Découverte 10</button>
+                  <button class="btn-secondary" id="presetReviewBtn" disabled>Révision libre</button>
+                </div>
+              </div>
 
-      <section class="panel training-panel">
-        <h2>Studio D'Entraînement</h2>
+              <div class="section">
+                <div class="section-head">
+                  <h3>Matières</h3>
+                  <span class="section-note">Choisis ton terrain de jeu</span>
+                </div>
+                <div id="subjectsList" class="subject-list"></div>
+              </div>
 
-        <div class="section">
-          <div class="section-head">
-            <h3>Cockpit Session</h3>
-            <span class="section-note">Ton état de jeu en un coup d'oeil</span>
-          </div>
-          <div class="stats" id="stats"></div>
-          <div id="sessionSummary" class="session-brief empty"></div>
-          <div class="goal-block">
-            <div class="goal-row">
-              <div id="sessionGoalLabel" class="muted">Objectif: session libre</div>
-              <div id="sessionGoalChip" class="chip">Libre</div>
-            </div>
-            <div class="progress-track">
-              <div id="sessionGoalProgressBar" class="progress-fill"></div>
-            </div>
-          </div>
-        </div>
+              <div class="section">
+                <div class="section-head">
+                  <h3>Chapitres</h3>
+                  <span class="section-note">Affine si tu veux cibler</span>
+                </div>
+                <div id="chaptersList" class="chapter-list"></div>
+              </div>
+            </section>
 
-        <div class="section">
-          <div class="section-head">
-            <h3>Scène De Question</h3>
-            <span class="section-note">Lecture, réponse, correction immédiate</span>
-          </div>
-          <div id="questionContainer" class="q-card question-stage hidden"></div>
-          <div class="row question-actions-row" id="questionActions">
-            <button class="btn-primary" id="submitAnswerBtn" disabled>Valider réponse</button>
-            <button class="btn-secondary" id="nextQuestionBtn" disabled>Question suivante</button>
-          </div>
-          <div class="question-exit-row">
-            <button class="btn-danger" id="completeSessionBtn" disabled>Terminer session</button>
-          </div>
-        </div>
+            <section class="panel training-panel">
+              <h2>Studio D'Entraînement</h2>
 
-        <div class="section">
-          <div class="section-head">
-            <h3>Coach De Révision</h3>
-            <span class="section-note">Ce que tes résultats suggèrent ensuite</span>
-          </div>
-          <div id="focusList" class="focus-list"></div>
-          <div class="goal-row" style="margin-top:8px">
-            <div id="suggestedModeLabel" class="muted">Mode conseillé: -</div>
-            <button class="btn-secondary btn-inline" id="applySuggestedModeBtn" disabled>Appliquer</button>
-          </div>
-        </div>
+              <div class="section">
+                <div class="section-head">
+                  <h3>Cockpit Session</h3>
+                  <span class="section-note">Ton état de jeu en un coup d'oeil</span>
+                </div>
+                <div class="stats" id="stats"></div>
+                <div id="sessionSummary" class="session-brief empty"></div>
+                <div class="goal-block">
+                  <div class="goal-row">
+                    <div id="sessionGoalLabel" class="muted">Objectif: session libre</div>
+                    <div id="sessionGoalChip" class="chip">Libre</div>
+                  </div>
+                  <div class="progress-track">
+                    <div id="sessionGoalProgressBar" class="progress-fill"></div>
+                  </div>
+                </div>
+              </div>
 
-        <div class="section">
-          <div class="section-head">
-            <h3>État système</h3>
-          </div>
-          <div id="statusBox" class="status info">Connecte-toi pour commencer.</div>
-        </div>
+              <div class="section">
+                <div class="section-head">
+                  <h3>Scène De Question</h3>
+                  <span class="section-note">Lecture, réponse, correction immédiate</span>
+                </div>
+                <div id="questionContainer" class="q-card question-stage hidden"></div>
+                <div class="row question-actions-row" id="questionActions">
+                  <button class="btn-primary" id="submitAnswerBtn" disabled>Valider réponse</button>
+                  <button class="btn-secondary" id="nextQuestionBtn" disabled>Question suivante</button>
+                </div>
+                <div class="question-exit-row">
+                  <button class="btn-danger" id="completeSessionBtn" disabled>Terminer session</button>
+                </div>
+              </div>
 
-        <div id="completionSection" class="section hidden">
-          <div class="section-head">
-            <h3>Débrief De Session</h3>
-            <span class="section-note">Bilan utile et relance immédiate</span>
-          </div>
-          <div id="completionContent" class="completion-card completion-card-rich"></div>
-        </div>
+              <div class="section">
+                <div class="section-head">
+                  <h3>Coach De Révision</h3>
+                  <span class="section-note">Ce que tes résultats suggèrent ensuite</span>
+                </div>
+                <div id="focusList" class="focus-list"></div>
+                <div class="goal-row" style="margin-top:8px">
+                  <div id="suggestedModeLabel" class="muted">Mode conseillé: -</div>
+                  <button class="btn-secondary btn-inline" id="applySuggestedModeBtn" disabled>Appliquer</button>
+                </div>
+              </div>
 
-        <div class="section">
-          <div class="section-head">
-            <h3>Trace Immédiate</h3>
-            <span class="section-note">Tes 12 dernières réponses commentées</span>
-          </div>
-          <div id="historyList" class="history-list"></div>
-        </div>
+              <div class="section">
+                <div class="section-head">
+                  <h3>État système</h3>
+                </div>
+                <div id="statusBox" class="status info">Connecte-toi pour commencer.</div>
+              </div>
 
-        <div class="section">
-          <div class="section-head">
-            <h3>Notifications</h3>
-            <span id="notificationsUnreadChip" class="chip">0 non lues</span>
-          </div>
-          <div class="goal-row">
-            <div class="muted">Tours de duel, sursis, fins de partie.</div>
-            <button class="btn-secondary btn-inline" id="refreshNotificationsBtn" disabled>Rafraîchir</button>
-          </div>
-          <div id="notificationsList" class="notification-list"></div>
-        </div>
+              <div id="completionSection" class="section hidden">
+                <div class="section-head">
+                  <h3>Débrief De Session</h3>
+                  <span class="section-note">Bilan utile et relance immédiate</span>
+                </div>
+                <div id="completionContent" class="completion-card completion-card-rich"></div>
+              </div>
 
-        <div class="section">
-          <div class="section-head">
-            <h3>Duel Asynchrone</h3>
-            <span class="section-note">5 manches x 3 questions</span>
+              <div class="section">
+                <div class="section-head">
+                  <h3>Trace Immédiate</h3>
+                  <span class="section-note">Tes 12 dernières réponses commentées</span>
+                </div>
+                <div id="historyList" class="history-list"></div>
+              </div>
+            </section>
           </div>
-          <div class="auth-grid">
-            <div>
-              <label class="label" for="duelModeSelect">Type de duel</label>
-              <select id="duelModeSelect">
-                <option value="friend_invite">Ami (invitation)</option>
-                <option value="random_free">Aléatoire</option>
-                <option value="random_level">Niveau proche</option>
-              </select>
-            </div>
-            <div>
-              <label class="label" for="duelOpponentInput">Opponent userId (UUID pour ami)</label>
-              <input id="duelOpponentInput" type="text" placeholder="UUID adversaire" />
-            </div>
-            <div>
-              <label class="label" for="duelStatusFilterSelect">Filtre liste</label>
-              <select id="duelStatusFilterSelect">
-                <option value="all">Tous</option>
-                <option value="pending_opener">pending_opener</option>
-                <option value="in_progress">in_progress</option>
-                <option value="completed">completed</option>
-                <option value="cancelled">cancelled</option>
-                <option value="expired">expired</option>
-              </select>
-            </div>
-            <div class="row">
-              <button class="btn-primary" id="createDuelBtn" disabled>Créer duel</button>
-              <button class="btn-secondary" id="refreshDuelsBtn" disabled>Rafraîchir duels</button>
-            </div>
+        </section>
+
+        <section id="duelScreen" class="screen-view hidden">
+          <div class="grid">
+            <section class="panel">
+              <h2>Notifications</h2>
+              <div class="section">
+                <div class="section-head">
+                  <h3>Centre De Notifications</h3>
+                  <span id="notificationsUnreadChip" class="chip">0 non lues</span>
+                </div>
+                <div class="goal-row">
+                  <div class="muted">Tours de duel, sursis, fins de partie.</div>
+                  <button class="btn-secondary btn-inline" id="refreshNotificationsBtn" disabled>Rafraîchir</button>
+                </div>
+                <div id="notificationsList" class="notification-list"></div>
+              </div>
+            </section>
+
+            <section class="panel">
+              <h2>Duel Asynchrone</h2>
+              <div class="section">
+                <div class="section-head">
+                  <h3>Duel Asynchrone</h3>
+                  <span class="section-note">5 manches x 3 questions</span>
+                </div>
+                <div class="auth-grid">
+                  <div>
+                    <label class="label" for="duelModeSelect">Type de duel</label>
+                    <select id="duelModeSelect">
+                      <option value="friend_invite">Ami (invitation)</option>
+                      <option value="random_free">Aléatoire</option>
+                      <option value="random_level">Niveau proche</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="label" for="duelOpponentInput">Opponent userId (UUID pour ami)</label>
+                    <input id="duelOpponentInput" type="text" placeholder="UUID adversaire" />
+                  </div>
+                  <div>
+                    <label class="label" for="duelStatusFilterSelect">Filtre liste</label>
+                    <select id="duelStatusFilterSelect">
+                      <option value="all">Tous</option>
+                      <option value="pending_opener">pending_opener</option>
+                      <option value="in_progress">in_progress</option>
+                      <option value="completed">completed</option>
+                      <option value="cancelled">cancelled</option>
+                      <option value="expired">expired</option>
+                    </select>
+                  </div>
+                  <div class="row">
+                    <button class="btn-primary" id="createDuelBtn" disabled>Créer duel</button>
+                    <button class="btn-secondary" id="refreshDuelsBtn" disabled>Rafraîchir duels</button>
+                  </div>
+                </div>
+                <div id="duelsList" class="duel-list" style="margin-top:8px"></div>
+                <div id="duelDetail" class="duel-detail-card hidden" style="margin-top:8px"></div>
+              </div>
+            </section>
           </div>
-          <div id="duelsList" class="duel-list" style="margin-top:8px"></div>
-          <div id="duelDetail" class="duel-detail-card hidden" style="margin-top:8px"></div>
-        </div>
+        </section>
+
+        <section id="profileScreen" class="screen-view hidden">
+          <div class="grid">
+            <section class="panel">
+              <h2>Profil</h2>
+              <div id="profileSummary" class="section"></div>
+            </section>
+            <section class="panel">
+              <h2>Avatar</h2>
+              <div id="profileAvatarSummary" class="section"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="settingsScreen" class="screen-view hidden">
+          <section class="panel">
+            <h2>Paramètres</h2>
+            <div id="settingsSummary" class="section"></div>
+          </section>
+        </section>
       </section>
     </main>
   </div>
@@ -1878,6 +2183,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
       var state = {
         token: persistedToken,
+        activeScreen: persistedToken ? 'dashboard' : 'welcome',
         me: null,
         myAvatar: null,
         dashboard: null,
@@ -1906,6 +2212,22 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
       var refs = {
         userBadge: document.getElementById('userBadge'),
+        welcomeScreen: document.getElementById('welcomeScreen'),
+        appShell: document.getElementById('appShell'),
+        dashboardScreen: document.getElementById('dashboardScreen'),
+        trainingScreen: document.getElementById('trainingScreen'),
+        duelScreen: document.getElementById('duelScreen'),
+        profileScreen: document.getElementById('profileScreen'),
+        settingsScreen: document.getElementById('settingsScreen'),
+        screenTitle: document.getElementById('screenTitle'),
+        screenSubtitle: document.getElementById('screenSubtitle'),
+        homeNavBtn: document.getElementById('homeNavBtn'),
+        quickTrainingNavBtn: document.getElementById('quickTrainingNavBtn'),
+        quickDuelNavBtn: document.getElementById('quickDuelNavBtn'),
+        dashboardCards: document.getElementById('dashboardCards'),
+        profileSummary: document.getElementById('profileSummary'),
+        profileAvatarSummary: document.getElementById('profileAvatarSummary'),
+        settingsSummary: document.getElementById('settingsSummary'),
         emailInput: document.getElementById('emailInput'),
         passwordInput: document.getElementById('passwordInput'),
         displayNameInput: document.getElementById('displayNameInput'),
@@ -1955,10 +2277,97 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
       var notificationPollHandle = null;
       var notificationToastTimers = {};
+      var screenMeta = {
+        welcome: {
+          title: 'Accueil',
+          subtitle: 'Connecte-toi pour entrer dans MedQuiz.'
+        },
+        dashboard: {
+          title: 'Dashboard',
+          subtitle: 'Choisis la grande catégorie que tu veux ouvrir.'
+        },
+        training: {
+          title: 'Entraînement',
+          subtitle: 'Prépare une session, joue question par question et termine par un débrief utile.'
+        },
+        duel: {
+          title: 'Duel',
+          subtitle: 'Gère tes défis asynchrones, tes notifications et tes jokers depuis un seul écran.'
+        },
+        profile: {
+          title: 'Profil',
+          subtitle: 'Relis ton identité joueur, ton parcours et ton avatar de progression.'
+        },
+        settings: {
+          title: 'Paramètres',
+          subtitle: 'Vérifie les réglages de compte, de visibilité et de configuration locale.'
+        }
+      };
 
       function setStatus(msg, tone) {
         refs.statusBox.className = 'status ' + (tone || 'info');
         refs.statusBox.textContent = msg;
+      }
+
+      function getUnreadNotificationsCount() {
+        return state.notifications.filter(function (item) {
+          return item.status !== 'read';
+        }).length;
+      }
+
+      function getActiveDuelsCount() {
+        return state.duels.filter(function (item) {
+          return item.status === 'pending_opener' || item.status === 'in_progress';
+        }).length;
+      }
+
+      function setNavButtonActive(button, active) {
+        if (!button) {
+          return;
+        }
+        button.classList.toggle('is-active', !!active);
+      }
+
+      function normalizeActiveScreen(screenKey) {
+        if (!state.token) {
+          return 'welcome';
+        }
+        return screenMeta[screenKey] ? screenKey : 'dashboard';
+      }
+
+      function renderScreenFrame() {
+        var connected = !!state.token;
+        var active = normalizeActiveScreen(state.activeScreen);
+        var screenRefs = {
+          dashboard: refs.dashboardScreen,
+          training: refs.trainingScreen,
+          duel: refs.duelScreen,
+          profile: refs.profileScreen,
+          settings: refs.settingsScreen
+        };
+
+        state.activeScreen = active;
+        refs.welcomeScreen.classList.toggle('hidden', connected);
+        refs.appShell.classList.toggle('hidden', !connected);
+
+        Object.keys(screenRefs).forEach(function (key) {
+          screenRefs[key].classList.toggle('hidden', !connected || key !== active);
+        });
+
+        if (!connected) {
+          return;
+        }
+
+        refs.screenTitle.textContent = screenMeta[active].title;
+        refs.screenSubtitle.textContent = screenMeta[active].subtitle;
+        setNavButtonActive(refs.homeNavBtn, active === 'dashboard');
+        setNavButtonActive(refs.quickTrainingNavBtn, active === 'training');
+        setNavButtonActive(refs.quickDuelNavBtn, active === 'duel');
+      }
+
+      function setActiveScreen(screenKey) {
+        state.activeScreen = normalizeActiveScreen(screenKey);
+        renderScreenFrame();
       }
 
       async function api(path, options) {
@@ -2043,6 +2452,216 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         return 'Joueur MedQuiz';
       }
 
+      function summaryCardHtml(label, value, note) {
+        return '<div class="summary-card">'
+          + '<div class="summary-card-label">' + escapeHtml(label) + '</div>'
+          + '<div class="summary-card-value">' + escapeHtml(value) + '</div>'
+          + (note ? ('<div class="summary-card-note">' + escapeHtml(note) + '</div>') : '')
+          + '</div>';
+      }
+
+      function getSubscriptionLabel() {
+        if (!state.me || !state.me.subscription) {
+          return 'Free';
+        }
+        var plan = state.me.subscription.plan || 'free';
+        var status = state.me.subscription.status || 'active';
+        return String(plan).toUpperCase() + ' · ' + status;
+      }
+
+      function renderDashboardCards() {
+        if (!state.token) {
+          refs.dashboardCards.innerHTML = '<div class="muted">Connecte-toi pour retrouver ton tableau de bord.</div>';
+          return;
+        }
+
+        var overview = state.dashboard && state.dashboard.overview ? state.dashboard.overview : null;
+        var suggestedMode = overview && overview.suggestedMode ? getModeLabel(overview.suggestedMode) : 'À déterminer';
+        var successRate = overview && overview.successRatePct != null ? (overview.successRatePct + '%') : 'Prêt';
+        var coverage = overview ? (overview.chapterCoveragePct + '%') : '-';
+        var activeDuels = getActiveDuelsCount();
+        var unreadNotifications = getUnreadNotificationsCount();
+        var stageName = state.myAvatar && state.myAvatar.currentStage ? state.myAvatar.currentStage.name : 'Début du parcours';
+        var nextStage = state.myAvatar && state.myAvatar.nextStage ? state.myAvatar.nextStage.name : '';
+        var settingsValue = state.me && state.me.timezone ? state.me.timezone : 'Europe/Paris';
+
+        var cards = [
+          {
+            kicker: 'Révision',
+            title: 'Entraînement',
+            value: successRate,
+            copy: 'Mode conseillé: ' + suggestedMode + '. Couverture du programme déjà travaillée: ' + coverage + '.',
+            chips: [
+              'Sessions 7j: ' + escapeHtml(String(overview ? overview.sessions7dCount : 0)),
+              'Tentatives: ' + escapeHtml(String(overview ? overview.attemptsCount : 0))
+            ],
+            badgeText: 'Session',
+            screen: 'training',
+            actionLabel: 'Ouvrir entraînement'
+          },
+          {
+            kicker: 'Challenge',
+            title: 'Duel',
+            value: activeDuels ? (String(activeDuels) + ' actif' + (activeDuels > 1 ? 's' : '')) : 'Prêt à lancer',
+            copy: unreadNotifications
+              ? (String(unreadNotifications) + ' notification' + (unreadNotifications > 1 ? 's' : '') + ' demandent ton attention.')
+              : 'Tes invitations, manches en attente et sursis se retrouvent ici.',
+            chips: [
+              'Notifications: ' + escapeHtml(String(unreadNotifications)),
+              'Filtre: ' + escapeHtml(refs.duelStatusFilterSelect.value)
+            ],
+            badgeText: unreadNotifications ? (String(unreadNotifications) + ' new') : 'Duel',
+            badgeTone: unreadNotifications ? 'warn' : '',
+            screen: 'duel',
+            actionLabel: 'Ouvrir duel'
+          },
+          {
+            kicker: 'Identité',
+            title: 'Profil',
+            value: stageName,
+            copy: nextStage
+              ? ('Prochaine étape avatar: ' + nextStage + '. Ton identité joueur se consolide ici.')
+              : 'Retrouve ton profil, ton alias et ton parcours de progression.',
+            chips: [
+              'Alias: ' + escapeHtml(state.me && state.me.publicAlias ? state.me.publicAlias : getPreferredPlayerName()),
+              'Abonnement: ' + escapeHtml(getSubscriptionLabel())
+            ],
+            badgeText: 'Profil',
+            screen: 'profile',
+            actionLabel: 'Voir profil'
+          },
+          {
+            kicker: 'Réglages',
+            title: 'Paramètres',
+            value: settingsValue,
+            copy: 'Timezone, visibilité et contexte local de la démo restent regroupés au même endroit.',
+            chips: [
+              'Visibilité: ' + escapeHtml(state.me && state.me.visibility ? state.me.visibility : 'friends'),
+              'Pays: ' + escapeHtml(state.me && state.me.countryCode ? state.me.countryCode : 'FR')
+            ],
+            badgeText: 'Réglages',
+            screen: 'settings',
+            actionLabel: 'Ouvrir paramètres'
+          }
+        ];
+
+        refs.dashboardCards.innerHTML = cards.map(function (card) {
+          var badgeClass = card.badgeTone ? ('chip ' + card.badgeTone) : 'chip';
+          return '<article class="dashboard-card">'
+            + '<div class="dashboard-card-top">'
+            + '<div>'
+            + '<div class="dashboard-kicker">' + escapeHtml(card.kicker) + '</div>'
+            + '<div class="dashboard-card-title">' + escapeHtml(card.title) + '</div>'
+            + '</div>'
+            + '<span class="' + badgeClass + '">' + escapeHtml(card.badgeText) + '</span>'
+            + '</div>'
+            + '<div class="dashboard-value">' + escapeHtml(card.value) + '</div>'
+            + '<div class="dashboard-copy">' + escapeHtml(card.copy) + '</div>'
+            + '<div class="dashboard-meta">' + card.chips.map(function (chipLabel) {
+              return '<span class="chip">' + chipLabel + '</span>';
+            }).join('') + '</div>'
+            + '<div class="dashboard-card-actions"><button class="btn-primary btn-inline" data-nav-screen="' + escapeHtml(card.screen) + '">' + escapeHtml(card.actionLabel) + '</button></div>'
+            + '</article>';
+        }).join('');
+      }
+
+      function renderProfileSummary() {
+        if (!state.token) {
+          refs.profileSummary.innerHTML = '<div class="muted">Connecte-toi pour afficher ton profil.</div>';
+          refs.profileAvatarSummary.innerHTML = '<div class="muted">Connecte-toi pour afficher ton avatar.</div>';
+          return;
+        }
+
+        if (!state.me) {
+          refs.profileSummary.innerHTML = '<div class="muted">Chargement du profil…</div>';
+        } else {
+          refs.profileSummary.innerHTML =
+            '<div class="summary-stack">'
+            + '<div class="summary-head">'
+            + '<div class="summary-title">' + escapeHtml(getPreferredPlayerName()) + '</div>'
+            + '<div class="summary-text">Tu peux retrouver ici ton identité publique, ton parcours d’études et la manière dont ton profil est présenté dans l’application.</div>'
+            + '<div class="summary-inline-chips">'
+            + '<span class="chip">' + escapeHtml(state.me.publicAlias || 'Alias libre') + '</span>'
+            + '<span class="chip">' + escapeHtml(state.me.visibility || 'friends') + '</span>'
+            + '<span class="chip">' + escapeHtml(getSubscriptionLabel()) + '</span>'
+            + '</div>'
+            + '</div>'
+            + '<div class="summary-grid">'
+            + summaryCardHtml('Email', state.me.email || '-', 'Compte utilisé pour la connexion')
+            + summaryCardHtml('Parcours', state.me.studyTrack || 'Non renseigné', 'Ex: PASS, LAS, DFGSM2...')
+            + summaryCardHtml('Année', state.me.yearLabel || 'Non renseignée', 'Tu peux l’utiliser pour te situer')
+            + summaryCardHtml('Couleur', state.me.profileColor || '#0f766e', 'Couleur visible dans certains écrans duel')
+            + '</div>'
+            + '</div>';
+        }
+
+        if (!state.myAvatar) {
+          refs.profileAvatarSummary.innerHTML = '<div class="muted">Ton avatar n’est pas encore initialisé.</div>';
+          return;
+        }
+
+        var equipmentSummary = Array.isArray(state.myAvatar.inventorySummary)
+          ? state.myAvatar.inventorySummary
+          : [];
+        var equipmentLabels = ['outfit', 'pose', 'object', 'background']
+          .map(function (type) {
+            return state.myAvatar.equipment && state.myAvatar.equipment[type] && state.myAvatar.equipment[type].name
+              ? state.myAvatar.equipment[type].name
+              : '';
+          })
+          .filter(Boolean);
+
+        refs.profileAvatarSummary.innerHTML =
+          '<div class="summary-stack">'
+          + '<div class="summary-head">'
+          + '<div class="summary-title">' + escapeHtml(state.myAvatar.currentStage.name) + '</div>'
+          + '<div class="summary-text">' + escapeHtml(
+            state.myAvatar.nextStage
+              ? ('Prochaine étape: ' + state.myAvatar.nextStage.name + '. Continue à jouer pour progresser.')
+              : 'Tu es à un stade avancé du parcours avatar.'
+          ) + '</div>'
+          + '<div class="summary-inline-chips">'
+          + '<span class="chip">' + escapeHtml(state.myAvatar.specialty ? state.myAvatar.specialty.name : 'Spécialité non choisie') + '</span>'
+          + '<span class="chip">' + escapeHtml(String(state.myAvatar.xpPoints)) + ' XP</span>'
+          + '</div>'
+          + '</div>'
+          + '<div class="summary-grid">'
+          + summaryCardHtml('Stade actuel', state.myAvatar.currentStage.name, 'Progression médecine en cours')
+          + summaryCardHtml('Prochain stade', state.myAvatar.nextStage ? state.myAvatar.nextStage.name : 'Dernier stade connu', 'Vision long terme')
+          + summaryCardHtml('Équipement actif', equipmentLabels.length ? equipmentLabels.join(' · ') : 'Aucun objet équipé', 'Tenue, pose, objet, décor')
+          + summaryCardHtml('Inventaire', equipmentSummary.length ? equipmentSummary.map(function (item) { return item.type + ': ' + item.totalUnlocked; }).join(' · ') : 'Inventaire vide', 'Objets débloqués par catégorie')
+          + '</div>'
+          + '</div>';
+      }
+
+      function renderSettingsSummary() {
+        if (!state.token) {
+          refs.settingsSummary.innerHTML = '<div class="muted">Connecte-toi pour afficher les paramètres du compte.</div>';
+          return;
+        }
+
+        if (!state.me) {
+          refs.settingsSummary.innerHTML = '<div class="muted">Chargement des paramètres…</div>';
+          return;
+        }
+
+        refs.settingsSummary.innerHTML =
+          '<div class="summary-stack">'
+          + '<div class="summary-head">'
+          + '<div class="summary-title">Réglages du compte</div>'
+          + '<div class="summary-text">Cet écran regroupe les informations de contexte qui pilotent l’expérience: fuseau, visibilité, abonnement et état local de la démo.</div>'
+          + '</div>'
+          + '<div class="summary-grid">'
+          + summaryCardHtml('Fuseau horaire', state.me.timezone || 'Europe/Paris', 'Base des dates et rappels')
+          + summaryCardHtml('Pays', state.me.countryCode || 'FR', 'Contexte du compte')
+          + summaryCardHtml('Visibilité', state.me.visibility || 'friends', 'Qui peut voir ton profil')
+          + summaryCardHtml('Notifications', String(getUnreadNotificationsCount()), 'Notifications non lues actuellement')
+          + summaryCardHtml('Duels actifs', String(getActiveDuelsCount()), 'Invitations + duels en cours')
+          + summaryCardHtml('Abonnement', getSubscriptionLabel(), 'État premium ou free')
+          + '</div>'
+          + '</div>';
+      }
+
       function renderUserBadge() {
         if (!state.me) {
           refs.userBadge.textContent = 'Non connecté';
@@ -2056,6 +2675,9 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       async function loadMe() {
         state.me = await api('/me');
         renderUserBadge();
+        renderDashboardCards();
+        renderProfileSummary();
+        renderSettingsSummary();
       }
 
       async function loadMyAvatar() {
@@ -2065,6 +2687,8 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           state.myAvatar = null;
         }
         renderUserBadge();
+        renderDashboardCards();
+        renderProfileSummary();
       }
 
       async function ensureDemoCatalogReady() {
@@ -2079,6 +2703,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         renderStats();
         renderFocus();
         renderSetupGuide();
+        renderDashboardCards();
       }
 
       async function loadSubjects() {
@@ -3390,6 +4015,8 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           state.notificationSeeded = false;
           renderNotifications();
           renderNotificationToasts();
+          renderDashboardCards();
+          renderSettingsSummary();
           return;
         }
         var previousIds = state.notifications.map(function (item) { return item.id; });
@@ -3404,6 +4031,8 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         state.notifications = nextItems;
         state.notificationSeeded = true;
         renderNotifications();
+        renderDashboardCards();
+        renderSettingsSummary();
         if (newItems.length) {
           enqueueNotificationToasts(newItems);
         }
@@ -3475,6 +4104,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         if (duelId && isUuidV4(duelId)) {
           await loadDuels();
           await loadDuelDetail(duelId);
+          setActiveScreen('duel');
           if (state.selectedDuel && state.selectedDuel.status === 'in_progress') {
             try {
               await loadCurrentRound();
@@ -3493,6 +4123,8 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         if (!state.token) {
           state.duels = [];
           renderDuelsList();
+          renderDashboardCards();
+          renderSettingsSummary();
           return;
         }
         var status = getDuelStatusFilterParam();
@@ -3500,6 +4132,8 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         var result = await api(path);
         state.duels = result.items || [];
         renderDuelsList();
+        renderDashboardCards();
+        renderSettingsSummary();
       }
 
       async function loadDuelDetail(duelId) {
@@ -4087,6 +4721,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         await loadDuels();
         startNotificationPolling();
         setDuelModeUi();
+        setActiveScreen('dashboard');
         setStatus('Prêt. Lance une session d\'entraînement.', 'info');
       }
 
@@ -4158,6 +4793,10 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         refs.chaptersList.innerHTML = '';
         refs.stats.innerHTML = '';
         refs.focusList.innerHTML = '';
+        refs.dashboardCards.innerHTML = '';
+        refs.profileSummary.innerHTML = '';
+        refs.profileAvatarSummary.innerHTML = '';
+        refs.settingsSummary.innerHTML = '';
         refs.notificationsList.innerHTML = '';
         refs.notificationsUnreadChip.className = 'chip';
         refs.notificationsUnreadChip.textContent = '0 non lues';
@@ -4175,7 +4814,36 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         renderSessionGoal();
         renderCompletion();
         ensureAuthUi();
+        setActiveScreen('welcome');
         setStatus('Déconnecté.', 'info');
+      });
+
+      refs.homeNavBtn.addEventListener('click', function () {
+        setActiveScreen('dashboard');
+      });
+
+      refs.quickTrainingNavBtn.addEventListener('click', function () {
+        setActiveScreen('training');
+      });
+
+      refs.quickDuelNavBtn.addEventListener('click', function () {
+        setActiveScreen('duel');
+      });
+
+      refs.dashboardCards.addEventListener('click', function (event) {
+        var target = event.target;
+        if (!target || typeof target.closest !== 'function') {
+          return;
+        }
+        var btn = target.closest('button[data-nav-screen]');
+        if (!btn) {
+          return;
+        }
+        var screen = btn.getAttribute('data-nav-screen');
+        if (!screen) {
+          return;
+        }
+        setActiveScreen(screen);
       });
 
       refs.createSessionBtn.addEventListener('click', async function () {
@@ -4510,7 +5178,11 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       (async function init() {
         try {
           ensureAuthUi();
+          renderScreenFrame();
           setDuelModeUi();
+          renderDashboardCards();
+          renderProfileSummary();
+          renderSettingsSummary();
           renderDuelsList();
           renderDuelDetail();
           renderSessionSummary();
@@ -4525,10 +5197,13 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           refs.targetCountInput.disabled = refs.stopRuleSelect.value !== 'fixed_custom';
           if (state.token) {
             await bootstrapConnectedState();
+          } else {
+            setActiveScreen('welcome');
           }
         } catch (err) {
           saveToken('');
           ensureAuthUi();
+          setActiveScreen('welcome');
           setStatus((err && err.message) ? err.message : 'Session invalide, reconnecte-toi.', 'err');
         }
       })();
