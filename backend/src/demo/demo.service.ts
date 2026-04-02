@@ -1345,6 +1345,186 @@ const DEMO_SUBJECTS: DemoSubjectSeed[] = [
         ]
       }
     ]
+  },
+  {
+    code: "HISTO_EMBRYO",
+    name: "Histologie, embryologie et cytologie",
+    chapterCode: "HISTOLOGIE_GENERALE",
+    chapterName: "Histologie générale",
+    chapters: [
+      { code: "HISTOLOGIE_GENERALE", name: "Histologie générale" },
+      { code: "EMBRYOLOGIE", name: "Embryologie" }
+    ],
+    questions: [
+      {
+        type: "single_choice",
+        prompt: "[Demo] Sur quelle structure repose un épithélium de revêtement ?",
+        explanation: "Un épithélium de revêtement repose sur une lame basale qui le sépare du tissu conjonctif sous-jacent.",
+        difficulty: 1,
+        chapterCode: "HISTOLOGIE_GENERALE",
+        chapterName: "Histologie générale",
+        choices: [
+          { label: "Lame basale", isCorrect: true },
+          { label: "Sarcomère", isCorrect: false },
+          { label: "Méninge", isCorrect: false },
+          { label: "Endocarde", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Quel tissu est caractérisé par une matrice extracellulaire abondante ?",
+        explanation: "Le tissu conjonctif se distingue par une matrice extracellulaire abondante par rapport au tissu épithélial.",
+        difficulty: 1,
+        chapterCode: "HISTOLOGIE_GENERALE",
+        chapterName: "Histologie générale",
+        choices: [
+          { label: "Tissu conjonctif", isCorrect: true },
+          { label: "Tissu épithélial", isCorrect: false },
+          { label: "Tissu nerveux", isCorrect: false },
+          { label: "Tissu musculaire cardiaque", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Quelle cellule sanguine mature ne possède normalement pas de noyau ?",
+        explanation: "L'érythrocyte mature humain a perdu son noyau, ce qui favorise le transport des gaz.",
+        difficulty: 1,
+        chapterCode: "HISTOLOGIE_GENERALE",
+        chapterName: "Histologie générale",
+        choices: [
+          { label: "Érythrocyte", isCorrect: true },
+          { label: "Lymphocyte", isCorrect: false },
+          { label: "Monocyte", isCorrect: false },
+          { label: "Fibroblaste", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Quel type de tissu musculaire est involontaire et présent dans la paroi des viscères ?",
+        explanation: "Le muscle lisse est involontaire et se trouve notamment dans la paroi digestive ou vasculaire.",
+        difficulty: 1,
+        chapterCode: "HISTOLOGIE_GENERALE",
+        chapterName: "Histologie générale",
+        choices: [
+          { label: "Muscle lisse", isCorrect: true },
+          { label: "Muscle strié squelettique", isCorrect: false },
+          { label: "Muscle cardiaque", isCorrect: false },
+          { label: "Tissu conjonctif dense", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Quelle cellule gliale est responsable de la myélinisation dans le système nerveux central ?",
+        explanation: "Dans le système nerveux central, la myéline est produite par les oligodendrocytes.",
+        difficulty: 2,
+        chapterCode: "HISTOLOGIE_GENERALE",
+        chapterName: "Histologie générale",
+        choices: [
+          { label: "Oligodendrocyte", isCorrect: true },
+          { label: "Cellule de Schwann", isCorrect: false },
+          { label: "Fibroblaste", isCorrect: false },
+          { label: "Plaquette", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] En coloration HES, quelle structure apparaît classiquement bleu-violet avec l'hématoxyline ?",
+        explanation: "L'hématoxyline colore surtout les structures basophiles, notamment les noyaux.",
+        difficulty: 2,
+        chapterCode: "HISTOLOGIE_GENERALE",
+        chapterName: "Histologie générale",
+        choices: [
+          { label: "Les noyaux cellulaires", isCorrect: true },
+          { label: "Les fibres de collagène", isCorrect: false },
+          { label: "Les lipides neutres", isCorrect: false },
+          { label: "Le mucus", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Où se déroule la spermatogenèse ?",
+        explanation: "La spermatogenèse se déroule dans les tubes séminifères des testicules.",
+        difficulty: 1,
+        chapterCode: "EMBRYOLOGIE",
+        chapterName: "Embryologie",
+        choices: [
+          { label: "Dans les tubes séminifères", isCorrect: true },
+          { label: "Dans l'épididyme", isCorrect: false },
+          { label: "Dans la prostate", isCorrect: false },
+          { label: "Dans les vésicules séminales", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Comment s'appelle le stade embryonnaire qui s'implante dans l'utérus ?",
+        explanation: "Le blastocyste est le stade qui s'implante dans l'endomètre lors de la nidation.",
+        difficulty: 1,
+        chapterCode: "EMBRYOLOGIE",
+        chapterName: "Embryologie",
+        choices: [
+          { label: "Blastocyste", isCorrect: true },
+          { label: "Zygote", isCorrect: false },
+          { label: "Morula", isCorrect: false },
+          { label: "Gamète", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Quelle étape embryologique aboutit à la formation des trois feuillets embryonnaires ?",
+        explanation: "La gastrulation conduit à la formation de l'ectoderme, du mésoderme et de l'endoderme.",
+        difficulty: 1,
+        chapterCode: "EMBRYOLOGIE",
+        chapterName: "Embryologie",
+        choices: [
+          { label: "Gastrulation", isCorrect: true },
+          { label: "Neurulation", isCorrect: false },
+          { label: "Fécondation", isCorrect: false },
+          { label: "Segmentation", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Quelle structure se forme lors de la neurulation ?",
+        explanation: "La neurulation conduit à la formation du tube neural, à l'origine du système nerveux central.",
+        difficulty: 1,
+        chapterCode: "EMBRYOLOGIE",
+        chapterName: "Embryologie",
+        choices: [
+          { label: "Tube neural", isCorrect: true },
+          { label: "Canal déférent", isCorrect: false },
+          { label: "Canal thoracique", isCorrect: false },
+          { label: "Sinus veineux", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Quel est le rôle principal du placenta ?",
+        explanation: "Le placenta assure les échanges entre la mère et le fœtus, notamment pour les gaz et les nutriments.",
+        difficulty: 1,
+        chapterCode: "EMBRYOLOGIE",
+        chapterName: "Embryologie",
+        choices: [
+          { label: "Assurer les échanges mère-fœtus", isCorrect: true },
+          { label: "Produire les gamètes", isCorrect: false },
+          { label: "Former la moelle osseuse", isCorrect: false },
+          { label: "Remplacer le cordon ombilical", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Comment appelle-t-on un agent susceptible d'induire une malformation pendant le développement embryonnaire ?",
+        explanation: "Un agent tératogène peut perturber le développement embryonnaire et favoriser des malformations.",
+        difficulty: 2,
+        chapterCode: "EMBRYOLOGIE",
+        chapterName: "Embryologie",
+        choices: [
+          { label: "Tératogène", isCorrect: true },
+          { label: "Mitogène", isCorrect: false },
+          { label: "Anticoagulant", isCorrect: false },
+          { label: "Anabolisant", isCorrect: false }
+        ]
+      }
+    ]
   }
 ];
 

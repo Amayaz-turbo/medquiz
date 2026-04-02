@@ -4607,7 +4607,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
                   <section class="panel">
                     <div class="module-head">
                       <b>Choisir un entraînement</b>
-                      <span>D’abord le type de session. Ensuite seulement la configuration. Puis l’écran question.</span>
+                      <span>Choisis d’abord le type. On prendra ensuite les matières, puis le nombre de questions.</span>
                     </div>
                     <div id="trainingModeCards" class="training-mode-grid"></div>
                   </section>
@@ -4616,18 +4616,18 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
                 <section id="trainingSetupView" class="flow-view hidden">
                   <section class="panel">
                     <div class="training-back-row">
-                      <button class="btn-secondary btn-inline" id="trainingSetupBackBtn">Retour au périmètre</button>
+                      <button class="btn-secondary btn-inline" id="trainingSetupBackBtn">Retour aux matières</button>
                     </div>
                     <div class="module-head">
                       <b>Combien de questions ?</b>
-                      <span>Dernière étape avant de lancer la session: ici tu choisis seulement le nombre de questions.</span>
+                      <span>Dernière étape avant de lancer la session: ici tu choisis seulement la longueur de ta révision.</span>
                     </div>
                     <div class="training-setup-stack">
                       <div id="selectedTrainingModeBanner" class="selected-mode-banner"></div>
-                      <div class="training-flow-note">Tu as déjà choisi le type et le périmètre. Il ne reste plus qu’à fixer la longueur de la session.</div>
+                      <div class="training-flow-note">Le type et les matières sont déjà choisis. Il ne reste plus qu’à fixer le nombre de questions.</div>
                       <div class="section">
                         <div class="section-head">
-                          <h3>Durée de session</h3>
+                          <h3>Nombre de questions</h3>
                           <span id="setupStateChip" class="chip">À configurer</span>
                         </div>
                         <div class="auth-grid">
@@ -4642,15 +4642,15 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
                             </select>
                           </div>
                           <div>
-                            <label class="label" for="stopRuleSelect">Durée de session</label>
+                            <label class="label" for="stopRuleSelect">Format de session</label>
                             <select id="stopRuleSelect">
                               <option value="fixed_10">10 questions</option>
-                              <option value="fixed_custom">Choisir nombre</option>
-                              <option value="until_stop">Jusqu'à arrêt</option>
+                              <option value="fixed_custom">Nombre personnalisé</option>
+                              <option value="until_stop">Session libre</option>
                             </select>
                           </div>
                           <div>
-                            <label class="label" for="targetCountInput">Nombre de questions (mode personnalisé)</label>
+                            <label class="label" for="targetCountInput">Nombre de questions</label>
                             <input id="targetCountInput" type="number" min="1" max="200" value="20" placeholder="Nombre de questions" />
                           </div>
                         </div>
@@ -4663,7 +4663,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
                       </div>
 
                       <div class="training-setup-actions">
-                        <button class="btn-primary" id="trainingSetupNextBtn" disabled>Commencer la révision</button>
+                        <button class="btn-primary" id="trainingSetupNextBtn" disabled>Lancer la session</button>
                       </div>
                     </div>
                   </section>
@@ -4697,7 +4697,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
                       </div>
 
                       <div class="training-setup-actions">
-                        <button class="btn-primary" id="createSessionBtn" disabled>Choisir le nombre de questions</button>
+                        <button class="btn-primary" id="createSessionBtn" disabled>Continuer</button>
                         <button class="btn-secondary" id="refreshDashboardBtn" disabled>Rafraîchir les données</button>
                       </div>
                     </div>
@@ -7228,13 +7228,13 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         var scopeReady = true;
         var durationText = stopRule === 'fixed_custom'
           ? (durationValid ? (String(refs.targetCountInput.value) + ' questions') : 'Nombre invalide (1..200)')
-          : (stopRule === 'fixed_10' ? '10 questions' : 'Jusqu\'à arrêt');
+          : (stopRule === 'fixed_10' ? '10 questions' : 'Session libre');
 
         refs.setupChecklist.innerHTML = [
-          setupStepHtml(1, 'Mode', modeReady, getModeLabel(mode)),
-          setupStepHtml(2, 'Périmètre', scopeReady, scopeLabel),
-          setupStepHtml(3, 'Durée', durationValid, durationText),
-          setupStepHtml(4, 'Prêt à démarrer', connected && durationValid, connected ? (durationValid ? 'Session prête à lancer' : 'Corrige le nombre de questions') : 'Connecte-toi pour activer le lancement')
+          setupStepHtml(1, 'Type', modeReady, getModeLabel(mode)),
+          setupStepHtml(2, 'Matières', scopeReady, scopeLabel),
+          setupStepHtml(3, 'Questions', durationValid, durationText),
+          setupStepHtml(4, 'Session prête', connected && durationValid, connected ? (durationValid ? 'Prête à lancer' : 'Vérifie le nombre de questions') : 'Connecte-toi pour activer le lancement')
         ].join('');
 
         if (!connected) {
@@ -7269,7 +7269,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           return;
         }
         refs.selectedTrainingModeBanner.innerHTML =
-          '<div><b>' + escapeHtml(getModeLabel(refs.modeSelect.value || 'learning')) + '</b><span>Type d’entraînement déjà choisi</span></div>'
+          '<div><b>' + escapeHtml(getModeLabel(refs.modeSelect.value || 'learning')) + '</b><span>Type choisi</span></div>'
           + '<span class="chip">' + escapeHtml(getSessionScopeLabel()) + '</span>';
       }
 
