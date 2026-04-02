@@ -508,6 +508,7 @@ export class TrainingsService {
 
       let isCorrect = false;
       let selectedChoiceIds: string[] = [];
+      let correctChoiceIds: string[] = [];
       let openTextAnswer: string | null = null;
       let normalizedOpenTextAnswer: string | null = null;
       let openTextExpectedAnswers: string[] = [];
@@ -546,6 +547,7 @@ export class TrainingsService {
             SELECT id, is_correct
             FROM question_choices
             WHERE question_id = $1
+            ORDER BY position ASC
           `,
           [dto.questionId]
         );
@@ -560,6 +562,9 @@ export class TrainingsService {
           question.question_type === "single_choice"
             ? this.normalizeSingleChoiceSelection(dto)
             : this.normalizeMultiChoiceSelection(dto);
+        correctChoiceIds = choicesResult.rows
+          .filter((choice) => choice.is_correct)
+          .map((choice) => choice.id);
 
         const choiceMap = new Map(choicesResult.rows.map((choice) => [choice.id, choice.is_correct]));
         for (const choiceId of selectedChoiceIds) {
@@ -572,12 +577,14 @@ export class TrainingsService {
         }
 
         if (question.question_type === "single_choice") {
+          if (correctChoiceIds.length !== 1) {
+            throw new UnprocessableEntityException({
+              code: "QUESTION_CONFIGURATION_INVALID",
+              message: "Question must have exactly one correct choice configured"
+            });
+          }
           isCorrect = choiceMap.get(selectedChoiceIds[0]) ?? false;
         } else {
-          const correctChoiceIds = choicesResult.rows
-            .filter((choice) => choice.is_correct)
-            .map((choice) => choice.id)
-            .sort();
           if (correctChoiceIds.length === 0) {
             throw new UnprocessableEntityException({
               code: "QUESTION_CONFIGURATION_INVALID",
@@ -586,9 +593,10 @@ export class TrainingsService {
           }
 
           const normalizedSelected = [...selectedChoiceIds].sort();
+          const normalizedCorrect = [...correctChoiceIds].sort();
           isCorrect =
-            normalizedSelected.length === correctChoiceIds.length &&
-            normalizedSelected.every((choiceId, index) => choiceId === correctChoiceIds[index]);
+            normalizedSelected.length === normalizedCorrect.length &&
+            normalizedSelected.every((choiceId, index) => choiceId === normalizedCorrect[index]);
         }
       }
 
@@ -735,7 +743,11 @@ export class TrainingsService {
                 submittedAnswer: openTextAnswer,
                 expectedAnswers: openTextExpectedAnswers
               }
-            : null
+            : {
+                questionType: question.question_type,
+                selectedChoiceIds,
+                correctChoiceIds
+              }
       };
     });
   }
@@ -755,21 +767,69 @@ export class TrainingsService {
       [sessionId, userId]
     );
 
-    const statsResult = await this.db.query<{ attempts: string; correct: string }>(
-      `
-        SELECT
-          COUNT(*)::text AS attempts,
-          COUNT(*) FILTER (WHERE is_correct)::text AS correct
-        FROM quiz_answers
-        WHERE session_id = $1
-      `,
-      [sessionId]
-    );
+    const [statsResult, chapterBreakdownResult] = await Promise.all([
+      this.db.query<{ attempts: string; correct: string }>(
+        `
+          SELECT
+            COUNT(*)::text AS attempts,
+            COUNT(*) FILTER (WHERE is_correct)::text AS correct
+          FROM quiz_answers
+          WHERE session_id = $1
+        `,
+        [sessionId]
+      ),
+      this.db.query<{
+        subject_id: string;
+        subject_name: string;
+        chapter_id: string;
+        chapter_code: string;
+        chapter_name: string;
+        attempts_count: string;
+        correct_count: string;
+      }>(
+        `
+          SELECT
+            s.id AS subject_id,
+            s.name AS subject_name,
+            c.id AS chapter_id,
+            c.code AS chapter_code,
+            c.name AS chapter_name,
+            COUNT(*)::text AS attempts_count,
+            COUNT(*) FILTER (WHERE qa.is_correct)::text AS correct_count
+          FROM quiz_answers qa
+          JOIN questions q
+            ON q.id = qa.question_id
+          JOIN subjects s
+            ON s.id = q.subject_id
+          JOIN chapters c
+            ON c.id = q.chapter_id
+          WHERE qa.session_id = $1
+          GROUP BY s.id, s.name, c.id, c.code, c.name
+          ORDER BY COUNT(*) DESC, COUNT(*) FILTER (WHERE qa.is_correct) ASC, s.name ASC, c.name ASC
+        `,
+        [sessionId]
+      )
+    ]);
 
     return {
       id: sessionId,
       attempts: Number(statsResult.rows[0]?.attempts ?? 0),
       correct: Number(statsResult.rows[0]?.correct ?? 0),
+      chapterResults: chapterBreakdownResult.rows.map((row) => {
+        const attempts = Number(row.attempts_count);
+        const correct = Number(row.correct_count);
+        return {
+          subjectId: row.subject_id,
+          subjectName: row.subject_name,
+          chapterId: row.chapter_id,
+          chapterCode: row.chapter_code,
+          chapterName: row.chapter_name,
+          referenceLabel: row.chapter_name,
+          attemptsCount: attempts,
+          correctCount: correct,
+          successRatePct: attempts > 0 ? Math.round((correct / attempts) * 1000) / 10 : null
+        };
+      }),
       endedAt: new Date().toISOString()
     };
   }

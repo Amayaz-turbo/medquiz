@@ -977,6 +977,16 @@ describe("Critical integration flows", () => {
       .send(answerPayload)
       .expect(201);
 
+    const completed = await request(app.getHttpServer())
+      .post(`/v1/trainings/sessions/${sessionId}/complete`)
+      .set("Authorization", `Bearer ${trainee.accessToken}`)
+      .expect(201);
+
+    expect(Array.isArray(completed.body.data.chapterResults)).toBe(true);
+    expect(completed.body.data.chapterResults.length).toBeGreaterThan(0);
+    expect(completed.body.data.chapterResults[0].chapterId).toBe(chapterId);
+    expect(typeof completed.body.data.chapterResults[0].referenceLabel).toBe("string");
+
     const session = await request(app.getHttpServer())
       .get(`/v1/trainings/sessions/${sessionId}`)
       .set("Authorization", `Bearer ${trainee.accessToken}`)
@@ -1155,6 +1165,80 @@ describe("Critical integration flows", () => {
       })
       .expect(201);
     expect(wrongAnswer.body.data.isCorrect).toBe(false);
+    expect(wrongAnswer.body.data.correction.questionType).toBe("multi_choice");
+    expect(wrongAnswer.body.data.correction.selectedChoiceIds).toEqual([
+      question.correct_choice_ids[0],
+      question.incorrect_choice_id
+    ]);
+    expect(wrongAnswer.body.data.correction.correctChoiceIds).toEqual(question.correct_choice_ids);
+  });
+
+  it("returns correction details for single_choice training answers", async () => {
+    const trainee = await registerUser("Training Single Choice");
+
+    const singleQuestion = await db.query<{
+      subject_id: string;
+      question_id: string;
+      correct_choice_id: string;
+      incorrect_choice_id: string;
+    }>(
+      `
+        SELECT
+          q.subject_id,
+          q.id AS question_id,
+          (
+            SELECT qc.id
+            FROM question_choices qc
+            WHERE qc.question_id = q.id
+              AND qc.is_correct = TRUE
+            ORDER BY qc.position ASC
+            LIMIT 1
+          ) AS correct_choice_id,
+          (
+            SELECT qc.id
+            FROM question_choices qc
+            WHERE qc.question_id = q.id
+              AND qc.is_correct = FALSE
+            ORDER BY qc.position ASC
+            LIMIT 1
+          ) AS incorrect_choice_id
+        FROM questions q
+        WHERE q.question_type = 'single_choice'
+          AND q.status = 'published'
+        ORDER BY q.created_at ASC
+        LIMIT 1
+      `
+    );
+    expect(singleQuestion.rowCount).toBe(1);
+    const question = singleQuestion.rows[0];
+    expect(question.correct_choice_id).toBeTruthy();
+    expect(question.incorrect_choice_id).toBeTruthy();
+
+    const session = await request(app.getHttpServer())
+      .post("/v1/trainings/sessions")
+      .set("Authorization", `Bearer ${trainee.accessToken}`)
+      .send({
+        mode: "learning",
+        stopRule: "fixed_custom",
+        targetQuestionCount: 1,
+        subjectIds: [question.subject_id]
+      })
+      .expect(201);
+
+    const answer = await request(app.getHttpServer())
+      .post(`/v1/trainings/sessions/${session.body.data.id as string}/answers`)
+      .set("Authorization", `Bearer ${trainee.accessToken}`)
+      .send({
+        questionId: question.question_id,
+        selectedChoiceId: question.incorrect_choice_id,
+        responseTimeMs: 760
+      })
+      .expect(201);
+
+    expect(answer.body.data.isCorrect).toBe(false);
+    expect(answer.body.data.correction.questionType).toBe("single_choice");
+    expect(answer.body.data.correction.selectedChoiceIds).toEqual([question.incorrect_choice_id]);
+    expect(answer.body.data.correction.correctChoiceIds).toEqual([question.correct_choice_id]);
   });
 
   it("scores open_text training answers with normalized exact match", async () => {
