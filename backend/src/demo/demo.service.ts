@@ -1525,6 +1525,643 @@ const DEMO_SUBJECTS: DemoSubjectSeed[] = [
         ]
       }
     ]
+  },
+  {
+    code: "PHYS_BIOPHYS",
+    name: "Physique / Biophysique",
+    chapterCode: "PHYSIQUE_GENERALE",
+    chapterName: "Physique générale",
+    chapters: [
+      { code: "PHYSIQUE_GENERALE", name: "Physique générale" },
+      { code: "RAYONNEMENTS", name: "Rayonnements et radioactivité" },
+      { code: "BIOPHYSIQUE", name: "Biophysique" }
+    ],
+    questions: [
+      {
+        type: "single_choice",
+        prompt: "[Demo] Dans la loi de Poiseuille, quelle grandeur influence très fortement le débit d'un fluide dans un tube ?",
+        explanation: "Dans la loi de Poiseuille, le rayon intervient à la puissance 4 : une petite variation du rayon modifie fortement le débit.",
+        difficulty: 2,
+        chapterCode: "PHYSIQUE_GENERALE",
+        chapterName: "Physique générale",
+        choices: [
+          { label: "Le rayon du tube", isCorrect: true },
+          { label: "La couleur du fluide", isCorrect: false },
+          { label: "Le nombre de globules rouges", isCorrect: false },
+          { label: "La masse du patient", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Quelle unité du Système international correspond à la pression ?",
+        explanation: "La pression s'exprime en pascals dans le Système international.",
+        difficulty: 1,
+        chapterCode: "PHYSIQUE_GENERALE",
+        chapterName: "Physique générale",
+        choices: [
+          { label: "Pascal", isCorrect: true },
+          { label: "Watt", isCorrect: false },
+          { label: "Joule", isCorrect: false },
+          { label: "Volt", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Quelle relation traduit la loi d'Ohm pour un conducteur ohmique ?",
+        explanation: "La loi d'Ohm relie la tension, la résistance et l'intensité par U = R × I.",
+        difficulty: 1,
+        chapterCode: "PHYSIQUE_GENERALE",
+        chapterName: "Physique générale",
+        choices: [
+          { label: "U = R × I", isCorrect: true },
+          { label: "P = m × g", isCorrect: false },
+          { label: "E = m × c²", isCorrect: false },
+          { label: "F = m × a²", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Une lentille convergente est utilisée pour :",
+        explanation: "Une lentille convergente fait converger les rayons lumineux et peut former une image réelle.",
+        difficulty: 2,
+        chapterCode: "PHYSIQUE_GENERALE",
+        chapterName: "Physique générale",
+        choices: [
+          { label: "Faire converger les rayons lumineux", isCorrect: true },
+          { label: "Créer un rayonnement gamma", isCorrect: false },
+          { label: "Mesurer une pression artérielle", isCorrect: false },
+          { label: "Empêcher toute réfraction", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Quel rayonnement correspond à une onde électromagnétique très énergétique utilisée en radiographie ?",
+        explanation: "Les rayons X sont des ondes électromagnétiques de haute énergie utilisées en imagerie médicale.",
+        difficulty: 1,
+        chapterCode: "RAYONNEMENTS",
+        chapterName: "Rayonnements et radioactivité",
+        choices: [
+          { label: "Rayons X", isCorrect: true },
+          { label: "Ondes sonores", isCorrect: false },
+          { label: "Courant continu", isCorrect: false },
+          { label: "Lumière infrarouge uniquement", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Que représente la demi-vie d'un radionucléide ?",
+        explanation: "La demi-vie correspond au temps nécessaire pour que l'activité ou le nombre de noyaux radioactifs soit divisé par deux.",
+        difficulty: 2,
+        chapterCode: "RAYONNEMENTS",
+        chapterName: "Rayonnements et radioactivité",
+        choices: [
+          { label: "Le temps nécessaire pour diviser l'activité par deux", isCorrect: true },
+          { label: "Le temps nécessaire pour doubler la masse", isCorrect: false },
+          { label: "Le temps nécessaire pour stériliser un bloc", isCorrect: false },
+          { label: "Le temps nécessaire pour refroidir un tissu", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Quelle unité prend en compte l'effet biologique des rayonnements sur l'organisme ?",
+        explanation: "Le sievert tient compte de l'effet biologique des rayonnements, contrairement au gray qui exprime la dose absorbée.",
+        difficulty: 2,
+        chapterCode: "RAYONNEMENTS",
+        chapterName: "Rayonnements et radioactivité",
+        choices: [
+          { label: "Sievert", isCorrect: true },
+          { label: "Pascal", isCorrect: false },
+          { label: "Litre", isCorrect: false },
+          { label: "Newton", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Quelle technique d'imagerie repose sur l'utilisation d'ultrasons ?",
+        explanation: "L'échographie utilise des ultrasons réfléchis par les tissus pour produire une image.",
+        difficulty: 1,
+        chapterCode: "RAYONNEMENTS",
+        chapterName: "Rayonnements et radioactivité",
+        choices: [
+          { label: "Échographie", isCorrect: true },
+          { label: "Radiothérapie", isCorrect: false },
+          { label: "Scintigraphie", isCorrect: false },
+          { label: "Scanner injecté uniquement", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Au repos, l'intérieur de la cellule excitable est le plus souvent :",
+        explanation: "Au repos, l'intérieur de la cellule est négatif par rapport au milieu extracellulaire.",
+        difficulty: 1,
+        chapterCode: "BIOPHYSIQUE",
+        chapterName: "Biophysique",
+        choices: [
+          { label: "Négatif par rapport à l'extérieur", isCorrect: true },
+          { label: "Toujours positif", isCorrect: false },
+          { label: "Strictement neutre", isCorrect: false },
+          { label: "Toujours identique au milieu extérieur", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Lors du début d'un potentiel d'action neuronal, quel ion entre massivement dans la cellule ?",
+        explanation: "La dépolarisation initiale du potentiel d'action est principalement liée à une entrée de sodium.",
+        difficulty: 2,
+        chapterCode: "BIOPHYSIQUE",
+        chapterName: "Biophysique",
+        choices: [
+          { label: "Sodium", isCorrect: true },
+          { label: "Calcium uniquement extracellulaire", isCorrect: false },
+          { label: "Chlore", isCorrect: false },
+          { label: "Hélium", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] À quoi correspond le débit cardiaque en physiologie ?",
+        explanation: "Le débit cardiaque correspond au volume éjecté par minute, soit fréquence cardiaque × volume d'éjection systolique.",
+        difficulty: 2,
+        chapterCode: "BIOPHYSIQUE",
+        chapterName: "Biophysique",
+        choices: [
+          { label: "Fréquence cardiaque × volume d'éjection systolique", isCorrect: true },
+          { label: "Pression systolique + pression diastolique", isCorrect: false },
+          { label: "Volume pulmonaire × fréquence respiratoire", isCorrect: false },
+          { label: "Vitesse du sang dans une seule veine", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] En acoustique, le décibel sert principalement à exprimer :",
+        explanation: "Le décibel exprime un niveau sonore, c'est-à-dire une intensité perçue selon une échelle logarithmique.",
+        difficulty: 1,
+        chapterCode: "BIOPHYSIQUE",
+        chapterName: "Biophysique",
+        choices: [
+          { label: "Le niveau sonore", isCorrect: true },
+          { label: "La fréquence cardiaque", isCorrect: false },
+          { label: "La température corporelle", isCorrect: false },
+          { label: "La glycémie", isCorrect: false }
+        ]
+      }
+    ]
+  },
+  {
+    code: "SHS_ETHIQUE",
+    name: "Sciences humaines et sociales / Éthique",
+    chapterCode: "PSYCHOLOGIE",
+    chapterName: "Psychologie",
+    chapters: [
+      { code: "PSYCHOLOGIE", name: "Psychologie" },
+      { code: "SOCIOLOGIE_SANTE", name: "Sociologie de la santé" },
+      { code: "DROIT_MEDICAL", name: "Droit médical et déontologie" },
+      { code: "ETHIQUE_MEDICALE", name: "Éthique médicale" }
+    ],
+    questions: [
+      {
+        type: "single_choice",
+        prompt: "[Demo] Quelle notion est centrale dans l'écoute active en santé ?",
+        explanation: "L'écoute active repose notamment sur l'attention portée au patient et la reformulation de ses propos.",
+        difficulty: 1,
+        chapterCode: "PSYCHOLOGIE",
+        chapterName: "Psychologie",
+        choices: [
+          { label: "La reformulation", isCorrect: true },
+          { label: "L'interruption systématique", isCorrect: false },
+          { label: "La minimisation des émotions", isCorrect: false },
+          { label: "Le jargon technique permanent", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Dans la psychologie du développement, à qui associe-t-on les stades du développement cognitif ?",
+        explanation: "Les stades du développement cognitif sont classiquement associés à Jean Piaget.",
+        difficulty: 1,
+        chapterCode: "PSYCHOLOGIE",
+        chapterName: "Psychologie",
+        choices: [
+          { label: "Piaget", isCorrect: true },
+          { label: "Pasteur", isCorrect: false },
+          { label: "Descartes", isCorrect: false },
+          { label: "Claude Bernard", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Quel type de facteur fait partie des déterminants sociaux de la santé ?",
+        explanation: "Le niveau de vie, les conditions de logement ou d'éducation font partie des déterminants sociaux de la santé.",
+        difficulty: 1,
+        chapterCode: "SOCIOLOGIE_SANTE",
+        chapterName: "Sociologie de la santé",
+        choices: [
+          { label: "Les conditions de vie", isCorrect: true },
+          { label: "Le groupe sanguin seulement", isCorrect: false },
+          { label: "La couleur des yeux", isCorrect: false },
+          { label: "Le signe astrologique", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] En droit médical, le consentement éclairé suppose avant tout que le patient ait reçu :",
+        explanation: "Le consentement éclairé implique une information loyale, claire et appropriée avant la décision du patient.",
+        difficulty: 2,
+        chapterCode: "DROIT_MEDICAL",
+        chapterName: "Droit médical et déontologie",
+        choices: [
+          { label: "Une information claire et adaptée", isCorrect: true },
+          { label: "Une promesse de guérison", isCorrect: false },
+          { label: "Un accès direct au bloc opératoire", isCorrect: false },
+          { label: "Une autorisation de l'employeur", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Le secret médical concerne principalement :",
+        explanation: "Le secret médical protège les informations concernant la personne prise en charge.",
+        difficulty: 1,
+        chapterCode: "DROIT_MEDICAL",
+        chapterName: "Droit médical et déontologie",
+        choices: [
+          { label: "Les informations de santé du patient", isCorrect: true },
+          { label: "Uniquement les résultats biologiques", isCorrect: false },
+          { label: "Seulement les prescriptions hospitalières", isCorrect: false },
+          { label: "Uniquement les actes chirurgicaux", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Quel texte international encadre l'éthique de la recherche clinique chez l'humain ?",
+        explanation: "La déclaration d'Helsinki constitue un texte de référence pour l'éthique de la recherche clinique.",
+        difficulty: 2,
+        chapterCode: "ETHIQUE_MEDICALE",
+        chapterName: "Éthique médicale",
+        choices: [
+          { label: "La déclaration d'Helsinki", isCorrect: true },
+          { label: "Le serment d'Hippocrate uniquement", isCorrect: false },
+          { label: "Le code civil seulement", isCorrect: false },
+          { label: "La loi des gaz parfaits", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Parmi les quatre grands principes de l'éthique médicale, lequel consiste à respecter la capacité du patient à décider pour lui-même ?",
+        explanation: "Le principe d'autonomie reconnaît au patient la capacité de participer aux décisions qui le concernent.",
+        difficulty: 2,
+        chapterCode: "ETHIQUE_MEDICALE",
+        chapterName: "Éthique médicale",
+        choices: [
+          { label: "Autonomie", isCorrect: true },
+          { label: "Justice", isCorrect: false },
+          { label: "Non-malfaisance", isCorrect: false },
+          { label: "Bienfaisance uniquement envers l'équipe", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Quel comité français est notamment consulté sur les grandes questions de bioéthique ?",
+        explanation: "Le CCNE est le Comité consultatif national d'éthique pour les sciences de la vie et de la santé.",
+        difficulty: 2,
+        chapterCode: "ETHIQUE_MEDICALE",
+        chapterName: "Éthique médicale",
+        choices: [
+          { label: "CCNE", isCorrect: true },
+          { label: "ANSM", isCorrect: false },
+          { label: "CAF", isCorrect: false },
+          { label: "CROUS", isCorrect: false }
+        ]
+      }
+    ]
+  },
+  {
+    code: "MATH_BIOSTAT",
+    name: "Mathématiques et biostatistiques",
+    chapterCode: "MATHS",
+    chapterName: "Mathématiques",
+    chapters: [
+      { code: "MATHS", name: "Mathématiques" },
+      { code: "STATS_DESCRIPTIVES", name: "Statistiques descriptives" },
+      { code: "PROBABILITES", name: "Probabilités" },
+      { code: "TESTS_STATISTIQUES", name: "Tests statistiques" }
+    ],
+    questions: [
+      {
+        type: "single_choice",
+        prompt: "[Demo] Quelle fonction est l'inverse de la fonction exponentielle ?",
+        explanation: "Le logarithme népérien est la fonction réciproque de l'exponentielle.",
+        difficulty: 1,
+        chapterCode: "MATHS",
+        chapterName: "Mathématiques",
+        choices: [
+          { label: "Le logarithme", isCorrect: true },
+          { label: "La dérivée seconde", isCorrect: false },
+          { label: "La valeur absolue", isCorrect: false },
+          { label: "La médiane", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] La dérivée de exp(x) est :",
+        explanation: "La fonction exponentielle a la particularité d'être sa propre dérivée.",
+        difficulty: 1,
+        chapterCode: "MATHS",
+        chapterName: "Mathématiques",
+        choices: [
+          { label: "exp(x)", isCorrect: true },
+          { label: "x × exp(x)", isCorrect: false },
+          { label: "1 / x", isCorrect: false },
+          { label: "0", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Quel indicateur est sensible aux valeurs extrêmes dans une série quantitative ?",
+        explanation: "La moyenne est influencée par les valeurs extrêmes, contrairement à la médiane qui y est plus robuste.",
+        difficulty: 2,
+        chapterCode: "STATS_DESCRIPTIVES",
+        chapterName: "Statistiques descriptives",
+        choices: [
+          { label: "La moyenne", isCorrect: true },
+          { label: "La médiane uniquement", isCorrect: false },
+          { label: "Le mode uniquement", isCorrect: false },
+          { label: "Le rang", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Quel indicateur décrit la dispersion autour de la moyenne ?",
+        explanation: "L'écart-type mesure la dispersion des valeurs autour de la moyenne.",
+        difficulty: 1,
+        chapterCode: "STATS_DESCRIPTIVES",
+        chapterName: "Statistiques descriptives",
+        choices: [
+          { label: "L'écart-type", isCorrect: true },
+          { label: "La médiane", isCorrect: false },
+          { label: "Le mode", isCorrect: false },
+          { label: "Le percentile 50", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] La probabilité d'un événement impossible est égale à :",
+        explanation: "Par définition, un événement impossible a une probabilité nulle.",
+        difficulty: 1,
+        chapterCode: "PROBABILITES",
+        chapterName: "Probabilités",
+        choices: [
+          { label: "0", isCorrect: true },
+          { label: "0,5", isCorrect: false },
+          { label: "1", isCorrect: false },
+          { label: "-1", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Quelle loi de probabilité est classiquement utilisée pour modéliser un grand nombre de phénomènes biologiques continus ?",
+        explanation: "La loi normale est une loi continue très utilisée en statistique biomédicale.",
+        difficulty: 1,
+        chapterCode: "PROBABILITES",
+        chapterName: "Probabilités",
+        choices: [
+          { label: "La loi normale", isCorrect: true },
+          { label: "La loi des mailles", isCorrect: false },
+          { label: "La loi de Hooke", isCorrect: false },
+          { label: "La loi de Poiseuille", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Un intervalle de confiance à 95 % donne une estimation :",
+        explanation: "L'intervalle de confiance fournit une plage plausible pour la valeur du paramètre estimé.",
+        difficulty: 2,
+        chapterCode: "TESTS_STATISTIQUES",
+        chapterName: "Tests statistiques",
+        choices: [
+          { label: "De la plage plausible du paramètre", isCorrect: true },
+          { label: "De la valeur certaine et exacte du paramètre", isCorrect: false },
+          { label: "Du nombre de sujets inclus", isCorrect: false },
+          { label: "De la sensibilité d'un examen clinique", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Quel test est classiquement utilisé pour comparer deux variables qualitatives ?",
+        explanation: "Le test du Chi² est utilisé pour étudier l'association entre variables qualitatives.",
+        difficulty: 2,
+        chapterCode: "TESTS_STATISTIQUES",
+        chapterName: "Tests statistiques",
+        choices: [
+          { label: "Chi²", isCorrect: true },
+          { label: "Test t de Student", isCorrect: false },
+          { label: "ANOVA uniquement", isCorrect: false },
+          { label: "Régression de Cox", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Dans beaucoup d'études biomédicales, une p-valeur inférieure à 0,05 est traditionnellement considérée comme :",
+        explanation: "Par convention, une p-valeur inférieure à 0,05 est souvent interprétée comme statistiquement significative.",
+        difficulty: 2,
+        chapterCode: "TESTS_STATISTIQUES",
+        chapterName: "Tests statistiques",
+        choices: [
+          { label: "Statistiquement significative", isCorrect: true },
+          { label: "Cliniquement toujours majeure", isCorrect: false },
+          { label: "Forcément fausse", isCorrect: false },
+          { label: "Synonyme d'absence de biais", isCorrect: false }
+        ]
+      }
+    ]
+  },
+  {
+    code: "ANGLAIS_MED",
+    name: "Anglais médical et scientifique",
+    chapterCode: "ANGLAIS_MEDICAL",
+    chapterName: "Anglais médical et scientifique",
+    chapters: [
+      { code: "ANGLAIS_MEDICAL", name: "Anglais médical et scientifique" }
+    ],
+    questions: [
+      {
+        type: "single_choice",
+        prompt: "[Demo] Comment dit-on « douleur thoracique » en anglais médical ?",
+        explanation: "Le terme usuel est chest pain.",
+        difficulty: 1,
+        chapterCode: "ANGLAIS_MEDICAL",
+        chapterName: "Anglais médical et scientifique",
+        choices: [
+          { label: "Chest pain", isCorrect: true },
+          { label: "Head injury", isCorrect: false },
+          { label: "Short stature", isCorrect: false },
+          { label: "Skin rash", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Comment traduit-on « essoufflement » dans un contexte médical ?",
+        explanation: "L'essoufflement se traduit classiquement par shortness of breath ou dyspnea.",
+        difficulty: 1,
+        chapterCode: "ANGLAIS_MEDICAL",
+        chapterName: "Anglais médical et scientifique",
+        choices: [
+          { label: "Shortness of breath", isCorrect: true },
+          { label: "Broken skin", isCorrect: false },
+          { label: "Sore hand", isCorrect: false },
+          { label: "Slow digestion", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Dans un article scientifique, le mot « abstract » désigne :",
+        explanation: "L'abstract correspond au résumé d'un article scientifique.",
+        difficulty: 1,
+        chapterCode: "ANGLAIS_MEDICAL",
+        chapterName: "Anglais médical et scientifique",
+        choices: [
+          { label: "Le résumé", isCorrect: true },
+          { label: "La bibliographie", isCorrect: false },
+          { label: "Le tableau des résultats uniquement", isCorrect: false },
+          { label: "L'autorisation éthique", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Que signifie l'acronyme « BP » dans un contexte médical anglophone ?",
+        explanation: "BP signifie blood pressure, c'est-à-dire la pression artérielle.",
+        difficulty: 1,
+        chapterCode: "ANGLAIS_MEDICAL",
+        chapterName: "Anglais médical et scientifique",
+        choices: [
+          { label: "Blood pressure", isCorrect: true },
+          { label: "Body pain", isCorrect: false },
+          { label: "Blood pulse", isCorrect: false },
+          { label: "Breathing pattern", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Comment dit-on « ordonnance » en anglais médical courant ?",
+        explanation: "Le mot prescription désigne l'ordonnance médicale.",
+        difficulty: 1,
+        chapterCode: "ANGLAIS_MEDICAL",
+        chapterName: "Anglais médical et scientifique",
+        choices: [
+          { label: "Prescription", isCorrect: true },
+          { label: "Injection", isCorrect: false },
+          { label: "Diagnosis", isCorrect: false },
+          { label: "Ward", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Le terme anglais « caregiver » renvoie le plus souvent à :",
+        explanation: "Caregiver désigne la personne qui prend soin d'un malade, professionnel ou aidant selon le contexte.",
+        difficulty: 2,
+        chapterCode: "ANGLAIS_MEDICAL",
+        chapterName: "Anglais médical et scientifique",
+        choices: [
+          { label: "Une personne qui prend soin du patient", isCorrect: true },
+          { label: "Un appareil de monitorage", isCorrect: false },
+          { label: "Un type de médicament", isCorrect: false },
+          { label: "Une analyse biologique", isCorrect: false }
+        ]
+      }
+    ]
+  },
+  {
+    code: "METIERS_SANTE",
+    name: "Métiers de la santé et projet professionnel",
+    chapterCode: "PROJET_PRO",
+    chapterName: "Métiers de la santé et projet professionnel",
+    chapters: [
+      { code: "PROJET_PRO", name: "Métiers de la santé et projet professionnel" }
+    ],
+    questions: [
+      {
+        type: "single_choice",
+        prompt: "[Demo] Dans l'acronyme MMOPK, la lettre P correspond à :",
+        explanation: "Dans MMOPK, P correspond à pharmacie.",
+        difficulty: 1,
+        chapterCode: "PROJET_PRO",
+        chapterName: "Métiers de la santé et projet professionnel",
+        choices: [
+          { label: "Pharmacie", isCorrect: true },
+          { label: "Psychologie", isCorrect: false },
+          { label: "Pédiatrie", isCorrect: false },
+          { label: "Physique", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Quelle filière est centrée sur la santé bucco-dentaire ?",
+        explanation: "L'odontologie correspond à la chirurgie dentaire et à la santé bucco-dentaire.",
+        difficulty: 1,
+        chapterCode: "PROJET_PRO",
+        chapterName: "Métiers de la santé et projet professionnel",
+        choices: [
+          { label: "Odontologie", isCorrect: true },
+          { label: "Maïeutique", isCorrect: false },
+          { label: "Kinésithérapie", isCorrect: false },
+          { label: "Pharmacie", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Quelle filière prépare spécifiquement au métier de sage-femme ?",
+        explanation: "La maïeutique prépare au métier de sage-femme.",
+        difficulty: 1,
+        chapterCode: "PROJET_PRO",
+        chapterName: "Métiers de la santé et projet professionnel",
+        choices: [
+          { label: "Maïeutique", isCorrect: true },
+          { label: "Médecine", isCorrect: false },
+          { label: "Odontologie", isCorrect: false },
+          { label: "Pharmacie", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Le stage d'initiation aux soins infirmiers concerne classiquement les admis en :",
+        explanation: "Ce stage est classiquement requis au début du cursus pour les admis en médecine et en odontologie.",
+        difficulty: 2,
+        chapterCode: "PROJET_PRO",
+        chapterName: "Métiers de la santé et projet professionnel",
+        choices: [
+          { label: "Médecine et odontologie", isCorrect: true },
+          { label: "Uniquement pharmacie", isCorrect: false },
+          { label: "Uniquement kinésithérapie", isCorrect: false },
+          { label: "Aucune filière de santé", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Quel type de structure correspond à un exercice hors hôpital, en cabinet par exemple ?",
+        explanation: "On parle d'exercice libéral lorsqu'un professionnel travaille en cabinet ou hors structure hospitalière.",
+        difficulty: 1,
+        chapterCode: "PROJET_PRO",
+        chapterName: "Métiers de la santé et projet professionnel",
+        choices: [
+          { label: "Exercice libéral", isCorrect: true },
+          { label: "Exercice universitaire uniquement", isCorrect: false },
+          { label: "Exercice carcéral", isCorrect: false },
+          { label: "Exercice théorique", isCorrect: false }
+        ]
+      },
+      {
+        type: "single_choice",
+        prompt: "[Demo] Lors des épreuves orales, quelle compétence transversale est particulièrement attendue ?",
+        explanation: "Les oraux valorisent notamment la communication, l'écoute et la capacité à argumenter clairement.",
+        difficulty: 1,
+        chapterCode: "PROJET_PRO",
+        chapterName: "Métiers de la santé et projet professionnel",
+        choices: [
+          { label: "La communication", isCorrect: true },
+          { label: "La mémorisation brute sans interaction", isCorrect: false },
+          { label: "Le calcul de dérivées complexes", isCorrect: false },
+          { label: "La seule rapidité d'écriture", isCorrect: false }
+        ]
+      }
+    ]
   }
 ];
 

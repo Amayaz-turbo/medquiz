@@ -30,14 +30,16 @@ Le referentiel actuel couvre:
 
 ## Perimetre actuel de la demo
 
-Le seed demo couvre aujourd'hui surtout:
-- `ANAT` -> correspond au tronc `Anatomie generale`
-- `PHYS` -> correspond au tronc `Physiologie generale`
-- `BIOC` -> couvre la branche `Biochimie`
+Le seed demo couvre maintenant l'ensemble des grandes matieres PASS du referentiel.
+
+Chaque matiere dispose d'un premier noyau de QCM jouables, avec un niveau volontairement simple:
+- pour rendre tous les modules visibles dans l'app;
+- pour permettre les premiers tests de navigation et d'entrainement;
+- puis pour enrichir progressivement chaque matiere avec des questions plus proches des annales.
 
 On garde donc deux niveaux:
 - le referentiel PASS complet pour classer proprement le futur contenu;
-- le seed demo actuel pour les questions deja jouables.
+- le seed demo actuel comme base jouable a densifier ensuite.
 
 ## Regles editoriales
 
@@ -50,6 +52,6 @@ Quand on ajoute un QCM:
 
 ## Prochaine etape recommandee
 
-1. Aligner les QCM existants sur cette nomenclature finale.
-2. Ajouter ensuite les nouvelles questions issues d'annales reformulees.
-3. Etendre progressivement la demo aux autres matieres quand on aura assez de contenu.
+1. Densifier chaque matiere avec des questions plus proches des annales.
+2. Harmoniser progressivement la difficulte et le style des explications.
+3. Ajouter ensuite des references de cours/chapitres encore plus utiles au debrief final.
