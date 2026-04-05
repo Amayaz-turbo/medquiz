@@ -2475,10 +2475,35 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
     }
 
     .duel-overview-card {
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 8px;
-      background: #fff;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(171, 216, 236, 0.88);
+      border-radius: 14px;
+      padding: 10px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(236, 249, 255, 0.92));
+      box-shadow: 0 8px 18px rgba(84, 141, 173, 0.08);
+    }
+
+    .duel-overview-card::after {
+      content: "";
+      position: absolute;
+      inset: 0 auto auto 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, rgba(134, 198, 228, 0.86), rgba(244, 194, 124, 0.8));
+      opacity: 0.9;
+    }
+
+    .duel-overview-card.tour::after {
+      background: linear-gradient(90deg, rgba(109, 201, 162, 0.92), rgba(138, 214, 185, 0.88));
+    }
+
+    .duel-overview-card.manches::after {
+      background: linear-gradient(90deg, rgba(134, 198, 228, 0.9), rgba(178, 225, 244, 0.9));
+    }
+
+    .duel-overview-card.status::after {
+      background: linear-gradient(90deg, rgba(243, 186, 116, 0.92), rgba(249, 217, 167, 0.9));
     }
 
     .duel-overview-card .k {
@@ -2490,10 +2515,17 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
     .duel-overview-card .v {
       margin-top: 4px;
-      font-size: 16px;
+      font-size: 19px;
       font-weight: 800;
       color: var(--ink);
       line-height: 1.2;
+    }
+
+    .duel-overview-card .s {
+      margin-top: 3px;
+      font-size: 11px;
+      color: var(--ink-soft);
+      line-height: 1.3;
     }
 
     .duel-player-grid {
@@ -7201,6 +7233,14 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         return (words[0].slice(0, 1) + words[1].slice(0, 1)).toUpperCase();
       }
 
+      function capitalizeDisplayLabel(value) {
+        var text = String(value || '').trim();
+        if (!text) {
+          return '';
+        }
+        return text.charAt(0).toUpperCase() + text.slice(1);
+      }
+
       function getDuelOpponentTitle(duel) {
         if (duel.matchmakingMode === 'friend_invite') {
           return duel.acceptedAt ? 'Adversaire invité' : 'Invitation en attente';
@@ -7494,8 +7534,8 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         }
 
         if (context.isMyTurn && !context.roundQuestions.length) {
-          primary.push('<button class="btn-primary" data-duel-action="load-round-questions">Charger mes 3 questions</button>');
-          return { primary: primary, secondary: secondary, hint: 'La matière est choisie: récupère maintenant tes questions.' };
+          primary.push('<button class="btn-primary" data-duel-action="load-round-questions">Préparer mon tour</button>');
+          return { primary: primary, secondary: secondary, hint: 'La matière est choisie: ouvre maintenant ton tour de jeu.' };
         }
 
         if (context.isMyTurn && context.roundQuestions.length) {
@@ -8442,11 +8482,11 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
             slotNo: item.slotNo,
             difficultySnapshot: item.difficultySnapshot,
             question: item.question,
-            progressLabel: 'Slot ' + item.slotNo + ' / 3',
+            progressLabel: 'Question ' + item.slotNo + ' / 3',
             scopeLabel: selectedSubjectName || 'Manche en cours',
             topicLabel: 'Manche ' + (state.currentRound ? state.currentRound.roundNo : '-') + ' · duel',
             guidance: 'Réponds à cette question, puis on t’enchaîne directement sur la suivante.',
-            submitLabel: 'Valider ce slot'
+            submitLabel: 'Valider cette question'
           };
         }
 
@@ -8777,14 +8817,14 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         }
         var myAccent = getSafeProfileColor((myProfile && myProfile.profileColor) || (state.me && state.me.profileColor));
         var opponentAccent = getSafeProfileColor(opponentProfile && opponentProfile.profileColor);
-        var myName = myProfile && myProfile.displayLabel ? myProfile.displayLabel : getPreferredPlayerName();
+        var myName = capitalizeDisplayLabel(myProfile && myProfile.displayLabel ? myProfile.displayLabel : getPreferredPlayerName());
         var myStage = getDuelProfileStageName(myProfile) || (state.myAvatar && state.myAvatar.currentStage ? state.myAvatar.currentStage.name : 'Progression initiale');
         var mySpecialty = getDuelProfileSpecialtyName(myProfile) || (state.myAvatar && state.myAvatar.specialty ? state.myAvatar.specialty.name : 'Spécialité non choisie');
         var myLoadout = getDuelProfileEquipmentSummary(myProfile);
         if (!myLoadout.length) {
           myLoadout = getAvatarLoadoutLabels();
         }
-        var opponentName = opponentProfile && opponentProfile.displayLabel ? opponentProfile.displayLabel : getDuelOpponentTitle(d);
+        var opponentName = capitalizeDisplayLabel(opponentProfile && opponentProfile.displayLabel ? opponentProfile.displayLabel : getDuelOpponentTitle(d));
         var opponentStage = getDuelProfileStageName(opponentProfile) || 'Progression non visible';
         var opponentSpecialty = getDuelProfileSpecialtyName(opponentProfile) || 'Spécialité non visible';
         var opponentLoadout = getDuelProfileEquipmentSummary(opponentProfile);
@@ -8863,21 +8903,22 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         var roundBlockClass = 'duel-question' + (guideState.stageKey === 'round' ? ' is-current' : ' is-passive');
         var jokerBlockClass = 'duel-question' + ((pendingJoker || canRequestJoker || canRespondToPendingJoker) ? ' is-current' : ' is-passive');
 
-        var openerBlock = '<div class="' + openerBlockClass + '"><div class="duel-section-kicker">Étape opener</div><b>Opener</b><div class="mini">Charge la question opener pour répondre.</div></div>';
+        var openerBlock = '<div class="' + openerBlockClass + '"><div class="duel-section-kicker">Étape opener</div><b>Question d’ouverture</b><div class="mini">Commence ici quand le duel est prêt.</div></div>';
         if (state.openerQuestion) {
           openerBlock =
             '<div class="' + openerBlockClass + '">'
             + '<div class="duel-section-kicker">Étape opener</div>'
-            + '<b>Opener prêt à jouer</b>'
-            + '<div class="mini">Une seule question t’attend pour lancer le duel. On l’ouvre dans un écran dédié, sans le reste autour.</div>'
+            + '<b>Question d’ouverture prête</b>'
+            + '<div class="mini">La question est prête. Ouvre l’écran de jeu pour répondre.</div>'
             + '<div class="duel-actions"><button class="btn-primary" data-duel-action="open-opener-play">Ouvrir l’opener</button></div>'
             + '</div>';
         }
 
-        var roundBlock = '<div class="' + roundBlockClass + '"><div class="duel-section-kicker">Tour en cours</div><b>Manche courante</b><div class="mini">Charge la manche pour jouer ton tour.</div></div>';
+        var roundBlock = '<div class="' + roundBlockClass + '"><div class="duel-section-kicker">Tour en cours</div><b>Manche courante</b><div class="mini">Charge la manche pour voir l’action suivante.</div></div>';
         if (state.currentRound) {
           var subjectsButtons = '';
           var chosenRoundSubjectName = '';
+          var roundBadges = '';
           if (state.currentRound.chosenSubjectId && Array.isArray(state.currentRound.offeredSubjects)) {
             var chosenRoundSubject = state.currentRound.offeredSubjects.find(function (subject) {
               return subject.id === state.currentRound.chosenSubjectId;
@@ -8894,32 +8935,39 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
           var loadQuestionsBtn = '';
           if (state.currentRound.chosenSubjectId && isMyTurn) {
-            loadQuestionsBtn = '<button class="btn-secondary" data-duel-action="load-round-questions">Charger mes 3 questions</button>';
+            loadQuestionsBtn = '<button class="btn-secondary" data-duel-action="load-round-questions">Préparer mon tour</button>';
           }
 
           var questionsHtml = '';
           if (state.roundQuestions.length) {
             var answeredSlotsCount = Object.keys(state.duelRoundAnsweredSlots || {}).length;
             questionsHtml =
-              '<div class="mini">' + escapeHtml(String(Math.max(0, 3 - answeredSlotsCount))) + ' question(s) restante(s) dans cette manche.</div>'
+              '<div class="mini">' + escapeHtml(String(Math.max(0, 3 - answeredSlotsCount))) + ' question(s) encore à jouer dans ce tour.</div>'
               + '<div class="duel-actions"><button class="btn-primary" data-duel-action="open-round-play"' + (isMyTurn ? '' : ' disabled') + '>Continuer mon tour</button></div>';
           }
+
+          roundBadges =
+            '<div class="duel-detail-badges">'
+            + '<span class="chip neutral">Manche ' + escapeHtml(String(state.currentRound.roundNo)) + ' / 5</span>'
+            + '<span class="chip' + (isMyTurn ? '' : ' neutral') + '">' + escapeHtml(isMyTurn ? 'À toi' : ('Tour de ' + opponentName)) + '</span>'
+            + (chosenRoundSubjectName ? ('<span class="chip neutral">' + escapeHtml(chosenRoundSubjectName) + '</span>') : '')
+            + '</div>';
 
           roundBlock =
             '<div class="' + roundBlockClass + '">'
             + '<div class="duel-section-kicker">Tour en cours</div>'
             + '<b>Manche ' + escapeHtml(String(state.currentRound.roundNo)) + ' · ' + escapeHtml(getDuelStatusLabel(state.currentRound.status)) + '</b>'
-            + '<div class="mini">Tour courant: ' + escapeHtml(String(state.currentRound.currentTurnUserId || '-').slice(0, 8)) + ' · Deadline: ' + escapeHtml(String(state.currentRound.turnDeadlineAt || '-').slice(0, 19).replace('T', ' ')) + '</div>'
+            + roundBadges
             + (state.currentRound.chosenSubjectId
-              ? ('<div class="mini">Matière choisie: ' + escapeHtml(chosenRoundSubjectName || 'matière déjà fixée') + '</div>')
-              : '<div class="mini">Choisis une matière parmi les 3 proposées.</div>')
+              ? '<div class="mini">La matière est fixée. Tu peux maintenant jouer le tour.</div>'
+              : '<div class="mini">Choisis une matière parmi les propositions pour lancer la manche.</div>')
             + subjectsButtons
             + (loadQuestionsBtn ? ('<div style="margin-top:8px">' + loadQuestionsBtn + '</div>') : '')
             + (questionsHtml ? ('<div style="margin-top:8px; display:grid; gap:8px;">' + questionsHtml + '</div>') : '')
             + '</div>';
         }
 
-        var jokerBlock = '<div class="' + jokerBlockClass + '"><div class="duel-section-kicker">Sursis</div><b>Joker / sursis 24h</b><div class="mini">Chaque joueur dispose d\'un sursis maximum par duel.</div></div>';
+        var jokerBlock = '<div class="' + jokerBlockClass + '"><div class="duel-section-kicker">Sursis</div><b>Joker 24h</b><div class="mini">Un joker maximum par joueur sur ce duel.</div></div>';
         if (d.status === 'in_progress') {
           var pendingHtml = '';
           if (pendingJoker) {
@@ -8955,9 +9003,11 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           jokerBlock =
             '<div class="' + jokerBlockClass + '">'
             + '<div class="duel-section-kicker">Sursis</div>'
-            + '<b>Joker / sursis 24h</b>'
-            + '<div class="mini">Mon joker: ' + escapeHtml(myJokerUsed ? 'utilisé' : 'disponible') + ' · Joker adverse: ' + escapeHtml(opponentJokerUsed ? 'utilisé' : 'disponible') + '</div>'
-            + (d.turnDeadlineAt ? ('<div class="mini">Deadline actuelle: ' + escapeHtml(formatDateTime(d.turnDeadlineAt)) + '</div>') : '')
+            + '<b>Joker 24h</b>'
+            + '<div class="duel-detail-badges">'
+            + '<span class="chip' + (myJokerUsed ? ' warn' : ' neutral') + '">Mon joker: ' + escapeHtml(myJokerUsed ? 'utilisé' : 'disponible') + '</span>'
+            + '<span class="chip' + (opponentJokerUsed ? ' warn' : ' neutral') + '">Adverse: ' + escapeHtml(opponentJokerUsed ? 'utilisé' : 'disponible') + '</span>'
+            + '</div>'
             + pendingHtml
             + requestHtml
             + helperText
@@ -8971,7 +9021,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           + '<div class="duel-hero-copy">'
           + '<div class="duel-hero-kicker">Ton duel du moment</div>'
           + '<div class="duel-hero-name">' + escapeHtml(opponentName) + '</div>'
-          + '<div class="mini">Un tour = 3 questions chacun. ' + escapeHtml(duelModeLabel) + '.</div>'
+          + '<div class="mini">' + escapeHtml(duelModeLabel) + ' · duel en cours.</div>'
           + '</div>'
           + '<div class="duel-detail-badges"><span class="chip">' + escapeHtml(getDuelStatusLabel(d.status)) + '</span><span class="chip neutral">Temps restant: ' + escapeHtml(duelRemainingLabel) + '</span></div>'
           + '</div>'
@@ -8981,9 +9031,9 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           + '<div class="duel-score-col"><span>' + escapeHtml(opponentName) + '</span><b>' + escapeHtml(String(opponentScore)) + '</b></div>'
           + '</div>'
           + '<div class="duel-overview-grid">'
-          + '<div class="duel-overview-card"><div class="k">Tour actuel</div><div class="v">' + escapeHtml(duelTurnLabel) + '</div></div>'
-          + '<div class="duel-overview-card"><div class="k">Manches</div><div class="v">' + escapeHtml(String(d.currentRoundNo)) + ' / 5</div></div>'
-          + '<div class="duel-overview-card"><div class="k">Statut</div><div class="v">' + escapeHtml(duelResultLabel) + '</div></div>'
+          + '<div class="duel-overview-card tour"><div class="k">Tour actuel</div><div class="v">' + escapeHtml(duelTurnLabel) + '</div><div class="s">' + escapeHtml(isMyTurn ? 'Tu peux agir maintenant.' : 'Tu reprends la main au prochain tour.') + '</div></div>'
+          + '<div class="duel-overview-card manches"><div class="k">Manches</div><div class="v">' + escapeHtml(String(d.currentRoundNo)) + ' / 5</div><div class="s">' + escapeHtml('On avance manche par manche.') + '</div></div>'
+          + '<div class="duel-overview-card status"><div class="k">Statut</div><div class="v">' + escapeHtml(duelResultLabel) + '</div><div class="s">' + escapeHtml(getDuelStatusLabel(d.status)) + '</div></div>'
           + '</div>'
           + '</div>'
           + '<div class="duel-guide-focus">'
