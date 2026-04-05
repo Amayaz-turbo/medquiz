@@ -2864,6 +2864,16 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       gap: 6px;
     }
 
+    .duel-question.is-current {
+      border-color: #f0c38a;
+      background: rgba(255, 247, 235, 0.96);
+      box-shadow: 0 12px 30px rgba(240, 195, 138, 0.18);
+    }
+
+    .duel-question.is-passive {
+      background: rgba(255, 255, 255, 0.82);
+    }
+
     .duel-section-kicker {
       font-size: 11px;
       text-transform: uppercase;
@@ -2877,6 +2887,19 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       font-size: 11px;
       color: var(--ink-soft);
       line-height: 1.3;
+    }
+
+    .duel-detail-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .duel-detail-utility {
+      margin-top: 8px;
+      display: flex;
+      justify-content: flex-end;
     }
 
     .subject-list, .chapter-list, .history-list {
@@ -8399,20 +8422,16 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           })
           + '</div>';
 
-        var actions = [];
-        if (canAccept) {
-          actions.push('<button class="btn-primary" data-duel-action="accept">Accepter</button>');
-        }
-        if (canDecline) {
-          actions.push('<button class="btn-danger" data-duel-action="decline">Refuser</button>');
-        }
+        var utilityActions = [];
         if (canForfeit) {
-          actions.push('<button class="btn-danger" data-duel-action="forfeit">Abandonner</button>');
+          utilityActions.push('<button class="btn-danger" data-duel-action="forfeit">Abandonner le duel</button>');
         }
-        actions.push('<button class="btn-secondary" data-duel-action="load-opener">Charger opener</button>');
-        actions.push('<button class="btn-secondary" data-duel-action="load-round">Charger manche</button>');
 
-        var openerBlock = '<div class="duel-question"><div class="duel-section-kicker">Étape opener</div><b>Opener</b><div class="mini">Charge la question opener pour répondre.</div></div>';
+        var openerBlockClass = 'duel-question' + ((guideState.stageKey === 'opener' || guideState.stageKey === 'decision') ? ' is-current' : ' is-passive');
+        var roundBlockClass = 'duel-question' + (guideState.stageKey === 'round' ? ' is-current' : ' is-passive');
+        var jokerBlockClass = 'duel-question' + ((pendingJoker || canRequestJoker || canRespondToPendingJoker) ? ' is-current' : ' is-passive');
+
+        var openerBlock = '<div class="' + openerBlockClass + '"><div class="duel-section-kicker">Étape opener</div><b>Opener</b><div class="mini">Charge la question opener pour répondre.</div></div>';
         if (state.openerQuestion) {
           var openerChoices = (state.openerQuestion.choices || []).map(function (c, index) {
             return '<label class="choice"><input type="radio" name="openerChoice" value="' + escapeHtml(c.id) + '" /> <span class="choice-badge">' + escapeHtml(getChoiceMarker(index)) + '</span><span class="choice-copy">' + escapeHtml(c.label) + '</span></label>';
@@ -8428,7 +8447,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           }
 
           openerBlock =
-            '<div class="duel-question">'
+            '<div class="' + openerBlockClass + '">'
             + '<div class="duel-section-kicker">Étape opener</div>'
             + '<b>Opener · difficulté ' + escapeHtml(String(state.openerQuestion.difficulty)) + '</b>'
             + '<div>' + escapeHtml(state.openerQuestion.prompt) + '</div>'
@@ -8438,9 +8457,16 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
             + '</div>';
         }
 
-        var roundBlock = '<div class="duel-question"><div class="duel-section-kicker">Tour en cours</div><b>Manche courante</b><div class="mini">Charge la manche pour jouer ton tour.</div></div>';
+        var roundBlock = '<div class="' + roundBlockClass + '"><div class="duel-section-kicker">Tour en cours</div><b>Manche courante</b><div class="mini">Charge la manche pour jouer ton tour.</div></div>';
         if (state.currentRound) {
           var subjectsButtons = '';
+          var chosenRoundSubjectName = '';
+          if (state.currentRound.chosenSubjectId && Array.isArray(state.currentRound.offeredSubjects)) {
+            var chosenRoundSubject = state.currentRound.offeredSubjects.find(function (subject) {
+              return subject.id === state.currentRound.chosenSubjectId;
+            });
+            chosenRoundSubjectName = chosenRoundSubject ? chosenRoundSubject.name : '';
+          }
           if (!state.currentRound.chosenSubjectId) {
             subjectsButtons = '<div class="duel-actions">' + (state.currentRound.offeredSubjects || []).map(function (s) {
               return '<button class="btn-secondary" data-duel-action="choose-subject" data-subject-id="' + escapeHtml(s.id) + '"' + (isMyTurn ? '' : ' disabled') + '>'
@@ -8470,18 +8496,20 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           }
 
           roundBlock =
-            '<div class="duel-question">'
+            '<div class="' + roundBlockClass + '">'
             + '<div class="duel-section-kicker">Tour en cours</div>'
             + '<b>Manche ' + escapeHtml(String(state.currentRound.roundNo)) + ' · ' + escapeHtml(getDuelStatusLabel(state.currentRound.status)) + '</b>'
             + '<div class="mini">Tour courant: ' + escapeHtml(String(state.currentRound.currentTurnUserId || '-').slice(0, 8)) + ' · Deadline: ' + escapeHtml(String(state.currentRound.turnDeadlineAt || '-').slice(0, 19).replace('T', ' ')) + '</div>'
-            + (state.currentRound.chosenSubjectId ? ('<div class="mini">Matière choisie: ' + escapeHtml(String(state.currentRound.chosenSubjectId).slice(0, 8)) + '</div>') : '<div class="mini">Choisis une matière parmi les 3 proposées.</div>')
+            + (state.currentRound.chosenSubjectId
+              ? ('<div class="mini">Matière choisie: ' + escapeHtml(chosenRoundSubjectName || 'matière déjà fixée') + '</div>')
+              : '<div class="mini">Choisis une matière parmi les 3 proposées.</div>')
             + subjectsButtons
             + (loadQuestionsBtn ? ('<div style="margin-top:8px">' + loadQuestionsBtn + '</div>') : '')
             + (questionsHtml ? ('<div style="margin-top:8px; display:grid; gap:8px;">' + questionsHtml + '</div>') : '')
             + '</div>';
         }
 
-        var jokerBlock = '<div class="duel-question"><div class="duel-section-kicker">Sursis</div><b>Joker / sursis 24h</b><div class="mini">Chaque joueur dispose d\'un sursis maximum par duel.</div></div>';
+        var jokerBlock = '<div class="' + jokerBlockClass + '"><div class="duel-section-kicker">Sursis</div><b>Joker / sursis 24h</b><div class="mini">Chaque joueur dispose d\'un sursis maximum par duel.</div></div>';
         if (d.status === 'in_progress') {
           var pendingHtml = '';
           if (pendingJoker) {
@@ -8515,7 +8543,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           }
 
           jokerBlock =
-            '<div class="duel-question">'
+            '<div class="' + jokerBlockClass + '">'
             + '<div class="duel-section-kicker">Sursis</div>'
             + '<b>Joker / sursis 24h</b>'
             + '<div class="mini">Mon joker: ' + escapeHtml(myJokerUsed ? 'utilisé' : 'disponible') + ' · Joker adverse: ' + escapeHtml(opponentJokerUsed ? 'utilisé' : 'disponible') + '</div>'
@@ -8546,17 +8574,15 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           + '</div>'
           + playerCardsHtml
           + '<div class="duel-stage-list">' + stageListHtml + '</div>'
-          + '<div class="duel-callout"><b>' + escapeHtml(guideState.title) + '</b><div class="mini">' + escapeHtml(guideState.detail) + '</div></div>'
           + '<div class="duel-round-strip">' + roundsStripHtml + '</div>'
           + '</div>'
           + '<div class="duel-item-top">'
-          + '<b>Duel ' + escapeHtml(d.id.slice(0, 8)) + '</b>'
-          + '<span class="chip">' + escapeHtml(getDuelStatusLabel(d.status)) + '</span>'
+          + '<b>Face-à-face avec ' + escapeHtml(opponentName) + '</b>'
+          + '<div class="duel-detail-badges"><span class="chip">' + escapeHtml(getDuelStatusLabel(d.status)) + '</span><span class="chip neutral">' + escapeHtml(getDuelModeLabel(d.matchmakingMode)) + '</span></div>'
           + '</div>'
-          + '<div class="mini">Type: ' + escapeHtml(getDuelModeLabel(d.matchmakingMode)) + ' · Score ' + escapeHtml(String(d.score.player1)) + ' - ' + escapeHtml(String(d.score.player2)) + '</div>'
-          + '<div class="mini">Round: ' + escapeHtml(String(d.currentRoundNo)) + ' · Mon tour: ' + escapeHtml(isMyTurn ? 'Oui' : 'Non') + '</div>'
-          + (d.winnerUserId ? ('<div class="mini">Vainqueur: ' + escapeHtml(String(d.winnerUserId).slice(0, 8)) + ' · Raison: ' + escapeHtml(String(d.winReason || '-')) + '</div>') : '')
-          + '<div class="duel-actions">' + actions.join('') + '</div>'
+          + '<div class="mini">' + escapeHtml(isMyTurn ? 'C\'est ton tour.' : 'Tour adverse pour l\'instant.') + (d.turnDeadlineAt ? (' Deadline: ' + escapeHtml(formatDateTime(d.turnDeadlineAt)) + '.') : '') + '</div>'
+          + (d.winnerUserId ? ('<div class="mini">Fin du duel: ' + escapeHtml(String(d.winReason || 'résultat final')) + '</div>') : '')
+          + (utilityActions.length ? ('<div class="duel-detail-utility">' + utilityActions.join('') + '</div>') : '')
           + openerBlock
           + jokerBlock
           + roundBlock;
