@@ -5323,6 +5323,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
                   <section class="panel">
                     <div class="training-back-row">
                       <button class="btn-secondary btn-inline" id="duelDetailBackBtn">Retour à mes duels</button>
+                      <button class="btn-secondary btn-inline" id="duelDetailCloseBtn">Fermer ce duel</button>
                     </div>
                     <div class="module-head">
                       <b>Duel en cours</b>
@@ -5336,6 +5337,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
                   <section class="panel">
                     <div class="training-back-row">
                       <button class="btn-secondary btn-inline" id="duelSubjectBackBtn">Retour au duel</button>
+                      <button class="btn-secondary btn-inline" id="duelSubjectCloseBtn">Fermer ce duel</button>
                     </div>
                     <div class="module-head">
                       <b>Choix de la matière</b>
@@ -5349,6 +5351,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
                   <section class="panel duel-play-panel">
                     <div class="question-exit-row">
                       <button class="btn-secondary" id="duelPlayBackBtn">Retour au duel</button>
+                      <button class="btn-secondary btn-inline" id="duelPlayCloseBtn">Fermer ce duel</button>
                     </div>
                     <div id="duelPlayContent" class="q-card question-stage hidden"></div>
                     <div class="row question-actions-row" id="duelPlayActions">
@@ -5550,7 +5553,9 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         duelCreateBackBtn: document.getElementById('duelCreateBackBtn'),
         duelInboxBackBtn: document.getElementById('duelInboxBackBtn'),
         duelDetailBackBtn: document.getElementById('duelDetailBackBtn'),
+        duelDetailCloseBtn: document.getElementById('duelDetailCloseBtn'),
         duelSubjectBackBtn: document.getElementById('duelSubjectBackBtn'),
+        duelSubjectCloseBtn: document.getElementById('duelSubjectCloseBtn'),
         modeSelect: document.getElementById('modeSelect'),
         stopRuleSelect: document.getElementById('stopRuleSelect'),
         targetCountInput: document.getElementById('targetCountInput'),
@@ -5596,6 +5601,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         duelDetail: document.getElementById('duelDetail'),
         duelSubjectContent: document.getElementById('duelSubjectContent'),
         duelPlayBackBtn: document.getElementById('duelPlayBackBtn'),
+        duelPlayCloseBtn: document.getElementById('duelPlayCloseBtn'),
         duelPlayContent: document.getElementById('duelPlayContent'),
         duelPlayActions: document.getElementById('duelPlayActions'),
         duelSubmitAnswerBtn: document.getElementById('duelSubmitAnswerBtn'),
@@ -8562,6 +8568,23 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         state.roundQuestionShownAtBySlot = {};
       }
 
+      function closeSelectedDuelView() {
+        state.selectedDuelId = null;
+        state.selectedDuel = null;
+        resetDuelTransientView();
+        if (refs.duelDetail) {
+          refs.duelDetail.innerHTML = '';
+          refs.duelDetail.classList.add('hidden');
+        }
+        if (refs.duelSubjectContent) {
+          refs.duelSubjectContent.innerHTML = '';
+          refs.duelSubjectContent.classList.add('hidden');
+        }
+        setDuelFlow('home');
+        renderDuelsList();
+        setStatus('Duel fermé.', 'info');
+      }
+
       function findNextUnansweredDuelRoundIndex(startIndex) {
         var fromIndex = Number.isFinite(startIndex) ? startIndex : 0;
         for (var index = Math.max(0, fromIndex); index < state.roundQuestions.length; index += 1) {
@@ -10745,13 +10768,22 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       refs.duelDetailBackBtn.addEventListener('click', function () {
         setDuelFlow('inbox');
       });
+      refs.duelDetailCloseBtn.addEventListener('click', function () {
+        closeSelectedDuelView();
+      });
       refs.duelSubjectBackBtn.addEventListener('click', function () {
         setDuelFlow('detail');
+      });
+      refs.duelSubjectCloseBtn.addEventListener('click', function () {
+        closeSelectedDuelView();
       });
 
       refs.duelPlayBackBtn.addEventListener('click', function () {
         state.duelPlayReview = null;
         setDuelFlow('detail');
+      });
+      refs.duelPlayCloseBtn.addEventListener('click', function () {
+        closeSelectedDuelView();
       });
 
       refs.settingsSummary.addEventListener('click', function (event) {
