@@ -137,36 +137,37 @@ export class DuelsService {
     try {
       return await this.db.withTransaction(async (client) => {
         const duelId = randomUUID();
-        const openerQuestionId = await this.pickOpenerQuestionId(client);
         const autoAccepted = dto.matchmakingMode !== "friend_invite";
+        const acceptedAt = autoAccepted ? new Date() : null;
 
         await client.query(
           `
             INSERT INTO duels
-              (id, player1_id, player2_id, matchmaking_mode, status, accepted_at)
+              (
+                id,
+                player1_id,
+                player2_id,
+                matchmaking_mode,
+                status,
+                accepted_at
+              )
             VALUES
-              ($1, $2, $3, $4, 'pending_opener', $5)
+              ($1, $2, $3, $4, $5, $6)
           `,
-          [duelId, userId, opponentUserId, dto.matchmakingMode, autoAccepted ? new Date() : null]
-        );
-
-        await client.query(
-          `
-            INSERT INTO duel_openers (id, duel_id, question_id)
-            VALUES ($1, $2, $3)
-          `,
-          [randomUUID(), duelId, openerQuestionId]
+          [
+            duelId,
+            userId,
+            opponentUserId,
+            dto.matchmakingMode,
+            autoAccepted ? "in_progress" : "pending_opener",
+            acceptedAt
+          ]
         );
 
         if (autoAccepted) {
-          await this.insertNotification(client, {
-            userId: opponentUserId,
-            type: "duel_turn",
-            payload: {
-              duelId,
-              reason: "duel_created_random"
-            }
-          });
+          const duel = await this.getDuelForUser(client, duelId, userId, true);
+          const starterUserId = this.pickRandomStarterUserId(duel);
+          await this.startDuelFlow(client, duel, duelId, starterUserId, "duel_created_random");
         }
 
         const duel = await this.getDuelForUser(client, duelId, userId);
@@ -352,22 +353,23 @@ export class DuelsService {
       await client.query(
         `
           UPDATE duels
-          SET accepted_at = COALESCE(accepted_at, NOW())
+          SET accepted_at = COALESCE(accepted_at, NOW()),
+              status = 'in_progress'
           WHERE id = $1
         `,
         [duelId]
       );
 
-      await this.insertNotification(client, {
-        userId: duel.player1_id,
-        type: "duel_turn",
-        payload: {
-          duelId,
-          reason: "duel_accepted"
-        }
-      });
+      const acceptedDuel = await this.getDuelForUser(client, duelId, userId, true);
+      const starterUserId = this.pickRandomStarterUserId(acceptedDuel);
+      const started = await this.startDuelFlow(client, acceptedDuel, duelId, starterUserId, "duel_accepted");
 
-      return { acceptedAt: new Date().toISOString() };
+      return {
+        acceptedAt: new Date().toISOString(),
+        starterUserId: started.starterUserId,
+        currentTurnUserId: started.currentTurnUserId,
+        turnDeadlineAt: started.turnDeadlineAt
+      };
     });
   }
 
@@ -589,32 +591,6 @@ export class DuelsService {
       }
 
       const final = await this.getOpenerRow(client, duelId);
-      if (final?.winner_user_id) {
-        const rematchWinnerChoice = await this.shouldWinnerChooseStarter(client, duel);
-        if (!rematchWinnerChoice) {
-          const starterUserId = this.pickRandomStarterUserId(duel);
-          const startedDuel = await this.startDuelAfterOpener(
-            client,
-            duel,
-            duelId,
-            starterUserId,
-            "opener_random_starter"
-          );
-
-          return {
-            answeredBy: userId,
-            playerCorrect: isCorrect,
-            resolved: true,
-            winnerUserId: final.winner_user_id,
-            requiresStarterDecision: false,
-            starterPolicy: "random",
-            starterUserId: startedDuel.starterUserId,
-            currentTurnUserId: startedDuel.currentTurnUserId,
-            turnDeadlineAt: startedDuel.turnDeadlineAt
-          };
-        }
-      }
-
       return {
         answeredBy: userId,
         playerCorrect: isCorrect,
@@ -667,7 +643,7 @@ export class DuelsService {
         [duelId, dto.decision]
       );
 
-      return this.startDuelAfterOpener(client, duel, duelId, starterUserId, "opener_decision_made");
+      return this.startDuelFlow(client, duel, duelId, starterUserId, "opener_decision_made");
     });
   }
 
@@ -1818,32 +1794,11 @@ export class DuelsService {
     return [duel.player1_id, duel.player2_id].every((userId) => (counts.get(userId) ?? 0) >= 3);
   }
 
-  private async shouldWinnerChooseStarter(client: PoolClient, duel: DuelRow): Promise<boolean> {
-    const result = await client.query<{ winner_user_id: string }>(
-      `
-        SELECT winner_user_id
-        FROM duels
-        WHERE id <> $1
-          AND winner_user_id IS NOT NULL
-          AND (
-            (player1_id = $2 AND player2_id = $3)
-            OR
-            (player1_id = $3 AND player2_id = $2)
-          )
-        ORDER BY completed_at DESC NULLS LAST, created_at DESC
-        LIMIT 1
-      `,
-      [duel.id, duel.player1_id, duel.player2_id]
-    );
-
-    return result.rowCount > 0;
-  }
-
   private pickRandomStarterUserId(duel: DuelRow): string {
     return Math.random() < 0.5 ? duel.player1_id : duel.player2_id;
   }
 
-  private async startDuelAfterOpener(
+  private async startDuelFlow(
     client: PoolClient,
     duel: DuelRow,
     duelId: string,

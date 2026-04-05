@@ -7554,44 +7554,13 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
             return {
               stageKey: 'invite',
               title: 'Invitation reçue',
-              detail: 'Accepte ou refuse avant de passer à l\'opener.'
+              detail: 'Accepte ou refuse avant de lancer la première manche.'
             };
           }
           return {
             stageKey: 'invite',
             title: 'Invitation envoyée',
             detail: 'En attente de la réponse adverse.'
-          };
-        }
-
-        if (!duel.opener || !duel.opener.resolvedAt) {
-          if (state.openerQuestion) {
-            return {
-              stageKey: 'opener',
-              title: 'Répondre à l\'opener',
-              detail: 'Une seule question rapide pour déterminer l\'avantage initial.'
-            };
-          }
-          return {
-            stageKey: 'opener',
-            title: 'Charger l\'opener',
-            detail: 'L\'opener doit être joué avant le début des manches.'
-          };
-        }
-
-        if (duel.opener.winnerUserId === meId && !duel.opener.winnerDecision) {
-          return {
-            stageKey: 'decision',
-            title: 'Choisir qui commence',
-            detail: 'Tu as gagné l\'opener: décide si tu prends ou laisses la main.'
-          };
-        }
-
-        if (duel.status === 'pending_opener') {
-          return {
-            stageKey: 'decision',
-            title: 'Décision d\'opener en attente',
-            detail: 'Le gagnant de l\'opener choisit qui démarre la première manche.'
           };
         }
 
@@ -7649,21 +7618,6 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
             secondary.push('<button class="btn-secondary" data-duel-action="decline">Refuser</button>');
           }
           return { primary: primary, secondary: secondary, hint: 'Commence par répondre à l\'invitation.' };
-        }
-
-        if (!context.duel.opener || !context.duel.opener.resolvedAt) {
-          if (context.openerQuestion) {
-            primary.push('<button class="btn-primary" data-duel-action="open-opener-play">Jouer l\'opener</button>');
-            return { primary: primary, secondary: secondary, hint: 'L’opener est prêt: ouvre l’écran de jeu pour répondre.' };
-          }
-          primary.push('<button class="btn-primary" data-duel-action="load-opener">Charger l\'opener</button>');
-          return { primary: primary, secondary: secondary, hint: 'Le duel commence par une seule question rapide.' };
-        }
-
-        if (context.duel.opener && context.duel.opener.winnerUserId === context.meId && !context.duel.opener.winnerDecision) {
-          primary.push('<button class="btn-primary" data-duel-action="opener-decision-take">Prendre la main</button>');
-          secondary.push('<button class="btn-secondary" data-duel-action="opener-decision-leave">Laisser la main</button>');
-          return { primary: primary, secondary: secondary, hint: 'Tu as gagné l\'opener: choisis maintenant qui commence.' };
         }
 
         if (!context.currentRound) {
@@ -8996,11 +8950,9 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           roundQuestions: state.roundQuestions,
           openerQuestion: state.openerQuestion
         });
-        var stageOrder = ['invite', 'opener', 'decision', 'round', 'finish'];
+        var stageOrder = ['invite', 'round', 'finish'];
         var stageTitles = {
           invite: 'Invitation',
-          opener: 'Opener',
-          decision: 'Décision',
           round: 'Manches',
           finish: 'Clôture'
         };
@@ -9132,20 +9084,8 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           utilityActions.push('<button class="btn-danger" data-duel-action="forfeit">Abandonner le duel</button>');
         }
 
-        var openerBlockClass = 'duel-question' + ((guideState.stageKey === 'opener' || guideState.stageKey === 'decision') ? ' is-current' : ' is-passive');
         var roundBlockClass = 'duel-question' + (guideState.stageKey === 'round' ? ' is-current' : ' is-passive');
         var jokerBlockClass = 'duel-question' + ((pendingJoker || canRequestJoker || canRespondToPendingJoker) ? ' is-current' : ' is-passive');
-
-        var openerBlock = '<div class="' + openerBlockClass + '"><div class="duel-section-kicker">Étape opener</div><b>Question d’ouverture</b><div class="mini">Commence ici quand le duel est prêt.</div></div>';
-        if (state.openerQuestion) {
-          openerBlock =
-            '<div class="' + openerBlockClass + '">'
-            + '<div class="duel-section-kicker">Étape opener</div>'
-            + '<b>Question d’ouverture prête</b>'
-            + '<div class="mini">La question est prête. Ouvre l’écran de jeu pour répondre.</div>'
-            + '<div class="duel-actions"><button class="btn-primary" data-duel-action="open-opener-play">Ouvrir l’opener</button></div>'
-            + '</div>';
-        }
 
         var roundBlock = '<div class="' + roundBlockClass + '"><div class="duel-section-kicker">Tour en cours</div><b>Manche courante</b><div class="mini">Charge la manche pour voir l’action suivante.</div></div>';
         if (state.currentRound) {
@@ -9294,7 +9234,6 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           + '<div class="duel-stage-list">' + stageListHtml + '</div>'
           + '<div class="duel-round-strip">' + roundsStripHtml + '</div>'
           + (utilityActions.length ? ('<div class="duel-detail-utility">' + utilityActions.join('') + '</div>') : '')
-          + openerBlock
           + jokerBlock
           + roundBlock;
         renderDuelHome();
