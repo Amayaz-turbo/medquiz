@@ -8624,6 +8624,20 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         return null;
       }
 
+      async function refreshRoundQuestionsForPlay() {
+        if (!state.selectedDuelId || !state.currentRound) {
+          return;
+        }
+        var result = await api('/duels/' + state.selectedDuelId + '/rounds/' + state.currentRound.roundNo + '/questions');
+        state.roundQuestions = result.items || [];
+        (state.roundQuestions || []).forEach(function (item) {
+          var slotKey = String(item.slotNo);
+          if (!state.roundQuestionShownAtBySlot[slotKey]) {
+            state.roundQuestionShownAtBySlot[slotKey] = Date.now();
+          }
+        });
+      }
+
       function startDuelPlay(kind) {
         state.duelPlayKind = kind || '';
         state.duelPlayReview = null;
@@ -8745,7 +8759,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           + '<div class="duel-play-copy">'
           + '<div class="duel-play-kicker">' + escapeHtml(playItem.kind === 'opener' ? 'Question d’ouverture' : 'Tour duel') + '</div>'
           + '<div class="duel-play-name">' + escapeHtml(duelOpponentName) + '</div>'
-          + '<div class="mini">' + escapeHtml(playItem.kind === 'opener' ? 'Une question pour lancer le duel.' : 'Tu joues ton tour question par question.') + '</div>'
+          + '<div class="mini">' + escapeHtml(playItem.kind === 'opener' ? 'Une question pour lancer le duel.' : 'Ton tour comporte 3 questions, jouées l’une après l’autre.') + '</div>'
           + '</div>'
           + '<div class="duel-play-score"><b>' + escapeHtml(String(duelMyScore)) + '</b><span>VS</span><b>' + escapeHtml(String(duelOpponentScore)) + '</b></div>'
           + '</div>'
@@ -8773,7 +8787,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           refs.duelSubmitAnswerBtn.disabled = true;
           refs.duelNextAnswerBtn.classList.remove('hidden');
           refs.duelNextAnswerBtn.disabled = false;
-          refs.duelNextAnswerBtn.textContent = review.turnCompleted || findNextUnansweredDuelRoundIndex(state.duelPlayCursor + 1) < 0
+          refs.duelNextAnswerBtn.textContent = review.turnCompleted || review.remainingSlots === 0
             ? 'Retour au duel'
             : 'Question suivante';
           startDuelPlayAutoAdvance();
@@ -8790,7 +8804,16 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       async function advanceDuelPlay() {
         clearDuelPlayAutoAdvance();
         if (state.duelPlayKind === 'round' && state.duelPlayReview && !state.duelPlayReview.turnCompleted) {
-          var nextIndex = findNextUnansweredDuelRoundIndex(state.duelPlayCursor + 1);
+          var nextIndex = -1;
+          try {
+            await refreshRoundQuestionsForPlay();
+            nextIndex = findNextUnansweredDuelRoundIndex(state.duelPlayCursor + 1);
+            if (nextIndex < 0) {
+              nextIndex = findNextUnansweredDuelRoundIndex(0);
+            }
+          } catch (err) {
+            nextIndex = findNextUnansweredDuelRoundIndex(state.duelPlayCursor + 1);
+          }
           if (nextIndex >= 0) {
             state.duelPlayCursor = nextIndex;
             state.duelPlayReview = null;
@@ -9545,7 +9568,14 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           body: payload
         });
         await loadDuelDetail(state.selectedDuelId);
+        if (state.selectedDuel && state.selectedDuel.status === 'in_progress') {
+          await loadCurrentRound();
+        }
         setDuelFlow('detail');
+        if (result.starterPolicy === 'random' && result.resolved) {
+          setStatus('Opener résolu. La main de départ a été tirée au sort.', 'ok');
+          return;
+        }
         setStatus(result.resolved ? 'Opener résolu.' : 'Réponse opener enregistrée.', 'ok');
       }
 
@@ -9589,14 +9619,16 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         if (!state.selectedDuelId || !state.currentRound) {
           throw new Error('Charge la manche courante d\'abord.');
         }
-        var result = await api('/duels/' + state.selectedDuelId + '/rounds/' + state.currentRound.roundNo + '/questions');
-        state.roundQuestions = result.items || [];
+        await refreshRoundQuestionsForPlay();
         state.roundQuestionShownAtBySlot = {};
         state.duelRoundAnsweredSlots = {};
         state.duelPlayReview = null;
         (state.roundQuestions || []).forEach(function (q) {
           state.roundQuestionShownAtBySlot[String(q.slotNo)] = Date.now();
         });
+        if (state.roundQuestions.length < 3) {
+          setStatus('Tour duel chargé, mais moins de 3 questions ont été reçues.', 'warn');
+        }
         renderDuelDetail();
         startDuelPlay('round');
       }
@@ -9631,7 +9663,9 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           isCorrect: !!(result.answerResult && result.answerResult.isCorrect),
           correctChoiceId: result.answerResult ? result.answerResult.correctChoiceId : null,
           explanation: result.answerResult ? result.answerResult.explanation : '',
-          turnCompleted: !!result.turnCompleted
+          turnCompleted: !!result.turnCompleted,
+          answeredSlots: result.roundProgress ? Number(result.roundProgress.answeredSlots || 0) : null,
+          remainingSlots: result.roundProgress ? Number(result.roundProgress.remainingSlots || 0) : null
         };
         renderDuelPlay();
         var resultTone = result.answerResult && result.answerResult.isCorrect ? 'ok' : 'info';

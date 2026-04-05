@@ -589,11 +589,39 @@ export class DuelsService {
       }
 
       const final = await this.getOpenerRow(client, duelId);
+      if (final?.winner_user_id) {
+        const rematchWinnerChoice = await this.shouldWinnerChooseStarter(client, duel);
+        if (!rematchWinnerChoice) {
+          const starterUserId = this.pickRandomStarterUserId(duel);
+          const startedDuel = await this.startDuelAfterOpener(
+            client,
+            duel,
+            duelId,
+            starterUserId,
+            "opener_random_starter"
+          );
+
+          return {
+            answeredBy: userId,
+            playerCorrect: isCorrect,
+            resolved: true,
+            winnerUserId: final.winner_user_id,
+            requiresStarterDecision: false,
+            starterPolicy: "random",
+            starterUserId: startedDuel.starterUserId,
+            currentTurnUserId: startedDuel.currentTurnUserId,
+            turnDeadlineAt: startedDuel.turnDeadlineAt
+          };
+        }
+      }
+
       return {
         answeredBy: userId,
         playerCorrect: isCorrect,
         resolved: Boolean(final?.winner_user_id),
-        winnerUserId: final?.winner_user_id ?? null
+        winnerUserId: final?.winner_user_id ?? null,
+        requiresStarterDecision: Boolean(final?.winner_user_id),
+        starterPolicy: final?.winner_user_id ? "winner_choice" : null
       };
     });
   }
@@ -639,39 +667,7 @@ export class DuelsService {
         [duelId, dto.decision]
       );
 
-      const deadline = this.plusHours(new Date(), 24);
-      await client.query(
-        `
-          UPDATE duels
-          SET
-            status = 'in_progress',
-            starter_user_id = $2,
-            current_turn_user_id = $2,
-            turn_deadline_at = $3,
-            accepted_at = COALESCE(accepted_at, NOW()),
-            current_round_no = 1
-          WHERE id = $1
-        `,
-        [duelId, starterUserId, deadline]
-      );
-
-      await this.createRoundIfMissing(client, duel, 1, "awaiting_choice");
-
-      await this.insertNotification(client, {
-        userId: starterUserId,
-        type: "duel_turn",
-        payload: {
-          duelId,
-          reason: "opener_decision_made"
-        }
-      });
-
-      return {
-        duelId,
-        starterUserId,
-        currentTurnUserId: starterUserId,
-        turnDeadlineAt: deadline.toISOString()
-      };
+      return this.startDuelAfterOpener(client, duel, duelId, starterUserId, "opener_decision_made");
     });
   }
 
@@ -1644,15 +1640,8 @@ export class DuelsService {
     duel: DuelRow,
     round: DuelRoundRow
   ): Promise<void> {
-    const count = await client.query<{ c: string }>(
-      `
-        SELECT COUNT(*)::text AS c
-        FROM duel_round_questions
-        WHERE duel_round_id = $1
-      `,
-      [round.id]
-    );
-    if (Number(count.rows[0]?.c ?? "0") >= 6) {
+    const alreadyComplete = await this.hasCompleteRoundAssignments(client, round.id, duel);
+    if (alreadyComplete) {
       return;
     }
 
@@ -1672,15 +1661,44 @@ export class DuelsService {
     duelRoundId: string,
     subjectId: string
   ): Promise<void> {
-    const existing = await client.query<{ c: string }>(
+    const existingAssignments = await client.query<{
+      user_id: string;
+      slot_no: number;
+      question_id: string;
+      difficulty_snapshot: number;
+    }>(
       `
-        SELECT COUNT(*)::text AS c
+        SELECT user_id, slot_no, question_id, difficulty_snapshot
         FROM duel_round_questions
         WHERE duel_round_id = $1
+        ORDER BY slot_no, user_id
       `,
       [duelRoundId]
     );
-    if (Number(existing.rows[0]?.c ?? "0") >= 6) {
+
+    const assignedByUser = new Map<string, Map<number, { questionId: string; difficultySnapshot: number }>>();
+    assignedByUser.set(duel.player1_id, new Map());
+    assignedByUser.set(duel.player2_id, new Map());
+
+    const slotDifficulty = new Map<number, number>();
+    for (const row of existingAssignments.rows) {
+      if (!assignedByUser.has(row.user_id)) {
+        assignedByUser.set(row.user_id, new Map());
+      }
+      assignedByUser.get(row.user_id)?.set(row.slot_no, {
+        questionId: row.question_id,
+        difficultySnapshot: row.difficulty_snapshot
+      });
+      if (!slotDifficulty.has(row.slot_no)) {
+        slotDifficulty.set(row.slot_no, row.difficulty_snapshot);
+      }
+    }
+
+    const alreadyComplete = [duel.player1_id, duel.player2_id].every((userId) => {
+      const slots = assignedByUser.get(userId);
+      return Boolean(slots && slots.size >= 3);
+    });
+    if (alreadyComplete) {
       return;
     }
 
@@ -1704,8 +1722,13 @@ export class DuelsService {
       stock.set(row.difficulty, Number(row.c));
     }
 
-    const plan: number[] = [];
+    const plan = new Map<number, number>();
     for (let slot = 1; slot <= 3; slot += 1) {
+      if (slotDifficulty.has(slot)) {
+        plan.set(slot, slotDifficulty.get(slot) as number);
+        continue;
+      }
+
       const candidates = Array.from(stock.entries())
         .filter(([, remaining]) => remaining > 0)
         .map(([difficulty]) => difficulty);
@@ -1718,19 +1741,35 @@ export class DuelsService {
       }
 
       const picked = candidates[Math.floor(Math.random() * candidates.length)];
-      plan.push(picked);
+      plan.set(slot, picked);
       stock.set(picked, (stock.get(picked) ?? 1) - 1);
     }
 
     const playerSelections = new Map<string, string[]>();
-    playerSelections.set(duel.player1_id, []);
-    playerSelections.set(duel.player2_id, []);
+    playerSelections.set(
+      duel.player1_id,
+      Array.from((assignedByUser.get(duel.player1_id) ?? new Map()).values()).map((item) => item.questionId)
+    );
+    playerSelections.set(
+      duel.player2_id,
+      Array.from((assignedByUser.get(duel.player2_id) ?? new Map()).values()).map((item) => item.questionId)
+    );
 
     for (let i = 0; i < 3; i += 1) {
       const slotNo = i + 1;
-      const difficulty = plan[i];
+      const difficulty = plan.get(slotNo);
+      if (!difficulty) {
+        throw new UnprocessableEntityException({
+          code: "DUEL_SUBJECT_QUESTION_POOL_TOO_SMALL",
+          message: "Not enough questions to build fair round for this subject"
+        });
+      }
 
       for (const userId of [duel.player1_id, duel.player2_id]) {
+        if (assignedByUser.get(userId)?.has(slotNo)) {
+          continue;
+        }
+
         const selectedIds = playerSelections.get(userId) ?? [];
         const question = await this.pickQuestionForSlot(
           client,
@@ -1748,15 +1787,102 @@ export class DuelsService {
             VALUES
               ($1, $2, $3, $4, $5, $6)
             ON CONFLICT (duel_round_id, user_id, slot_no)
-            DO UPDATE
-            SET
-              question_id = EXCLUDED.question_id,
-              difficulty_snapshot = EXCLUDED.difficulty_snapshot
+            DO NOTHING
           `,
           [randomUUID(), duelRoundId, userId, slotNo, question.id, difficulty]
         );
       }
     }
+  }
+
+  private async hasCompleteRoundAssignments(
+    client: PoolClient,
+    duelRoundId: string,
+    duel: DuelRow
+  ): Promise<boolean> {
+    const result = await client.query<{ user_id: string; slot_count: string }>(
+      `
+        SELECT user_id, COUNT(DISTINCT slot_no)::text AS slot_count
+        FROM duel_round_questions
+        WHERE duel_round_id = $1
+        GROUP BY user_id
+      `,
+      [duelRoundId]
+    );
+
+    const counts = new Map<string, number>();
+    for (const row of result.rows) {
+      counts.set(row.user_id, Number(row.slot_count));
+    }
+
+    return [duel.player1_id, duel.player2_id].every((userId) => (counts.get(userId) ?? 0) >= 3);
+  }
+
+  private async shouldWinnerChooseStarter(client: PoolClient, duel: DuelRow): Promise<boolean> {
+    const result = await client.query<{ winner_user_id: string }>(
+      `
+        SELECT winner_user_id
+        FROM duels
+        WHERE id <> $1
+          AND winner_user_id IS NOT NULL
+          AND (
+            (player1_id = $2 AND player2_id = $3)
+            OR
+            (player1_id = $3 AND player2_id = $2)
+          )
+        ORDER BY completed_at DESC NULLS LAST, created_at DESC
+        LIMIT 1
+      `,
+      [duel.id, duel.player1_id, duel.player2_id]
+    );
+
+    return result.rowCount > 0;
+  }
+
+  private pickRandomStarterUserId(duel: DuelRow): string {
+    return Math.random() < 0.5 ? duel.player1_id : duel.player2_id;
+  }
+
+  private async startDuelAfterOpener(
+    client: PoolClient,
+    duel: DuelRow,
+    duelId: string,
+    starterUserId: string,
+    notificationReason: string
+  ) {
+    const deadline = this.plusHours(new Date(), 24);
+    await client.query(
+      `
+        UPDATE duels
+        SET
+          status = 'in_progress',
+          starter_user_id = $2,
+          current_turn_user_id = $2,
+          turn_deadline_at = $3,
+          accepted_at = COALESCE(accepted_at, NOW()),
+          current_round_no = 1
+        WHERE id = $1
+      `,
+      [duelId, starterUserId, deadline]
+    );
+
+    await this.createRoundIfMissing(client, duel, 1, "awaiting_choice");
+
+    await this.insertNotification(client, {
+      userId: starterUserId,
+      type: "duel_turn",
+      payload: {
+        duelId,
+        reason: notificationReason
+      }
+    });
+
+    return {
+      duelId,
+      starterUserId,
+      currentTurnUserId: starterUserId,
+      turnDeadlineAt: deadline.toISOString()
+    };
   }
 
   private async pickQuestionForSlot(
