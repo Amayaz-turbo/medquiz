@@ -7547,6 +7547,32 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         }).format(date);
       }
 
+      function formatRemainingTime(value) {
+        if (!value) {
+          return '-';
+        }
+        var date = new Date(value);
+        var diffMs = date.getTime() - Date.now();
+        if (!Number.isFinite(diffMs)) {
+          return '-';
+        }
+        if (diffMs <= 0) {
+          return 'Expiré';
+        }
+        var totalMinutes = Math.ceil(diffMs / 60000);
+        var days = Math.floor(totalMinutes / (24 * 60));
+        var hours = Math.floor((totalMinutes % (24 * 60)) / 60);
+        var minutes = totalMinutes % 60;
+
+        if (days > 0) {
+          return days + ' j ' + hours + ' h';
+        }
+        if (hours > 0) {
+          return hours + ' h ' + minutes + ' min';
+        }
+        return minutes + ' min';
+      }
+
       function getNotificationSummary(item) {
         var payload = item && item.payload && typeof item.payload === 'object' ? item.payload : {};
         var duelShort = payload.duelId ? 'Duel ' + String(payload.duelId).slice(0, 8) : 'Le duel';
@@ -8737,8 +8763,18 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           : '<div class="mini">Aucune manche initialisée pour l\'instant.</div>';
         var myScore = isPlayer1 ? d.score.player1 : d.score.player2;
         var opponentScore = isPlayer1 ? d.score.player2 : d.score.player1;
-        var myProfile = getDuelProfile(isPlayer1 ? 'player1' : 'player2', d);
-        var opponentProfile = getDuelProfile(isPlayer1 ? 'player2' : 'player1', d);
+        var myProfile = null;
+        var opponentProfile = null;
+        if (meId && d.player1Id === meId) {
+          myProfile = d.player1Profile || null;
+          opponentProfile = d.player2Profile || null;
+        } else if (meId && d.player2Id === meId) {
+          myProfile = d.player2Profile || null;
+          opponentProfile = d.player1Profile || null;
+        } else {
+          myProfile = getDuelProfile(isPlayer1 ? 'player1' : 'player2', d);
+          opponentProfile = getDuelProfile(isPlayer1 ? 'player2' : 'player1', d);
+        }
         var myAccent = getSafeProfileColor((myProfile && myProfile.profileColor) || (state.me && state.me.profileColor));
         var opponentAccent = getSafeProfileColor(opponentProfile && opponentProfile.profileColor);
         var myName = myProfile && myProfile.displayLabel ? myProfile.displayLabel : getPreferredPlayerName();
@@ -8757,7 +8793,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         var myNextStage = state.myAvatar && state.myAvatar.nextStage ? state.myAvatar.nextStage.name : '';
         var duelModeLabel = getDuelModeLabel(d.matchmakingMode);
         var duelTurnLabel = isMyTurn ? 'À toi de jouer' : ('Tour de ' + opponentName);
-        var duelDeadlineLabel = d.turnDeadlineAt ? formatDateTime(d.turnDeadlineAt) : 'Aucune deadline';
+        var duelRemainingLabel = d.turnDeadlineAt ? formatRemainingTime(d.turnDeadlineAt) : '-';
         var duelResultLabel = d.winnerUserId
           ? (d.winnerUserId === meId ? 'Tu as gagné' : (opponentName + ' a gagné'))
           : 'Duel en cours';
@@ -8937,7 +8973,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           + '<div class="duel-hero-name">' + escapeHtml(opponentName) + '</div>'
           + '<div class="mini">Un tour = 3 questions chacun. ' + escapeHtml(duelModeLabel) + '.</div>'
           + '</div>'
-          + '<div class="duel-detail-badges"><span class="chip">' + escapeHtml(getDuelStatusLabel(d.status)) + '</span><span class="chip neutral">' + escapeHtml(duelTurnLabel) + '</span></div>'
+          + '<div class="duel-detail-badges"><span class="chip">' + escapeHtml(getDuelStatusLabel(d.status)) + '</span><span class="chip neutral">Temps restant: ' + escapeHtml(duelRemainingLabel) + '</span></div>'
           + '</div>'
           + '<div class="duel-scoreboard">'
           + '<div class="duel-score-col"><span>Toi</span><b>' + escapeHtml(String(myScore)) + '</b></div>'
@@ -8947,8 +8983,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           + '<div class="duel-overview-grid">'
           + '<div class="duel-overview-card"><div class="k">Tour actuel</div><div class="v">' + escapeHtml(duelTurnLabel) + '</div></div>'
           + '<div class="duel-overview-card"><div class="k">Manches</div><div class="v">' + escapeHtml(String(d.currentRoundNo)) + ' / 5</div></div>'
-          + '<div class="duel-overview-card"><div class="k">Format</div><div class="v">3 questions</div></div>'
-          + '<div class="duel-overview-card"><div class="k">' + escapeHtml(d.winnerUserId ? 'Résultat' : 'Deadline') + '</div><div class="v">' + escapeHtml(d.winnerUserId ? duelResultLabel : duelDeadlineLabel) + '</div></div>'
+          + '<div class="duel-overview-card"><div class="k">Statut</div><div class="v">' + escapeHtml(duelResultLabel) + '</div></div>'
           + '</div>'
           + '</div>'
           + '<div class="duel-guide-focus">'
