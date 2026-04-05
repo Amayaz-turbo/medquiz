@@ -3525,6 +3525,128 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       box-shadow: none;
     }
 
+    .duel-play-top {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .duel-play-hero {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      border: 1px solid rgba(186, 227, 245, 0.32);
+      border-radius: 18px;
+      padding: 12px 14px;
+      background: linear-gradient(180deg, rgba(205, 234, 248, 0.3), rgba(162, 207, 229, 0.2));
+      box-shadow: 0 16px 28px rgba(60, 116, 150, 0.12);
+      backdrop-filter: blur(10px);
+    }
+
+    .duel-play-copy {
+      display: grid;
+      gap: 4px;
+    }
+
+    .duel-play-kicker {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.24px;
+      color: rgba(255, 255, 255, 0.78);
+      font-weight: 800;
+    }
+
+    .duel-play-name {
+      font-size: 28px;
+      line-height: 1;
+      font-weight: 900;
+      color: #ffffff;
+      text-shadow: 0 2px 8px rgba(17, 52, 88, 0.18);
+    }
+
+    .duel-play-copy .mini {
+      color: rgba(255, 255, 255, 0.86);
+      font-size: 12px;
+    }
+
+    .duel-play-score {
+      display: grid;
+      grid-template-columns: auto auto auto;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.34);
+    }
+
+    .duel-play-score b {
+      font-size: 34px;
+      line-height: 1;
+      color: #ffffff;
+      text-shadow: 0 2px 8px rgba(17, 52, 88, 0.18);
+    }
+
+    .duel-play-score span {
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      color: rgba(255, 255, 255, 0.78);
+      text-transform: uppercase;
+    }
+
+    .duel-play-track {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .duel-play-pill {
+      border-radius: 14px;
+      padding: 10px 10px 9px;
+      border: 1px solid rgba(210, 236, 249, 0.28);
+      background: rgba(255, 255, 255, 0.14);
+      display: grid;
+      gap: 3px;
+      justify-items: center;
+      text-align: center;
+      backdrop-filter: blur(10px);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    }
+
+    .duel-play-pill .slot {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.22px;
+      color: rgba(255, 255, 255, 0.78);
+      font-weight: 800;
+    }
+
+    .duel-play-pill .state {
+      font-size: 13px;
+      color: #ffffff;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .duel-play-pill.is-current {
+      background: rgba(255, 255, 255, 0.24);
+      border-color: rgba(255, 255, 255, 0.34);
+      transform: translateY(-1px);
+    }
+
+    .duel-play-pill.is-correct {
+      background: rgba(118, 215, 175, 0.28);
+      border-color: rgba(149, 240, 201, 0.36);
+    }
+
+    .duel-play-pill.is-wrong {
+      background: rgba(244, 192, 126, 0.28);
+      border-color: rgba(255, 216, 168, 0.36);
+    }
+
     body[data-screen="duel"] {
       --ambient-scene-opacity: 0.96;
       --ambient-scene-overlay: linear-gradient(180deg, rgba(241, 251, 255, 0.05), rgba(166, 217, 245, 0.1));
@@ -5806,6 +5928,8 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       var notificationToastTimers = {};
       var reviewAutoAdvanceTimeout = null;
       var reviewAutoAdvanceTick = null;
+      var duelPlayAutoAdvanceTimeout = null;
+      var duelPlayAutoAdvanceTick = null;
       var REVIEW_AUTO_ADVANCE_OK_MS = 3000;
       var REVIEW_AUTO_ADVANCE_ERR_MS = 5000;
       var ambientSceneAssets = [
@@ -6446,6 +6570,9 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         if (nextStep === 'play' && !state.selectedDuel) {
           nextStep = 'inbox';
         }
+        if (nextStep !== 'play') {
+          clearDuelPlayAutoAdvance();
+        }
         state.duelFlow = nextStep;
         document.body.setAttribute('data-duel-flow', state.duelFlow);
         renderDuelFlow();
@@ -6502,6 +6629,9 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       function setActiveScreen(screenKey) {
         var previousScreen = state.activeScreen;
         state.activeScreen = normalizeActiveScreen(screenKey);
+        if (state.activeScreen !== 'duel') {
+          clearDuelPlayAutoAdvance();
+        }
         if (state.activeScreen === 'duel' && previousScreen !== 'duel') {
           state.ambientScenes.duel = pickRandomAmbientScene(state.ambientScenes.trainingPlay);
         } else if (state.activeScreen !== 'duel' && previousScreen === 'duel' && !state.ambientScenes.app) {
@@ -8422,6 +8552,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       }
 
       function resetDuelTransientView() {
+        clearDuelPlayAutoAdvance();
         state.duelPlayKind = '';
         state.duelPlayCursor = 0;
         state.duelPlayReview = null;
@@ -8513,6 +8644,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
         var playItem = getCurrentDuelPlayItem();
         if (!playItem) {
+          clearDuelPlayAutoAdvance();
           refs.duelPlayContent.classList.remove('hidden');
           refs.duelPlayContent.classList.add('empty');
           refs.duelPlayContent.innerHTML = '<div class="q-empty-title">Aucune question duel à jouer</div>'
@@ -8524,12 +8656,43 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           return;
         }
 
+        var duel = state.selectedDuel || null;
+        var duelMeId = state.me && state.me.id ? state.me.id : null;
+        var duelIsPlayer1 = Boolean(duel && duelMeId && duel.player1Id === duelMeId);
+        var duelMyScore = duel ? (duelIsPlayer1 ? duel.score.player1 : duel.score.player2) : 0;
+        var duelOpponentScore = duel ? (duelIsPlayer1 ? duel.score.player2 : duel.score.player1) : 0;
+        var duelOpponentProfile = duel ? (duelIsPlayer1 ? (duel.player2Profile || null) : (duel.player1Profile || null)) : null;
+        var duelOpponentName = capitalizeDisplayLabel(
+          duelOpponentProfile && duelOpponentProfile.displayLabel
+            ? duelOpponentProfile.displayLabel
+            : (duel ? getDuelOpponentTitle(duel) : 'Adversaire')
+        );
         var q = playItem.question;
         var review = state.duelPlayReview && state.duelPlayReview.questionId === q.id
           ? state.duelPlayReview
           : null;
         var correctChoiceId = review ? review.correctChoiceId : '';
         var selectedChoiceId = review ? review.selectedChoiceId : '';
+        var slotTrackHtml = '';
+        if (playItem.kind === 'round') {
+          slotTrackHtml = '<div class="duel-play-track">' + [1, 2, 3].map(function (slotNo) {
+            var slotKey = String(slotNo);
+            var answer = state.duelRoundAnsweredSlots[slotKey];
+            var className = 'duel-play-pill';
+            var stateLabel = 'À jouer';
+            if (answer && answer.isCorrect) {
+              className += ' is-correct';
+              stateLabel = 'Réussie';
+            } else if (answer && !answer.isCorrect) {
+              className += ' is-wrong';
+              stateLabel = 'À revoir';
+            } else if (slotNo === playItem.slotNo) {
+              className += ' is-current';
+              stateLabel = review ? 'Corrigée' : 'En cours';
+            }
+            return '<div class="' + className + '"><div class="slot">Question ' + escapeHtml(String(slotNo)) + '</div><div class="state">' + escapeHtml(stateLabel) + '</div></div>';
+          }).join('') + '</div>';
+        }
 
         var choicesHtml = '<div class="choice-list">' + (q.choices || []).map(function (choice, index) {
           var checked = selectedChoiceId === choice.id ? ' checked' : '';
@@ -8559,6 +8722,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
         var feedbackHtml = '';
         if (review) {
+          var duelAutoAdvanceSeconds = Math.round(getDuelPlayAutoAdvanceMs(review) / 1000);
           feedbackHtml =
             '<div class="q-feedback ' + (review.isCorrect ? 'ok' : 'err') + '">'
             + '<div class="q-feedback-top">'
@@ -8566,13 +8730,28 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
             + '<span class="chip ' + (review.isCorrect ? '' : 'warn') + '">' + (review.isCorrect ? 'Correct' : 'Corrigé') + '</span>'
             + '</div>'
             + '<div class="q-feedback-copy">' + escapeHtml(review.explanation || '') + '</div>'
+            + '</div>'
+            + '<div class="q-auto-advance">'
+            + '<div class="q-auto-advance-top"><span>Transition automatique</span><b id="duelAutoAdvanceLabel">Suite automatique dans ' + duelAutoAdvanceSeconds + ' s</b></div>'
+            + '<div class="q-auto-advance-track"><div id="duelAutoAdvanceBar" class="q-auto-advance-bar"></div></div>'
             + '</div>';
         }
 
         refs.duelPlayContent.classList.remove('hidden');
         refs.duelPlayContent.classList.remove('empty');
         refs.duelPlayContent.innerHTML =
-          '<div class="q-focus-top">'
+          '<div class="duel-play-top">'
+          + '<div class="duel-play-hero">'
+          + '<div class="duel-play-copy">'
+          + '<div class="duel-play-kicker">' + escapeHtml(playItem.kind === 'opener' ? 'Question d’ouverture' : 'Tour duel') + '</div>'
+          + '<div class="duel-play-name">' + escapeHtml(duelOpponentName) + '</div>'
+          + '<div class="mini">' + escapeHtml(playItem.kind === 'opener' ? 'Une question pour lancer le duel.' : 'Tu joues ton tour question par question.') + '</div>'
+          + '</div>'
+          + '<div class="duel-play-score"><b>' + escapeHtml(String(duelMyScore)) + '</b><span>VS</span><b>' + escapeHtml(String(duelOpponentScore)) + '</b></div>'
+          + '</div>'
+          + slotTrackHtml
+          + '</div>'
+          + '<div class="q-focus-top">'
           + '<div class="q-progress-pill">' + escapeHtml(playItem.progressLabel) + '</div>'
           + '<span class="chip neutral q-scope-chip">' + escapeHtml(playItem.scopeLabel) + '</span>'
           + '</div>'
@@ -8597,9 +8776,11 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           refs.duelNextAnswerBtn.textContent = review.turnCompleted || findNextUnansweredDuelRoundIndex(state.duelPlayCursor + 1) < 0
             ? 'Retour au duel'
             : 'Question suivante';
+          startDuelPlayAutoAdvance();
           return;
         }
 
+        clearDuelPlayAutoAdvance();
         refs.duelSubmitAnswerBtn.classList.remove('hidden');
         refs.duelSubmitAnswerBtn.disabled = false;
         refs.duelNextAnswerBtn.classList.add('hidden');
@@ -8607,6 +8788,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       }
 
       async function advanceDuelPlay() {
+        clearDuelPlayAutoAdvance();
         if (state.duelPlayKind === 'round' && state.duelPlayReview && !state.duelPlayReview.turnCompleted) {
           var nextIndex = findNextUnansweredDuelRoundIndex(state.duelPlayCursor + 1);
           if (nextIndex >= 0) {
@@ -9761,7 +9943,22 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         }
       }
 
+      function clearDuelPlayAutoAdvance() {
+        if (duelPlayAutoAdvanceTimeout) {
+          clearTimeout(duelPlayAutoAdvanceTimeout);
+          duelPlayAutoAdvanceTimeout = null;
+        }
+        if (duelPlayAutoAdvanceTick) {
+          clearInterval(duelPlayAutoAdvanceTick);
+          duelPlayAutoAdvanceTick = null;
+        }
+      }
+
       function getReviewAutoAdvanceMs(review) {
+        return review && review.isCorrect ? REVIEW_AUTO_ADVANCE_OK_MS : REVIEW_AUTO_ADVANCE_ERR_MS;
+      }
+
+      function getDuelPlayAutoAdvanceMs(review) {
         return review && review.isCorrect ? REVIEW_AUTO_ADVANCE_OK_MS : REVIEW_AUTO_ADVANCE_ERR_MS;
       }
 
@@ -9776,6 +9973,20 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         label.textContent = remainingSeconds > 0
           ? ('Passage automatique dans ' + remainingSeconds + ' s')
           : 'Passage automatique…';
+        bar.style.width = ((remainingMs / durationMs) * 100) + '%';
+      }
+
+      function syncDuelPlayAutoAdvanceUi(deadlineAt, durationMs) {
+        var label = document.getElementById('duelAutoAdvanceLabel');
+        var bar = document.getElementById('duelAutoAdvanceBar');
+        if (!label || !bar) {
+          return;
+        }
+        var remainingMs = Math.max(0, deadlineAt - Date.now());
+        var remainingSeconds = remainingMs > 0 ? Math.max(1, Math.ceil(remainingMs / 1000)) : 0;
+        label.textContent = remainingSeconds > 0
+          ? ('Suite automatique dans ' + remainingSeconds + ' s')
+          : 'Suite automatique…';
         bar.style.width = ((remainingMs / durationMs) * 100) + '%';
       }
 
@@ -9795,6 +10006,27 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           try {
             await refreshSessionAndQuestion();
             setStatus('Question suivante chargée.', 'info');
+          } catch (err) {
+            setStatus(err.message || String(err), 'err');
+          }
+        }, durationMs);
+      }
+
+      function startDuelPlayAutoAdvance() {
+        clearDuelPlayAutoAdvance();
+        if (!state.duelPlayReview || state.duelFlow !== 'play') {
+          return;
+        }
+        var durationMs = getDuelPlayAutoAdvanceMs(state.duelPlayReview);
+        var deadlineAt = Date.now() + durationMs;
+        syncDuelPlayAutoAdvanceUi(deadlineAt, durationMs);
+        duelPlayAutoAdvanceTick = window.setInterval(function () {
+          syncDuelPlayAutoAdvanceUi(deadlineAt, durationMs);
+        }, 100);
+        duelPlayAutoAdvanceTimeout = window.setTimeout(async function () {
+          clearDuelPlayAutoAdvance();
+          try {
+            await advanceDuelPlay();
           } catch (err) {
             setStatus(err.message || String(err), 'err');
           }
