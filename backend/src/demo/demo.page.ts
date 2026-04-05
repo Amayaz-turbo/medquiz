@@ -2333,6 +2333,31 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       box-shadow: 0 10px 22px rgba(12, 47, 72, 0.04);
     }
 
+    .duel-filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .duel-filter-chip {
+      border: 1px solid rgba(164, 209, 231, 0.78);
+      border-radius: 999px;
+      min-height: 40px;
+      padding: 8px 14px;
+      background: linear-gradient(180deg, rgba(236, 248, 255, 0.96), rgba(206, 237, 249, 0.94));
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 700;
+      box-shadow: 0 8px 16px rgba(48, 102, 130, 0.08);
+    }
+
+    .duel-filter-chip.is-active {
+      border-color: rgba(140, 198, 225, 0.94);
+      background: linear-gradient(180deg, rgba(224, 243, 252, 0.98), rgba(185, 226, 243, 0.96));
+      box-shadow: 0 10px 18px rgba(69, 132, 167, 0.12), inset 0 0 0 1px rgba(232, 247, 255, 0.5);
+    }
+
     .duel-item-top {
       display: flex;
       justify-content: space-between;
@@ -3058,8 +3083,9 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
     }
 
     .q-feedback.err {
-      border-color: #f1cbd5;
-      background: linear-gradient(180deg, #fff7f8, #fff1f4);
+      border-color: rgba(255, 211, 128, 0.92);
+      background: linear-gradient(180deg, rgba(255, 248, 228, 0.98), rgba(255, 238, 196, 0.96));
+      animation: review-warn-pulse 1s ease-in-out 2;
     }
 
     .q-auto-advance {
@@ -3352,9 +3378,15 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
     }
 
     .choice-state.err {
-      background: rgba(255, 229, 235, 0.16);
-      border: 1px solid rgba(255, 215, 224, 0.42);
-      color: #fff4f6;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      color: rgba(255, 255, 255, 0.92);
+    }
+
+    .choice-state.solution {
+      background: rgba(255, 228, 176, 0.28);
+      border: 1px solid rgba(255, 230, 194, 0.62);
+      color: #7c4a03;
     }
 
     .choice:has(input:checked) .choice-copy {
@@ -3385,10 +3417,37 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
     .choice.is-review-wrong,
     .choice.is-review-wrong:has(input:checked) {
-      border-color: rgba(255, 218, 226, 0.84);
-      background: linear-gradient(180deg, rgba(253, 139, 162, 0.98), rgba(226, 83, 117, 0.98));
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 16px 28px rgba(145, 34, 70, 0.24);
+      border-color: rgba(230, 243, 250, 0.56);
+      background: linear-gradient(180deg, rgba(219, 237, 247, 0.34), rgba(181, 215, 232, 0.26));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+      opacity: 0.62;
+    }
+
+    .choice.is-review-miss,
+    .choice.is-review-miss-picked,
+    .choice.is-review-miss:has(input:checked),
+    .choice.is-review-miss-picked:has(input:checked) {
+      border-color: rgba(240, 195, 120, 0.92);
+      background: linear-gradient(180deg, rgba(244, 201, 120, 0.92), rgba(228, 164, 78, 0.88));
+      box-shadow: inset 0 1px 0 rgba(255, 236, 204, 0.26), 0 14px 24px rgba(174, 117, 36, 0.18);
       opacity: 1;
+      animation: review-warn-pulse 1s ease-in-out 2;
+    }
+
+    body[data-screen="training"][data-training-flow="play"] .choice.is-review-wrong,
+    body[data-screen="training"][data-training-flow="play"] .choice.is-review-wrong:has(input:checked) {
+      background: linear-gradient(180deg, rgba(219, 237, 247, 0.34), rgba(181, 215, 232, 0.26));
+      border-color: rgba(230, 243, 250, 0.56);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    }
+
+    body[data-screen="training"][data-training-flow="play"] .choice.is-review-miss,
+    body[data-screen="training"][data-training-flow="play"] .choice.is-review-miss-picked,
+    body[data-screen="training"][data-training-flow="play"] .choice.is-review-miss:has(input:checked),
+    body[data-screen="training"][data-training-flow="play"] .choice.is-review-miss-picked:has(input:checked) {
+      background: linear-gradient(180deg, rgba(244, 201, 120, 0.92), rgba(228, 164, 78, 0.88));
+      border-color: rgba(240, 195, 120, 0.92);
+      box-shadow: inset 0 1px 0 rgba(255, 236, 204, 0.26), 0 14px 24px rgba(174, 117, 36, 0.18);
     }
 
     .choice.is-review-correct .choice-badge,
@@ -3400,10 +3459,30 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
     }
 
     .choice.is-review-wrong .choice-badge {
-      background: linear-gradient(180deg, rgba(255, 241, 245, 0.98), rgba(255, 188, 205, 0.96));
-      border-color: rgba(255, 255, 255, 0.86);
-      color: #9f214b;
-      box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.44), 0 10px 20px rgba(145, 34, 70, 0.2);
+      background: linear-gradient(180deg, rgba(240, 248, 252, 0.9), rgba(203, 226, 238, 0.82));
+      border-color: rgba(255, 255, 255, 0.72);
+      color: #5b7f92;
+      box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.34), 0 8px 16px rgba(101, 145, 169, 0.12);
+    }
+
+    .choice.is-review-miss .choice-badge,
+    .choice.is-review-miss-picked .choice-badge {
+      background: linear-gradient(180deg, rgba(255, 225, 171, 0.96), rgba(241, 185, 97, 0.94));
+      border-color: rgba(255, 239, 214, 0.84);
+      color: #7c4a03;
+      box-shadow: inset 0 2px 0 rgba(255, 239, 214, 0.32), 0 10px 20px rgba(174, 117, 36, 0.18);
+    }
+
+    @keyframes review-warn-pulse {
+      0%, 100% {
+        transform: scale(1);
+        filter: saturate(1);
+      }
+
+      50% {
+        transform: scale(1.01);
+        filter: saturate(1.08);
+      }
     }
 
     .open-answer-box {
@@ -4083,11 +4162,11 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
     }
 
     .training-mode-card.is-selected {
-      border-color: rgba(134, 212, 172, 0.64);
-      box-shadow: 0 14px 24px rgba(72, 138, 108, 0.14), inset 0 0 0 1px rgba(173, 235, 202, 0.24);
+      border-color: rgba(162, 214, 236, 0.9);
+      box-shadow: 0 14px 24px rgba(69, 132, 167, 0.14), inset 0 0 0 1px rgba(214, 239, 250, 0.4);
       background:
         radial-gradient(circle at top right, rgba(255, 255, 255, 0.18), transparent 34%),
-        linear-gradient(180deg, rgba(222, 246, 232, 0.96), rgba(184, 228, 206, 0.92));
+        linear-gradient(180deg, rgba(236, 248, 255, 0.98), rgba(206, 237, 249, 0.94));
     }
 
     .training-mode-top {
@@ -4823,10 +4902,11 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
                     </div>
                     <div class="module-head">
                       <b>Mes duels</b>
-                      <span>Un écran simple pour filtrer, parcourir, puis ouvrir un duel.</span>
+                      <span>Choisis un filtre, parcours la liste, puis reprends un duel.</span>
                     </div>
-                    <div class="auth-grid">
-                      <div>
+                    <div id="duelStatusFilterButtons" class="duel-filter-row"></div>
+                    <div class="auth-grid hidden">
+                      <div class="hidden">
                         <label class="label" for="duelStatusFilterSelect">Filtre liste</label>
                         <select id="duelStatusFilterSelect">
                           <option value="all">Tous</option>
@@ -5079,6 +5159,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         duelOpponentField: document.getElementById('duelOpponentField'),
         duelOpponentInput: document.getElementById('duelOpponentInput'),
         duelStatusFilterSelect: document.getElementById('duelStatusFilterSelect'),
+        duelStatusFilterButtons: document.getElementById('duelStatusFilterButtons'),
         createDuelBtn: document.getElementById('createDuelBtn'),
         refreshDuelsBtn: document.getElementById('refreshDuelsBtn'),
         duelsList: document.getElementById('duelsList'),
@@ -6011,6 +6092,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         refs.duelCreateView.classList.toggle('hidden', state.duelFlow !== 'create');
         refs.duelInboxView.classList.toggle('hidden', state.duelFlow !== 'inbox');
         refs.duelDetailView.classList.toggle('hidden', state.duelFlow !== 'detail');
+        renderDuelStatusFilters();
       }
 
       function pickRandomAmbientScene(exclude) {
@@ -7868,6 +7950,29 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         renderDuelModeCards();
       }
 
+      function renderDuelStatusFilters() {
+        if (!refs.duelStatusFilterButtons || !refs.duelStatusFilterSelect) {
+          return;
+        }
+
+        var current = refs.duelStatusFilterSelect.value || 'all';
+        var filters = [
+          { value: 'all', label: 'Tous' },
+          { value: 'pending_opener', label: 'Invitation' },
+          { value: 'in_progress', label: 'En cours' },
+          { value: 'completed', label: 'Terminés' },
+          { value: 'cancelled', label: 'Annulés' },
+          { value: 'expired', label: 'Expirés' }
+        ];
+
+        refs.duelStatusFilterButtons.innerHTML = filters.map(function (filter) {
+          var active = filter.value === current;
+          return '<button class="duel-filter-chip' + (active ? ' is-active' : '') + '" data-duel-status-filter="' + escapeHtml(filter.value) + '">'
+            + escapeHtml(filter.label)
+            + '</button>';
+        }).join('');
+      }
+
       function renderDuelModeCards() {
         if (!refs.duelModeCards) {
           return;
@@ -7942,11 +8047,11 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           + '<div class="session-brief-top">'
           + '<div class="session-brief-copy">'
           + '<div class="session-brief-eyebrow">Mode duel</div>'
-          + '<div class="session-brief-title">On garde ça simple.</div>'
+          + '<div class="session-brief-title">Ton espace duel.</div>'
           + '<div class="session-brief-text">' + escapeHtml(
             state.selectedDuelId
-              ? ('Dernier duel ouvert: ' + selectedDuelLabel + '. Tu peux le reprendre ou lancer un nouveau défi.')
-              : 'Crée un défi ou rouvre une partie en cours, sans écran surchargé.'
+              ? ('Dernier duel ouvert: ' + selectedDuelLabel + '. Tu peux le reprendre tout de suite ou lancer un nouveau défi.')
+              : 'Lance un défi ou rouvre simplement une partie en cours.'
           ) + '</div>'
           + '</div>'
           + '</div>'
@@ -7963,7 +8068,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           {
             key: 'inbox',
             title: 'Mes duels',
-            copy: 'Voir la liste des duels et en ouvrir un.',
+            copy: 'Voir la liste et reprendre une partie.',
             chip: totalDuels ? (String(totalDuels) + ' visible(s)') : 'Liste vide'
           }
         ];
@@ -8005,6 +8110,9 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           var opponent = d.opponent || null;
           var opponentName = opponent && opponent.displayLabel ? opponent.displayLabel : 'Adversaire';
           var opponentStage = getDuelProfileStageName(opponent) || 'Profil duel';
+          var duelMeId = state.me && state.me.id ? state.me.id : null;
+          var duelIsMyTurn = Boolean(duelMeId && d.currentTurnUserId === duelMeId);
+          var ctaLabel = duelIsMyTurn ? 'Jouer' : 'Ouvrir';
           return '<div class="duel-item">'
             + '<div class="duel-item-top">'
             + '<b>Duel ' + escapeHtml(d.id.slice(0, 8)) + '</b>'
@@ -8012,8 +8120,8 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
             + '</div>'
             + '<div class="mini">Face à: ' + escapeHtml(opponentName) + ' · ' + escapeHtml(opponentStage) + '</div>'
             + '<div class="mini">Score ' + escapeHtml(String(d.meScore != null ? d.meScore : d.player1Score)) + ' - ' + escapeHtml(String(d.opponentScore != null ? d.opponentScore : d.player2Score)) + '</div>'
-            + '<div class="mini">Créé: ' + escapeHtml(String(d.createdAt || '').slice(0, 19).replace('T', ' ')) + '</div>'
-            + '<button class="btn-secondary" data-duel-id="' + escapeHtml(d.id) + '">Ouvrir</button>'
+            + '<div class="mini">Créé: ' + escapeHtml(String(d.createdAt || '').slice(0, 19).replace('T', ' ')) + ' · ' + escapeHtml(duelIsMyTurn ? 'À toi' : 'En attente') + '</div>'
+            + '<button class="btn-secondary" data-duel-id="' + escapeHtml(d.id) + '">' + escapeHtml(ctaLabel) + '</button>'
             + '</div>';
         }).join('');
         renderDuelHome();
@@ -9105,17 +9213,29 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
             var reviewClass = '';
             var reviewBadge = '';
             if (review) {
-              if (isCorrectChoice && isSelected) {
-                reviewClass = ' is-review-correct-picked';
-                reviewBadge = '<span class="choice-state ok">Ta réponse</span>';
-              } else if (isCorrectChoice) {
-                reviewClass = ' is-review-correct';
-                reviewBadge = '<span class="choice-state ok">Bonne réponse</span>';
-              } else if (isSelected) {
-                reviewClass = ' is-review-wrong';
-                reviewBadge = '<span class="choice-state err">Ton choix</span>';
+              if (review.isCorrect) {
+                if (isCorrectChoice && isSelected) {
+                  reviewClass = ' is-review-correct-picked';
+                  reviewBadge = '<span class="choice-state ok">Ta réponse</span>';
+                } else if (isCorrectChoice) {
+                  reviewClass = ' is-review-correct';
+                  reviewBadge = '<span class="choice-state ok">Bonne réponse</span>';
+                } else if (isSelected) {
+                  reviewClass = ' is-review-wrong';
+                  reviewBadge = '<span class="choice-state err">Ton choix</span>';
+                } else {
+                  reviewClass = ' is-review-dim';
+                }
               } else {
-                reviewClass = ' is-review-dim';
+                if (isSelected) {
+                  reviewClass = ' is-review-wrong';
+                  reviewBadge = '<span class="choice-state err">Ton choix</span>';
+                } else if (isCorrectChoice) {
+                  reviewClass = ' is-review-miss';
+                  reviewBadge = '<span class="choice-state solution">Bonne réponse</span>';
+                } else {
+                  reviewClass = ' is-review-dim';
+                }
               }
             }
             return '<label class="choice' + reviewClass + '"><input type="radio" name="singleChoice" value="' + c.id + '"' + checked + choicesDisabledAttr + ' /> <span class="choice-badge">' + escapeHtml(getChoiceMarker(index)) + '</span><span class="choice-copy-wrap"><span class="choice-copy">' + escapeHtml(c.label) + '</span>' + reviewBadge + '</span></label>';
@@ -9128,17 +9248,32 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
             var reviewClass = '';
             var reviewBadge = '';
             if (review) {
-              if (isCorrectChoice && isSelected) {
-                reviewClass = ' is-review-correct-picked';
-                reviewBadge = '<span class="choice-state ok">Bien coché</span>';
-              } else if (isCorrectChoice) {
-                reviewClass = ' is-review-correct';
-                reviewBadge = '<span class="choice-state ok">À cocher</span>';
-              } else if (isSelected) {
-                reviewClass = ' is-review-wrong';
-                reviewBadge = '<span class="choice-state err">À décocher</span>';
+              if (review.isCorrect) {
+                if (isCorrectChoice && isSelected) {
+                  reviewClass = ' is-review-correct-picked';
+                  reviewBadge = '<span class="choice-state ok">Bien coché</span>';
+                } else if (isCorrectChoice) {
+                  reviewClass = ' is-review-correct';
+                  reviewBadge = '<span class="choice-state ok">À cocher</span>';
+                } else if (isSelected) {
+                  reviewClass = ' is-review-wrong';
+                  reviewBadge = '<span class="choice-state err">À décocher</span>';
+                } else {
+                  reviewClass = ' is-review-dim';
+                }
               } else {
-                reviewClass = ' is-review-dim';
+                if (isCorrectChoice && isSelected) {
+                  reviewClass = ' is-review-miss-picked';
+                  reviewBadge = '<span class="choice-state solution">Bien coché</span>';
+                } else if (isCorrectChoice) {
+                  reviewClass = ' is-review-miss';
+                  reviewBadge = '<span class="choice-state solution">À cocher</span>';
+                } else if (isSelected) {
+                  reviewClass = ' is-review-wrong';
+                  reviewBadge = '<span class="choice-state err">À décocher</span>';
+                } else {
+                  reviewClass = ' is-review-dim';
+                }
               }
             }
             return '<label class="choice' + reviewClass + '"><input type="checkbox" name="multiChoice" value="' + c.id + '"' + checked + choicesDisabledAttr + ' /> <span class="choice-badge">' + escapeHtml(getChoiceMarker(index)) + '</span><span class="choice-copy-wrap"><span class="choice-copy">' + escapeHtml(c.label) + '</span>' + reviewBadge + '</span></label>';
@@ -9888,6 +10023,26 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
       refs.duelStatusFilterSelect.addEventListener('change', async function () {
         try {
+          renderDuelStatusFilters();
+          await loadDuels();
+        } catch (err) {
+          setStatus(err.message || String(err), 'err');
+        }
+      });
+
+      refs.duelStatusFilterButtons.addEventListener('click', async function (event) {
+        var target = event.target;
+        if (!target || typeof target.closest !== 'function') {
+          return;
+        }
+        var btn = target.closest('button[data-duel-status-filter]');
+        if (!btn) {
+          return;
+        }
+        var nextFilter = btn.getAttribute('data-duel-status-filter') || 'all';
+        refs.duelStatusFilterSelect.value = nextFilter;
+        try {
+          renderDuelStatusFilters();
           await loadDuels();
         } catch (err) {
           setStatus(err.message || String(err), 'err');
