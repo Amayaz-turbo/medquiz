@@ -5332,6 +5332,19 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
                   </section>
                 </section>
 
+                <section id="duelSubjectView" class="flow-view hidden">
+                  <section class="panel">
+                    <div class="training-back-row">
+                      <button class="btn-secondary btn-inline" id="duelSubjectBackBtn">Retour au duel</button>
+                    </div>
+                    <div class="module-head">
+                      <b>Choix de la matière</b>
+                      <span>On ne garde ici que les 3 matières proposées pour la manche.</span>
+                    </div>
+                    <div id="duelSubjectContent" class="duel-detail-card hidden" style="margin-top:8px"></div>
+                  </section>
+                </section>
+
                 <section id="duelPlayView" class="flow-view hidden">
                   <section class="panel duel-play-panel">
                     <div class="question-exit-row">
@@ -5521,6 +5534,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         duelCreateView: document.getElementById('duelCreateView'),
         duelInboxView: document.getElementById('duelInboxView'),
         duelDetailView: document.getElementById('duelDetailView'),
+        duelSubjectView: document.getElementById('duelSubjectView'),
         duelPlayView: document.getElementById('duelPlayView'),
         trainingModeCards: document.getElementById('trainingModeCards'),
         duelModeCards: document.getElementById('duelModeCards'),
@@ -5536,6 +5550,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         duelCreateBackBtn: document.getElementById('duelCreateBackBtn'),
         duelInboxBackBtn: document.getElementById('duelInboxBackBtn'),
         duelDetailBackBtn: document.getElementById('duelDetailBackBtn'),
+        duelSubjectBackBtn: document.getElementById('duelSubjectBackBtn'),
         modeSelect: document.getElementById('modeSelect'),
         stopRuleSelect: document.getElementById('stopRuleSelect'),
         targetCountInput: document.getElementById('targetCountInput'),
@@ -5579,6 +5594,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         refreshDuelsBtn: document.getElementById('refreshDuelsBtn'),
         duelsList: document.getElementById('duelsList'),
         duelDetail: document.getElementById('duelDetail'),
+        duelSubjectContent: document.getElementById('duelSubjectContent'),
         duelPlayBackBtn: document.getElementById('duelPlayBackBtn'),
         duelPlayContent: document.getElementById('duelPlayContent'),
         duelPlayActions: document.getElementById('duelPlayActions'),
@@ -6479,7 +6495,10 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           return 'Parcours simplement tes duels, puis ouvre celui qui t’intéresse.';
         }
         if (state.duelFlow === 'detail') {
-          return 'Un seul duel affiché à la fois, avec uniquement les actions utiles.';
+          return 'Le duel résumé au strict minimum avant de démarrer.';
+        }
+        if (state.duelFlow === 'subject') {
+          return 'Choisis une matière parmi les 3 proposées pour cette manche.';
         }
         if (state.duelFlow === 'play') {
           return 'On garde seulement la question duel en cours et l’action suivante.';
@@ -6517,6 +6536,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         refs.duelCreateView.classList.toggle('hidden', state.duelFlow !== 'create');
         refs.duelInboxView.classList.toggle('hidden', state.duelFlow !== 'inbox');
         refs.duelDetailView.classList.toggle('hidden', state.duelFlow !== 'detail');
+        refs.duelSubjectView.classList.toggle('hidden', state.duelFlow !== 'subject');
         refs.duelPlayView.classList.toggle('hidden', state.duelFlow !== 'play');
         renderDuelStatusFilters();
       }
@@ -6565,6 +6585,9 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       function setDuelFlow(step) {
         var nextStep = step || 'home';
         if (nextStep === 'detail' && !state.selectedDuel) {
+          nextStep = 'inbox';
+        }
+        if (nextStep === 'subject' && !state.selectedDuel) {
           nextStep = 'inbox';
         }
         if (nextStep === 'play' && !state.selectedDuel) {
@@ -8911,6 +8934,60 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         renderDuelHome();
       }
 
+      function renderDuelSubjectSelection() {
+        if (!refs.duelSubjectContent) {
+          return;
+        }
+
+        var d = state.selectedDuel;
+        if (!d || !state.currentRound) {
+          refs.duelSubjectContent.classList.add('hidden');
+          refs.duelSubjectContent.innerHTML = '';
+          return;
+        }
+
+        var meId = state.me && state.me.id ? state.me.id : null;
+        var isMyTurn = Boolean(meId && d.currentTurnUserId === meId);
+        var opponentName = getDuelPlayerDisplayNameById(d, meId === d.player1Id ? d.player2Id : d.player1Id) || 'Adversaire';
+        var starterName = getDuelPlayerDisplayNameById(d, d.currentTurnUserId);
+        var subjects = Array.isArray(state.currentRound.offeredSubjects) ? state.currentRound.offeredSubjects : [];
+        var chosenSubject = state.currentRound.chosenSubjectId
+          ? subjects.find(function (subject) { return subject.id === state.currentRound.chosenSubjectId; })
+          : null;
+        var summaryLine = isMyTurn
+          ? 'Tu choisis la matière de cette manche.'
+          : ((starterName || opponentName) + ' choisit la matière de cette manche.');
+
+        refs.duelSubjectContent.classList.remove('hidden');
+        refs.duelSubjectContent.innerHTML =
+          '<div class="session-brief">'
+          + '<div class="session-brief-top">'
+          + '<div class="session-brief-copy">'
+          + '<div class="session-brief-eyebrow">Manche ' + escapeHtml(String(state.currentRound.roundNo)) + '</div>'
+          + '<div class="session-brief-title">' + escapeHtml(summaryLine) + '</div>'
+          + '<div class="session-brief-text">Score ' + escapeHtml(String(d.score.player1)) + ' - ' + escapeHtml(String(d.score.player2)) + ' · Tour de ' + escapeHtml(starterName || opponentName) + '.</div>'
+          + '</div>'
+          + '</div>'
+          + '</div>'
+          + (chosenSubject
+            ? (
+              '<div class="duel-question is-current">'
+              + '<div class="duel-section-kicker">Matière choisie</div>'
+              + '<b>' + escapeHtml(chosenSubject.name) + '</b>'
+              + '<div class="mini">' + escapeHtml(isMyTurn ? 'La matière est prête. Tu peux lancer tes 3 questions.' : 'La matière est fixée. Le tour adverse peut maintenant commencer.') + '</div>'
+              + (isMyTurn ? '<div class="duel-actions"><button class="btn-primary" data-duel-subject-action="load-round-questions">Lancer mes 3 questions</button></div>' : '')
+              + '</div>'
+            )
+            : (
+              '<div class="training-mode-grid">' + subjects.map(function (subject) {
+                return '<button class="training-mode-card" data-duel-subject-action="choose-subject" data-subject-id="' + escapeHtml(subject.id) + '"' + (isMyTurn ? '' : ' disabled') + '>'
+                  + '<div class="training-mode-top"><div class="training-mode-title">' + escapeHtml(subject.name) + '</div><span class="chip neutral">Matière</span></div>'
+                  + '<div class="training-mode-copy">' + escapeHtml(isMyTurn ? 'Choisir pour cette manche.' : 'Visible pendant que l’adversaire choisit.') + '</div>'
+                  + '</button>';
+              }).join('') + '</div>'
+            ));
+      }
+
       function renderDuelDetail() {
         var d = state.selectedDuel;
         if (!d) {
@@ -9022,6 +9099,46 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         var duelResultLabel = d.winnerUserId
           ? (d.winnerUserId === meId ? 'Tu as gagné' : (opponentName + ' a gagné'))
           : 'Duel en cours';
+        var primaryActionHtml = '';
+        if (canAccept) {
+          primaryActionHtml = '<div class="duel-actions"><button class="btn-primary" data-duel-action="accept">Accepter</button><button class="btn-secondary" data-duel-action="decline">Refuser</button></div>';
+        } else if (d.status === 'in_progress' && state.currentRound) {
+          if (!state.currentRound.chosenSubjectId) {
+            primaryActionHtml = isMyTurn
+              ? '<div class="duel-actions"><button class="btn-primary" data-duel-action="start-round-flow">Démarrer</button></div>'
+              : '';
+          } else if (isMyTurn && state.roundQuestions.length) {
+            primaryActionHtml = '<div class="duel-actions"><button class="btn-primary" data-duel-action="open-round-play">Reprendre mes 3 questions</button></div>';
+          } else if (isMyTurn) {
+            primaryActionHtml = '<div class="duel-actions"><button class="btn-primary" data-duel-action="load-round-questions">Commencer mes 3 questions</button></div>';
+          }
+        }
+
+        refs.duelDetail.innerHTML =
+          '<div class="session-brief">'
+          + '<div class="session-brief-top">'
+          + '<div class="session-brief-copy">'
+          + '<div class="session-brief-eyebrow">Duel contre</div>'
+          + '<div class="session-brief-title">' + escapeHtml(opponentName) + '</div>'
+          + '<div class="session-brief-text">' + escapeHtml(starterLine || duelResultLabel) + '</div>'
+          + '</div>'
+          + '<div class="duel-scoreboard">'
+          + '<div class="duel-score-col"><span>Toi</span><b>' + escapeHtml(String(myScore)) + '</b></div>'
+          + '<div class="duel-score-vs">VS</div>'
+          + '<div class="duel-score-col"><span>' + escapeHtml(opponentName) + '</span><b>' + escapeHtml(String(opponentScore)) + '</b></div>'
+          + '</div>'
+          + '</div>'
+          + '<div class="duel-overview-grid">'
+          + '<div class="duel-overview-card tour"><div class="k">Tour</div><div class="v">' + escapeHtml(duelTurnLabel) + '</div><div class="s">' + escapeHtml(state.currentRound ? ('Manche ' + state.currentRound.roundNo + ' / 5') : 'En attente') + '</div></div>'
+          + '<div class="duel-overview-card manches"><div class="k">Temps restant</div><div class="v">' + escapeHtml(duelRemainingLabel) + '</div><div class="s">' + escapeHtml(d.status === 'in_progress' ? 'Le chrono tourne.' : getDuelStatusLabel(d.status)) + '</div></div>'
+          + '<div class="duel-overview-card status"><div class="k">Matière</div><div class="v">' + escapeHtml(state.currentRound && state.currentRound.chosenSubjectId && Array.isArray(state.currentRound.offeredSubjects) ? ((state.currentRound.offeredSubjects.find(function (subject) { return subject.id === state.currentRound.chosenSubjectId; }) || {}).name || 'Choix à venir') : 'Choix à venir') + '</div><div class="s">' + escapeHtml(state.currentRound && !state.currentRound.chosenSubjectId ? '3 matières seront proposées.' : duelResultLabel) + '</div></div>'
+          + '</div>'
+          + primaryActionHtml;
+        refs.duelDetail.classList.remove('hidden');
+        renderDuelHome();
+        renderDuelSubjectSelection();
+        return;
+
         var playerCardsHtml =
           '<div class="duel-player-grid">'
           + renderDuelPlayerCard({
@@ -9585,6 +9702,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         state.roundQuestions = [];
         state.roundQuestionShownAtBySlot = {};
         renderDuelDetail();
+        renderDuelSubjectSelection();
       }
 
       async function chooseCurrentRoundSubject(subjectId) {
@@ -9598,6 +9716,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         await loadDuelDetail(state.selectedDuelId);
         await loadCurrentRound();
         setStatus('Matière de manche choisie.', 'ok');
+        await loadRoundQuestions();
       }
 
       async function loadRoundQuestions() {
@@ -10626,6 +10745,9 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       refs.duelDetailBackBtn.addEventListener('click', function () {
         setDuelFlow('inbox');
       });
+      refs.duelSubjectBackBtn.addEventListener('click', function () {
+        setDuelFlow('detail');
+      });
 
       refs.duelPlayBackBtn.addEventListener('click', function () {
         state.duelPlayReview = null;
@@ -11110,6 +11232,13 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
             setStatus('Manche courante chargée.', 'info');
             return;
           }
+          if (action === 'start-round-flow') {
+            if (!state.currentRound) {
+              await loadCurrentRound();
+            }
+            setDuelFlow('subject');
+            return;
+          }
           if (action === 'choose-subject') {
             var subjectId = btn.getAttribute('data-subject-id');
             if (!subjectId) {
@@ -11146,6 +11275,38 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
               throw new Error('Paramètres de réponse manquants.');
             }
             await submitRoundAnswerFromUi(slotNo, questionId);
+            return;
+          }
+        } catch (err) {
+          setStatus(err.message || String(err), 'err');
+        }
+      });
+
+      refs.duelSubjectContent.addEventListener('click', async function (event) {
+        var target = event.target;
+        if (!target || typeof target.closest !== 'function') {
+          return;
+        }
+        var btn = target.closest('button[data-duel-subject-action]');
+        if (!btn) {
+          return;
+        }
+        var action = btn.getAttribute('data-duel-subject-action');
+        if (!action) {
+          return;
+        }
+        try {
+          if (action === 'choose-subject') {
+            var subjectId = btn.getAttribute('data-subject-id');
+            if (!subjectId) {
+              throw new Error('subjectId manquant.');
+            }
+            await chooseCurrentRoundSubject(subjectId);
+            return;
+          }
+          if (action === 'load-round-questions') {
+            await loadRoundQuestions();
+            setStatus('Questions de manche chargées.', 'info');
             return;
           }
         } catch (err) {
