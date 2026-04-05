@@ -7381,6 +7381,27 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         return 'Rival aléatoire';
       }
 
+      function getDuelPlayerDisplayNameById(duel, userId) {
+        if (!duel || !userId) {
+          return '';
+        }
+        if (duel.player1Id === userId) {
+          return capitalizeDisplayLabel(
+            duel.player1Profile && duel.player1Profile.displayLabel
+              ? duel.player1Profile.displayLabel
+              : getPreferredPlayerName()
+          );
+        }
+        if (duel.player2Id === userId) {
+          return capitalizeDisplayLabel(
+            duel.player2Profile && duel.player2Profile.displayLabel
+              ? duel.player2Profile.displayLabel
+              : getDuelOpponentTitle(duel)
+          );
+        }
+        return '';
+      }
+
       function getAvatarLoadoutLabels() {
         if (!state.myAvatar || !state.myAvatar.equipment) {
           return [];
@@ -9030,6 +9051,13 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           myLoadout = getAvatarLoadoutLabels();
         }
         var opponentName = capitalizeDisplayLabel(opponentProfile && opponentProfile.displayLabel ? opponentProfile.displayLabel : getDuelOpponentTitle(d));
+        var starterName = getDuelPlayerDisplayNameById(d, d.currentTurnUserId);
+        var starterLine = '';
+        if (d.status === 'in_progress' && starterName) {
+          starterLine = d.currentTurnUserId === meId
+            ? 'Tu commences cette manche.'
+            : (starterName + ' commence cette manche.');
+        }
         var opponentStage = getDuelProfileStageName(opponentProfile) || 'Progression non visible';
         var opponentSpecialty = getDuelProfileSpecialtyName(opponentProfile) || 'Spécialité non visible';
         var opponentLoadout = getDuelProfileEquipmentSummary(opponentProfile);
@@ -9131,11 +9159,20 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
             chosenRoundSubjectName = chosenRoundSubject ? chosenRoundSubject.name : '';
           }
           if (!state.currentRound.chosenSubjectId) {
-            subjectsButtons = '<div class="duel-actions">' + (state.currentRound.offeredSubjects || []).map(function (s) {
-              return '<button class="btn-secondary" data-duel-action="choose-subject" data-subject-id="' + escapeHtml(s.id) + '"' + (isMyTurn ? '' : ' disabled') + '>'
-                + escapeHtml(s.name)
-                + '</button>';
-            }).join('') + '</div>';
+            subjectsButtons =
+              '<div class="duel-subject-choice">'
+              + '<div class="mini"><b>3 matières proposées</b></div>'
+              + '<div class="mini">' + escapeHtml(
+                isMyTurn
+                  ? 'Choisis la matière que tu veux pour cette manche.'
+                  : (starterName ? (starterName + ' choisit la matière parmi ces 3 propositions.') : 'Le joueur qui commence choisit la matière de cette manche.')
+              ) + '</div>'
+              + '<div class="duel-actions">' + (state.currentRound.offeredSubjects || []).map(function (s) {
+                return '<button class="btn-secondary" data-duel-action="choose-subject" data-subject-id="' + escapeHtml(s.id) + '"' + (isMyTurn ? '' : ' disabled') + '>'
+                  + escapeHtml(s.name)
+                  + '</button>';
+              }).join('') + '</div>'
+              + '</div>';
           }
 
           var loadQuestionsBtn = '';
@@ -9163,6 +9200,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
             + '<div class="duel-section-kicker">Tour en cours</div>'
             + '<b>Manche ' + escapeHtml(String(state.currentRound.roundNo)) + ' · ' + escapeHtml(getDuelStatusLabel(state.currentRound.status)) + '</b>'
             + roundBadges
+            + (starterLine ? ('<div class="mini"><b>' + escapeHtml(starterLine) + '</b></div>') : '')
             + (state.currentRound.chosenSubjectId
               ? '<div class="mini">La matière est fixée. Tu peux maintenant jouer le tour.</div>'
               : '<div class="mini">Choisis une matière parmi les propositions pour lancer la manche.</div>')
@@ -9227,6 +9265,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           + '<div class="duel-hero-kicker">Ton duel du moment</div>'
           + '<div class="duel-hero-name">' + escapeHtml(opponentName) + '</div>'
           + '<div class="mini">' + escapeHtml(duelModeLabel) + ' · duel en cours.</div>'
+          + (starterLine ? ('<div class="mini"><b>' + escapeHtml(starterLine) + '</b></div>') : '')
           + '</div>'
           + '<div class="duel-detail-badges"><span class="chip">' + escapeHtml(getDuelStatusLabel(d.status)) + '</span><span class="chip neutral">Temps restant: ' + escapeHtml(duelRemainingLabel) + '</span></div>'
           + '</div>'
@@ -9519,6 +9558,13 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         renderDuelsList();
         renderDuelDetail();
         setDuelFlow('detail');
+        if (state.selectedDuel && state.selectedDuel.status === 'in_progress') {
+          try {
+            await loadCurrentRound();
+          } catch (err) {
+            // keep duel detail visible even if current round cannot be loaded yet
+          }
+        }
       }
 
       async function createDuelFromUi() {
