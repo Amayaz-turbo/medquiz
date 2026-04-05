@@ -67,8 +67,8 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       --choice-active-b: #2ebd22;
       --choice-active-border: rgba(169, 255, 148, 0.55);
       --ambient-scene-image: none;
-      --ambient-scene-opacity: 0.94;
-      --ambient-scene-overlay: linear-gradient(180deg, rgba(214, 235, 245, 0.08), rgba(156, 198, 219, 0.16));
+      --ambient-scene-opacity: 0.98;
+      --ambient-scene-overlay: linear-gradient(180deg, rgba(214, 235, 245, 0.03), rgba(156, 198, 219, 0.08));
       --radius-lg: 20px;
       --radius-md: 14px;
       --shadow: 0 24px 60px rgba(4, 29, 46, 0.18);
@@ -191,9 +191,9 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
     .panel {
       background:
-        radial-gradient(circle at top right, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0) 40%),
-        linear-gradient(180deg, rgba(214, 236, 247, 0.72), rgba(175, 210, 228, 0.5));
-      border: 1px solid rgba(234, 246, 252, 0.34);
+        radial-gradient(circle at top right, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 40%),
+        linear-gradient(180deg, rgba(214, 236, 247, 0.34), rgba(175, 210, 228, 0.22));
+      border: 1px solid rgba(234, 246, 252, 0.22);
       border-radius: var(--radius-lg);
       box-shadow: 0 18px 40px rgba(4, 30, 48, 0.12);
       padding: 16px;
@@ -215,7 +215,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
     .section {
       border: 1px solid var(--line);
-      background: linear-gradient(180deg, rgba(226, 243, 251, 0.82), rgba(190, 223, 238, 0.58));
+      background: linear-gradient(180deg, rgba(226, 243, 251, 0.46), rgba(190, 223, 238, 0.26));
       border-radius: var(--radius-md);
       padding: 12px;
       margin-top: 12px;
@@ -2426,9 +2426,10 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       gap: 10px;
       border-radius: 16px;
       padding: 12px 14px;
-      background: rgba(255, 255, 255, 0.44);
-      border: 1px solid rgba(255, 255, 255, 0.46);
+      background: rgba(231, 245, 252, 0.32);
+      border: 1px solid rgba(240, 250, 255, 0.34);
       box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+      backdrop-filter: blur(12px);
     }
 
     .duel-score-col {
@@ -2477,11 +2478,12 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
     .duel-overview-card {
       position: relative;
       overflow: hidden;
-      border: 1px solid rgba(171, 216, 236, 0.88);
+      border: 1px solid rgba(211, 238, 249, 0.34);
       border-radius: 14px;
       padding: 10px;
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(236, 249, 255, 0.92));
-      box-shadow: 0 8px 18px rgba(84, 141, 173, 0.08);
+      background: linear-gradient(180deg, rgba(229, 245, 252, 0.34), rgba(204, 231, 242, 0.18));
+      box-shadow: 0 8px 18px rgba(84, 141, 173, 0.04);
+      backdrop-filter: blur(12px);
     }
 
     .duel-overview-card::after {
@@ -2492,6 +2494,81 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       height: 3px;
       background: linear-gradient(90deg, rgba(134, 198, 228, 0.86), rgba(244, 194, 124, 0.8));
       opacity: 0.9;
+    }
+
+    .duel-result-shell {
+      display: grid;
+      gap: 12px;
+    }
+
+    .duel-result-hero {
+      border: 1px solid rgba(234, 246, 252, 0.4);
+      border-radius: 22px;
+      padding: 16px;
+      background:
+        linear-gradient(180deg, rgba(215, 238, 248, 0.72), rgba(175, 211, 229, 0.46));
+      box-shadow: 0 16px 28px rgba(12, 47, 72, 0.08);
+      display: grid;
+      gap: 12px;
+      backdrop-filter: blur(16px);
+    }
+
+    .duel-result-copy {
+      display: grid;
+      gap: 6px;
+      text-align: center;
+      justify-items: center;
+    }
+
+    .duel-result-kicker {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.28px;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+    }
+
+    .duel-result-title {
+      font-size: clamp(28px, 4vw, 42px);
+      line-height: 1.02;
+      font-weight: 900;
+      color: #16445c;
+      letter-spacing: -0.03em;
+      text-align: center;
+    }
+
+    .duel-result-subtitle {
+      font-size: 14px;
+      line-height: 1.45;
+      color: #45697e;
+      text-align: center;
+      max-width: 42ch;
+    }
+
+    .duel-result-art {
+      display: flex;
+      justify-content: center;
+      margin: 4px 0 0;
+      padding: 4px 0;
+    }
+
+    .duel-result-art img {
+      display: block;
+      width: min(300px, 74vw);
+      max-width: 100%;
+      height: auto;
+      object-fit: contain;
+    }
+
+    .duel-scoreboard.result {
+      background: rgba(229, 245, 252, 0.5);
+      border-color: rgba(235, 248, 253, 0.54);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+      padding: 14px 16px;
+    }
+
+    .duel-scoreboard.result .duel-score-col b {
+      font-size: clamp(48px, 7vw, 64px);
     }
 
     .duel-overview-card.tour::after {
@@ -3363,7 +3440,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
     body[data-screen="training"][data-training-flow="play"] {
       --ambient-scene-opacity: 1;
-      --ambient-scene-overlay: linear-gradient(180deg, rgba(12, 38, 86, 0.08), rgba(17, 86, 160, 0.08));
+      --ambient-scene-overlay: linear-gradient(180deg, rgba(12, 38, 86, 0.03), rgba(17, 86, 160, 0.04));
       padding: 8px;
     }
 
@@ -3450,7 +3527,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
     body[data-screen="duel"][data-duel-flow="play"] {
       --ambient-scene-opacity: 1;
-      --ambient-scene-overlay: linear-gradient(180deg, rgba(12, 38, 86, 0.08), rgba(17, 86, 160, 0.08));
+      --ambient-scene-overlay: linear-gradient(180deg, rgba(12, 38, 86, 0.03), rgba(17, 86, 160, 0.04));
       padding: 8px;
     }
 
@@ -3649,7 +3726,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
     body[data-screen="duel"] {
       --ambient-scene-opacity: 0.96;
-      --ambient-scene-overlay: linear-gradient(180deg, rgba(241, 251, 255, 0.05), rgba(166, 217, 245, 0.1));
+      --ambient-scene-overlay: linear-gradient(180deg, rgba(241, 251, 255, 0.02), rgba(166, 217, 245, 0.05));
     }
 
     body[data-screen="duel"] .app-scroll-area {
@@ -3665,8 +3742,8 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
     body[data-screen="duel"] .duel-overview-card,
     body[data-screen="duel"] .notification-item {
       backdrop-filter: blur(12px);
-      background: linear-gradient(180deg, rgba(238, 249, 255, 0.78), rgba(204, 232, 247, 0.54));
-      border-color: rgba(255, 255, 255, 0.42);
+      background: linear-gradient(180deg, rgba(238, 249, 255, 0.42), rgba(204, 232, 247, 0.24));
+      border-color: rgba(255, 255, 255, 0.26);
     }
 
     .choice-list {
@@ -3990,21 +4067,22 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       position: relative;
       overflow: hidden;
       margin-top: 10px;
-      border: 1px solid rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(236, 248, 253, 0.44);
       border-radius: 22px;
       padding: 14px;
       background:
-        radial-gradient(circle at top right, rgba(255, 191, 204, 0.2), transparent 34%),
-        radial-gradient(circle at bottom left, rgba(255, 223, 181, 0.12), transparent 24%),
-        linear-gradient(180deg, #ffffff, #fff9f5);
+        radial-gradient(circle at top right, rgba(255, 191, 204, 0.1), transparent 34%),
+        radial-gradient(circle at bottom left, rgba(255, 223, 181, 0.08), transparent 24%),
+        linear-gradient(180deg, rgba(231, 245, 252, 0.62), rgba(196, 224, 237, 0.34));
       display: grid;
       gap: 12px;
-      box-shadow: 0 16px 28px rgba(12, 47, 72, 0.06);
+      box-shadow: 0 16px 28px rgba(12, 47, 72, 0.04);
+      backdrop-filter: blur(14px);
     }
 
     .session-brief.empty {
       border-style: dashed;
-      background: linear-gradient(180deg, #fffdfd, #fff6f4);
+      background: linear-gradient(180deg, rgba(238, 248, 252, 0.46), rgba(214, 233, 241, 0.24));
     }
 
     .session-brief-top {
@@ -5964,6 +6042,29 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         '/v1/demo/assets/fond7.png',
         '/v1/demo/assets/fond8.png'
       ];
+
+      function getNotificationDuelId(item) {
+        var payload = item && item.payload && typeof item.payload === 'object' ? item.payload : {};
+        return typeof payload.duelId === 'string' ? payload.duelId : '';
+      }
+
+      function isActiveDuelAlreadyVisible(duelId) {
+        if (!duelId) {
+          return false;
+        }
+        if (state.activeScreen !== 'duel') {
+          return false;
+        }
+        if (state.selectedDuelId !== duelId) {
+          return false;
+        }
+        return state.duelFlow === 'detail' || state.duelFlow === 'subject' || state.duelFlow === 'play';
+      }
+
+      function shouldSuppressNotificationToast(item) {
+        return isActiveDuelAlreadyVisible(getNotificationDuelId(item));
+      }
+
       var screenMeta = {
         welcome: {
           title: 'Accueil',
@@ -6217,6 +6318,16 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         }
 
         image.addEventListener('load', runCleanup, { once: true });
+      }
+
+      function prepareDuelResultImage(image) {
+        prepareWelcomeImage(image, {
+          clearNeutralBackground: true,
+          neutralSaturationThreshold: 0.14,
+          neutralBrightnessThreshold: 170,
+          neutralChannelDelta: 26,
+          padding: 0
+        });
       }
 
       function getThemeDefinition(themeKey) {
@@ -9191,13 +9302,44 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         var opponentSceneTokens = getLoadoutTokens(opponentLoadout);
         var myNextStage = state.myAvatar && state.myAvatar.nextStage ? state.myAvatar.nextStage.name : '';
         var duelModeLabel = getDuelModeLabel(d.matchmakingMode);
+        var duelCompleted = d.status === 'completed';
+        var duelWon = Boolean(duelCompleted && d.winnerUserId === meId);
         var duelTurnLabel = isMyTurn ? 'À toi de jouer' : ('Tour de ' + opponentName);
         var duelRemainingLabel = d.turnDeadlineAt ? formatRemainingTime(d.turnDeadlineAt) : '-';
         var duelResultLabel = d.winnerUserId
           ? (d.winnerUserId === meId ? 'Tu as gagné' : (opponentName + ' a gagné'))
           : 'Duel en cours';
+        var duelOutcomeTitle = duelWon ? 'Bravo, vous avez gagné' : 'Défaite';
+        var duelResultDetail = duelCompleted
+          ? (d.winReason === 'tie_break_speed'
+            ? 'Victoire au tie-break de rapidité.'
+            : 'Le score final a tranché ce duel.')
+          : (starterLine || duelResultLabel);
+        var duelResultVisualHtml = duelCompleted
+          ? (
+            '<div class="duel-result-art" style="display:flex; justify-content:center; margin:10px 0 4px;">'
+            + '<img src="' + escapeHtml(baseUrl + '/demo/assets/' + (duelWon ? 'duel-victoire.png' : 'duel-défaite.png')) + '" alt="' + escapeHtml(duelWon ? 'Victoire duel' : 'Défaite duel') + '" style="display:block; width:min(280px, 72vw); max-width:100%; height:auto;" />'
+            + '</div>'
+          )
+          : '';
+        var overviewCardsHtml = duelCompleted
+          ? (
+            '<div class="duel-overview-grid">'
+            + '<div class="duel-overview-card tour"><div class="k">Résultat</div><div class="v">' + escapeHtml(duelWon ? 'Victoire' : 'Défaite') + '</div><div class="s">' + escapeHtml('Face à ' + opponentName) + '</div></div>'
+            + '<div class="duel-overview-card manches"><div class="k">Score final</div><div class="v">' + escapeHtml(String(myScore)) + ' - ' + escapeHtml(String(opponentScore)) + '</div><div class="s">' + escapeHtml(d.tieBreakPlayed ? 'Départagé au temps cumulé.' : 'Fin des 5 manches.') + '</div></div>'
+            + '<div class="duel-overview-card status"><div class="k">Rejouer</div><div class="v">' + escapeHtml(opponentName) + '</div><div class="s">' + escapeHtml('Tu peux relancer un duel tout de suite.') + '</div></div>'
+            + '</div>'
+          )
+          : (
+            '<div class="duel-overview-grid">'
+            + '<div class="duel-overview-card tour"><div class="k">Tour</div><div class="v">' + escapeHtml(duelTurnLabel) + '</div><div class="s">' + escapeHtml(state.currentRound ? ('Manche ' + state.currentRound.roundNo + ' / 5') : 'En attente') + '</div></div>'
+            + '<div class="duel-overview-card manches"><div class="k">Temps restant</div><div class="v">' + escapeHtml(duelRemainingLabel) + '</div><div class="s">' + escapeHtml(d.status === 'in_progress' ? 'Le chrono tourne.' : getDuelStatusLabel(d.status)) + '</div></div>'
+            + '<div class="duel-overview-card status"><div class="k">Matière</div><div class="v">' + escapeHtml(state.currentRound && state.currentRound.chosenSubjectId && Array.isArray(state.currentRound.offeredSubjects) ? ((state.currentRound.offeredSubjects.find(function (subject) { return subject.id === state.currentRound.chosenSubjectId; }) || {}).name || 'Choix à venir') : 'Choix à venir') + '</div><div class="s">' + escapeHtml(state.currentRound && !state.currentRound.chosenSubjectId ? '3 matières seront proposées.' : duelResultLabel) + '</div></div>'
+            + '</div>'
+          );
         var primaryActionHtml = '';
         var soloTestActionHtml = '';
+        var finishDemoActionHtml = '';
         var rematchActionHtml = '';
         if (canAccept) {
           primaryActionHtml = '<div class="duel-actions"><button class="btn-primary" data-duel-action="accept">Accepter</button><button class="btn-secondary" data-duel-action="decline">Refuser</button></div>';
@@ -9212,35 +9354,60 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
             primaryActionHtml = '<div class="duel-actions"><button class="btn-primary" data-duel-action="load-round-questions">Commencer mes 3 questions</button></div>';
           }
         }
-        if (d.status === 'in_progress' && meId && d.currentTurnUserId && d.currentTurnUserId !== meId) {
-          soloTestActionHtml = '<div class="duel-actions"><button class="btn-secondary" data-duel-action="simulate-opponent-turn">Simuler le tour adverse</button></div>';
+        if (d.status === 'in_progress' && meId && d.currentTurnUserId) {
+          soloTestActionHtml = '<div class="duel-actions"><button class="btn-secondary" data-duel-action="simulate-current-turn">' + escapeHtml(d.currentTurnUserId === meId ? 'Simuler mon tour' : 'Simuler le tour adverse') + '</button></div>';
+          finishDemoActionHtml = '<div class="duel-actions"><button class="btn-secondary" data-duel-action="simulate-to-win">Voir la victoire</button><button class="btn-secondary" data-duel-action="simulate-to-lose">Voir la défaite</button></div>';
         }
         if (d.status === 'completed' && getDuelOpponentUserId(d, meId)) {
           rematchActionHtml = '<div class="duel-actions"><button class="btn-primary" data-duel-action="rematch">Rejouer contre ' + escapeHtml(opponentName) + '</button></div>';
         }
 
         refs.duelDetail.innerHTML =
-          '<div class="session-brief">'
-          + '<div class="session-brief-top">'
-          + '<div class="session-brief-copy">'
-          + '<div class="session-brief-eyebrow">Duel contre</div>'
-          + '<div class="session-brief-title">' + escapeHtml(opponentName) + '</div>'
-          + '<div class="session-brief-text">' + escapeHtml(starterLine || duelResultLabel) + '</div>'
-          + '</div>'
-          + '<div class="duel-scoreboard">'
-          + '<div class="duel-score-col"><span>Toi</span><b>' + escapeHtml(String(myScore)) + '</b></div>'
-          + '<div class="duel-score-vs">VS</div>'
-          + '<div class="duel-score-col"><span>' + escapeHtml(opponentName) + '</span><b>' + escapeHtml(String(opponentScore)) + '</b></div>'
-          + '</div>'
-          + '</div>'
-          + '<div class="duel-overview-grid">'
-          + '<div class="duel-overview-card tour"><div class="k">Tour</div><div class="v">' + escapeHtml(duelTurnLabel) + '</div><div class="s">' + escapeHtml(state.currentRound ? ('Manche ' + state.currentRound.roundNo + ' / 5') : 'En attente') + '</div></div>'
-          + '<div class="duel-overview-card manches"><div class="k">Temps restant</div><div class="v">' + escapeHtml(duelRemainingLabel) + '</div><div class="s">' + escapeHtml(d.status === 'in_progress' ? 'Le chrono tourne.' : getDuelStatusLabel(d.status)) + '</div></div>'
-          + '<div class="duel-overview-card status"><div class="k">Matière</div><div class="v">' + escapeHtml(state.currentRound && state.currentRound.chosenSubjectId && Array.isArray(state.currentRound.offeredSubjects) ? ((state.currentRound.offeredSubjects.find(function (subject) { return subject.id === state.currentRound.chosenSubjectId; }) || {}).name || 'Choix à venir') : 'Choix à venir') + '</div><div class="s">' + escapeHtml(state.currentRound && !state.currentRound.chosenSubjectId ? '3 matières seront proposées.' : duelResultLabel) + '</div></div>'
-          + '</div>'
-          + primaryActionHtml
-          + soloTestActionHtml
-          + rematchActionHtml;
+          (duelCompleted
+            ? (
+              '<div class="duel-result-shell">'
+              + '<div class="duel-result-hero">'
+              + '<div class="duel-result-copy">'
+              + '<div class="duel-result-kicker">Duel terminé</div>'
+              + '<div class="duel-result-title">' + escapeHtml(duelOutcomeTitle) + '</div>'
+              + '<div class="duel-result-subtitle">' + escapeHtml('Face à ' + opponentName + '. ' + duelResultDetail) + '</div>'
+              + '</div>'
+              + duelResultVisualHtml
+              + '<div class="duel-scoreboard result">'
+              + '<div class="duel-score-col"><span>Toi</span><b>' + escapeHtml(String(myScore)) + '</b></div>'
+              + '<div class="duel-score-vs">VS</div>'
+              + '<div class="duel-score-col"><span>' + escapeHtml(opponentName) + '</span><b>' + escapeHtml(String(opponentScore)) + '</b></div>'
+              + '</div>'
+              + '</div>'
+              + overviewCardsHtml
+              + rematchActionHtml
+              + '</div>'
+            )
+            : (
+              '<div class="session-brief">'
+              + '<div class="session-brief-top">'
+              + '<div class="session-brief-copy">'
+              + '<div class="session-brief-eyebrow">Duel contre</div>'
+              + '<div class="session-brief-title">' + escapeHtml(opponentName) + '</div>'
+              + '<div class="session-brief-text">' + escapeHtml(duelResultDetail) + '</div>'
+              + '</div>'
+              + '<div class="duel-scoreboard">'
+              + '<div class="duel-score-col"><span>Toi</span><b>' + escapeHtml(String(myScore)) + '</b></div>'
+              + '<div class="duel-score-vs">VS</div>'
+              + '<div class="duel-score-col"><span>' + escapeHtml(opponentName) + '</span><b>' + escapeHtml(String(opponentScore)) + '</b></div>'
+              + '</div>'
+              + '</div>'
+              + overviewCardsHtml
+              + primaryActionHtml
+              + soloTestActionHtml
+              + finishDemoActionHtml
+            ));
+        if (duelCompleted) {
+          var duelResultImage = refs.duelDetail.querySelector('.duel-result-art img');
+          if (duelResultImage) {
+            prepareDuelResultImage(duelResultImage);
+          }
+        }
         refs.duelDetail.classList.remove('hidden');
         renderDuelHome();
         renderDuelSubjectSelection();
@@ -9555,6 +9722,9 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         }
 
         var fresh = items.filter(function (item) {
+          if (shouldSuppressNotificationToast(item)) {
+            return false;
+          }
           return !state.notificationToasts.some(function (current) {
             return current.id === item.id;
           });
@@ -9600,6 +9770,14 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         }
         state.notifications = nextItems;
         state.notificationSeeded = true;
+        var autoReadItems = newItems.filter(function (item) {
+          return shouldSuppressNotificationToast(item);
+        });
+        if (autoReadItems.length) {
+          for (var i = 0; i < autoReadItems.length; i += 1) {
+            await markNotificationRead(autoReadItems[i].id, { silent: true });
+          }
+        }
         renderNotifications();
         renderDuelHome();
         renderNotificationShortcut();
@@ -9657,7 +9835,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           loadNotifications({ silent: true }).catch(function () {
             // silent polling errors: manual refresh stays available
           });
-        }, 30000);
+        }, 5000);
       }
 
       async function openNotification(notificationId) {
@@ -9745,6 +9923,38 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           return;
         }
         setStatus('Tour adverse simulé. Tu peux reprendre.', 'ok');
+      }
+
+      async function simulateCurrentTurnFromUi() {
+        if (!state.selectedDuelId) {
+          throw new Error('Sélectionne un duel.');
+        }
+        var result = await api('/demo/duels/' + state.selectedDuelId + '/simulate-current-turn', {
+          method: 'POST'
+        });
+        await loadDuels();
+        await loadDuelDetail(state.selectedDuelId);
+        var updatedDuel = result && result.duel ? result.duel : state.selectedDuel;
+        if (updatedDuel && updatedDuel.status === 'completed') {
+          setStatus('Tour simulé. Le duel est terminé.', 'ok');
+          return;
+        }
+        setStatus('Tour simulé. La suite est prête.', 'ok');
+      }
+
+      async function simulateDuelToEndFromUi(targetOutcome) {
+        if (!state.selectedDuelId) {
+          throw new Error('Sélectionne un duel.');
+        }
+        await api('/demo/duels/' + state.selectedDuelId + '/simulate-to-end', {
+          method: 'POST',
+          body: {
+            targetOutcome: targetOutcome || null
+          }
+        });
+        await loadDuels();
+        await loadDuelDetail(state.selectedDuelId);
+        setStatus('Duel simulé jusqu’à la fin.', 'ok');
       }
 
       async function createRematchFromUi() {
@@ -11372,6 +11582,22 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           }
           if (action === 'simulate-opponent-turn') {
             await simulateOpponentTurnFromUi();
+            return;
+          }
+          if (action === 'simulate-current-turn') {
+            await simulateCurrentTurnFromUi();
+            return;
+          }
+          if (action === 'simulate-to-win') {
+            await simulateDuelToEndFromUi('win');
+            return;
+          }
+          if (action === 'simulate-to-lose') {
+            await simulateDuelToEndFromUi('lose');
+            return;
+          }
+          if (action === 'simulate-to-end') {
+            await simulateDuelToEndFromUi(null);
             return;
           }
           if (action === 'rematch') {

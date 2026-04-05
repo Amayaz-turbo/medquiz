@@ -2223,8 +2223,70 @@ export class DemoService {
       });
     }
 
-    const opponentUserId = duel.currentTurnUserId;
-    let round = await this.duelsService.getCurrentRound(opponentUserId, duelId);
+    return this.simulateTurnForUser(userId, duelId, duel.currentTurnUserId);
+  }
+
+  async simulateCurrentTurn(userId: string, duelId: string) {
+    const duel = await this.duelsService.getDuel(userId, duelId);
+
+    if (duel.status !== "in_progress") {
+      throw new UnprocessableEntityException({
+        code: "DEMO_DUEL_NOT_ACTIVE",
+        message: "Le duel n'est pas actif"
+      });
+    }
+
+    if (!duel.currentTurnUserId) {
+      throw new UnprocessableEntityException({
+        code: "DEMO_DUEL_NO_CURRENT_TURN",
+        message: "Aucun tour à simuler"
+      });
+    }
+
+    return this.simulateTurnForUser(userId, duelId, duel.currentTurnUserId);
+  }
+
+  async simulateDuelToEnd(userId: string, duelId: string, targetOutcome?: "win" | "lose" | null) {
+    let duel = await this.duelsService.getDuel(userId, duelId);
+    let simulatedTurns = 0;
+    const preferredWinnerUserId =
+      targetOutcome === "win"
+        ? userId
+        : targetOutcome === "lose"
+          ? (duel.player1Id === userId ? duel.player2Id : duel.player1Id)
+          : null;
+
+    while (duel.status === "in_progress" && duel.currentTurnUserId && simulatedTurns < 12) {
+      await this.simulateTurnForUser(
+        userId,
+        duelId,
+        duel.currentTurnUserId,
+        preferredWinnerUserId == null ? null : duel.currentTurnUserId === preferredWinnerUserId
+      );
+      simulatedTurns += 1;
+      duel = await this.duelsService.getDuel(userId, duelId);
+    }
+
+    return {
+      duel,
+      simulatedTurns
+    };
+  }
+
+  private async simulateTurnForUser(
+    userId: string,
+    duelId: string,
+    actingUserId: string,
+    preferCorrectAnswers?: boolean | null
+  ) {
+    if (!actingUserId) {
+      throw new UnprocessableEntityException({
+        code: "DEMO_DUEL_NO_ACTING_USER",
+        message: "Impossible de déterminer le joueur à simuler"
+      });
+    }
+
+    let round = await this.duelsService.getCurrentRound(actingUserId, duelId);
     let chosenSubjectId = round.chosenSubjectId ?? null;
 
     if (!chosenSubjectId) {
@@ -2236,11 +2298,11 @@ export class DemoService {
         });
       }
 
-      await this.duelsService.chooseRoundSubject(opponentUserId, duelId, round.roundNo, {
+      await this.duelsService.chooseRoundSubject(actingUserId, duelId, round.roundNo, {
         subjectId: fallbackSubject.id
       });
       chosenSubjectId = fallbackSubject.id;
-      round = await this.duelsService.getCurrentRound(opponentUserId, duelId);
+      round = await this.duelsService.getCurrentRound(actingUserId, duelId);
     }
 
     const answeredSlotRows = await this.db.query<{ slot_no: number }>(
@@ -2252,11 +2314,11 @@ export class DemoService {
           AND da.user_id = $2
           AND dr.round_no = $3
       `,
-      [duelId, opponentUserId, round.roundNo]
+      [duelId, actingUserId, round.roundNo]
     );
     const answeredSlots = new Set(answeredSlotRows.rows.map((row) => Number(row.slot_no)));
 
-    const questions = await this.duelsService.getRoundQuestions(opponentUserId, duelId, round.roundNo);
+    const questions = await this.duelsService.getRoundQuestions(actingUserId, duelId, round.roundNo);
     let playedQuestions = 0;
 
     for (const item of questions) {
@@ -2264,7 +2326,11 @@ export class DemoService {
         continue;
       }
 
-      const choice = Array.isArray(item.question?.choices) ? item.question.choices[0] : null;
+      const choice = await this.pickSimulatedChoice(
+        item.question.id,
+        Array.isArray(item.question?.choices) ? item.question.choices : [],
+        preferCorrectAnswers
+      );
       if (!choice) {
         throw new UnprocessableEntityException({
           code: "DEMO_DUEL_NO_CHOICES",
@@ -2272,7 +2338,7 @@ export class DemoService {
         });
       }
 
-      await this.duelsService.submitRoundAnswer(opponentUserId, duelId, round.roundNo, {
+      await this.duelsService.submitRoundAnswer(actingUserId, duelId, round.roundNo, {
         slotNo: Number(item.slotNo),
         questionId: item.question.id,
         selectedChoiceId: choice.id,
@@ -2283,11 +2349,43 @@ export class DemoService {
 
     return {
       duel: await this.duelsService.getDuel(userId, duelId),
-      simulatedUserId: opponentUserId,
+      simulatedUserId: actingUserId,
       roundNo: round.roundNo,
       chosenSubjectId,
       playedQuestions
     };
+  }
+
+  private async pickSimulatedChoice(
+    questionId: string,
+    choices: Array<{ id: string; label: string; position: number }>,
+    preferCorrectAnswers?: boolean | null
+  ) {
+    if (!choices.length) {
+      return null;
+    }
+
+    if (preferCorrectAnswers == null) {
+      return choices[0];
+    }
+
+    const correctChoiceResult = await this.db.query<{ id: string }>(
+      `
+        SELECT id
+        FROM question_choices
+        WHERE question_id = $1
+          AND is_correct = TRUE
+        LIMIT 1
+      `,
+      [questionId]
+    );
+    const correctChoiceId = correctChoiceResult.rows[0]?.id ?? null;
+
+    if (preferCorrectAnswers) {
+      return choices.find((choice) => choice.id === correctChoiceId) ?? choices[0];
+    }
+
+    return choices.find((choice) => choice.id !== correctChoiceId) ?? choices[0];
   }
 
   private async getCatalogStats() {

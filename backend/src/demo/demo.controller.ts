@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Get,
   Header,
@@ -60,6 +61,27 @@ export class DemoController {
     @Param("duelId") duelId: string
   ) {
     const result = await this.demoService.simulateOpponentTurn(user.userId, duelId);
+    return { data: result };
+  }
+
+  @Post("duels/:duelId/simulate-current-turn")
+  @UseGuards(JwtAuthGuard)
+  async simulateCurrentTurn(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("duelId") duelId: string
+  ) {
+    const result = await this.demoService.simulateCurrentTurn(user.userId, duelId);
+    return { data: result };
+  }
+
+  @Post("duels/:duelId/simulate-to-end")
+  @UseGuards(JwtAuthGuard)
+  async simulateToEnd(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("duelId") duelId: string,
+    @Body() body: { targetOutcome?: "win" | "lose" | null }
+  ) {
+    const result = await this.demoService.simulateDuelToEnd(user.userId, duelId, body?.targetOutcome ?? null);
     return { data: result };
   }
 }
