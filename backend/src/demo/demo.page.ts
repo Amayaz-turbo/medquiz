@@ -2375,6 +2375,90 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       box-shadow: 0 12px 26px rgba(12, 47, 72, 0.05);
     }
 
+    .duel-hero {
+      border: 1px solid rgba(171, 216, 236, 0.88);
+      border-radius: 18px;
+      padding: 14px;
+      background:
+        radial-gradient(circle at top center, rgba(255, 255, 255, 0.5), transparent 34%),
+        linear-gradient(180deg, rgba(218, 240, 250, 0.96), rgba(186, 223, 239, 0.9));
+      box-shadow: 0 12px 26px rgba(87, 145, 177, 0.12);
+      display: grid;
+      gap: 12px;
+    }
+
+    .duel-hero-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .duel-hero-copy {
+      display: grid;
+      gap: 5px;
+    }
+
+    .duel-hero-kicker {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.28px;
+      color: var(--ink-soft);
+      font-weight: 800;
+    }
+
+    .duel-hero-name {
+      font-size: 30px;
+      line-height: 1;
+      font-weight: 900;
+      color: #17425b;
+      letter-spacing: -0.02em;
+    }
+
+    .duel-hero-copy .mini {
+      font-size: 13px;
+    }
+
+    .duel-scoreboard {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      align-items: center;
+      gap: 10px;
+      border-radius: 16px;
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.44);
+      border: 1px solid rgba(255, 255, 255, 0.46);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+    }
+
+    .duel-score-col {
+      display: grid;
+      gap: 3px;
+      justify-items: center;
+      text-align: center;
+    }
+
+    .duel-score-col span {
+      font-size: 12px;
+      color: var(--ink-soft);
+      font-weight: 700;
+    }
+
+    .duel-score-col b {
+      font-size: 42px;
+      line-height: 1;
+      color: #17425b;
+      text-shadow: 0 2px 0 rgba(255, 255, 255, 0.32);
+    }
+
+    .duel-score-vs {
+      font-size: 15px;
+      font-weight: 900;
+      color: #4d7387;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
     .duel-guide {
       border: 1px solid var(--line);
       border-radius: 12px;
@@ -8671,6 +8755,12 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         var mySceneTokens = getLoadoutTokens(myLoadout);
         var opponentSceneTokens = getLoadoutTokens(opponentLoadout);
         var myNextStage = state.myAvatar && state.myAvatar.nextStage ? state.myAvatar.nextStage.name : '';
+        var duelModeLabel = getDuelModeLabel(d.matchmakingMode);
+        var duelTurnLabel = isMyTurn ? 'À toi de jouer' : ('Tour de ' + opponentName);
+        var duelDeadlineLabel = d.turnDeadlineAt ? formatDateTime(d.turnDeadlineAt) : 'Aucune deadline';
+        var duelResultLabel = d.winnerUserId
+          ? (d.winnerUserId === meId ? 'Tu as gagné' : (opponentName + ' a gagné'))
+          : 'Duel en cours';
         var playerCardsHtml =
           '<div class="duel-player-grid">'
           + renderDuelPlayerCard({
@@ -8840,11 +8930,26 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
 
         refs.duelDetail.innerHTML =
           '<div class="duel-guide">'
+          + '<div class="duel-hero">'
+          + '<div class="duel-hero-top">'
+          + '<div class="duel-hero-copy">'
+          + '<div class="duel-hero-kicker">Ton duel du moment</div>'
+          + '<div class="duel-hero-name">' + escapeHtml(opponentName) + '</div>'
+          + '<div class="mini">Un tour = 3 questions chacun. ' + escapeHtml(duelModeLabel) + '.</div>'
+          + '</div>'
+          + '<div class="duel-detail-badges"><span class="chip">' + escapeHtml(getDuelStatusLabel(d.status)) + '</span><span class="chip neutral">' + escapeHtml(duelTurnLabel) + '</span></div>'
+          + '</div>'
+          + '<div class="duel-scoreboard">'
+          + '<div class="duel-score-col"><span>Toi</span><b>' + escapeHtml(String(myScore)) + '</b></div>'
+          + '<div class="duel-score-vs">VS</div>'
+          + '<div class="duel-score-col"><span>' + escapeHtml(opponentName) + '</span><b>' + escapeHtml(String(opponentScore)) + '</b></div>'
+          + '</div>'
           + '<div class="duel-overview-grid">'
-          + '<div class="duel-overview-card"><div class="k">Score</div><div class="v">' + escapeHtml(String(d.score.player1)) + ' - ' + escapeHtml(String(d.score.player2)) + '</div></div>'
-          + '<div class="duel-overview-card"><div class="k">Tour actuel</div><div class="v">' + escapeHtml(isMyTurn ? 'À toi' : 'Adverse') + '</div></div>'
-          + '<div class="duel-overview-card"><div class="k">Manche active</div><div class="v">' + escapeHtml(String(d.currentRoundNo)) + '/5</div></div>'
-          + '<div class="duel-overview-card"><div class="k">Deadline</div><div class="v">' + escapeHtml(d.turnDeadlineAt ? formatDateTime(d.turnDeadlineAt) : '-') + '</div></div>'
+          + '<div class="duel-overview-card"><div class="k">Tour actuel</div><div class="v">' + escapeHtml(duelTurnLabel) + '</div></div>'
+          + '<div class="duel-overview-card"><div class="k">Manches</div><div class="v">' + escapeHtml(String(d.currentRoundNo)) + ' / 5</div></div>'
+          + '<div class="duel-overview-card"><div class="k">Format</div><div class="v">3 questions</div></div>'
+          + '<div class="duel-overview-card"><div class="k">' + escapeHtml(d.winnerUserId ? 'Résultat' : 'Deadline') + '</div><div class="v">' + escapeHtml(d.winnerUserId ? duelResultLabel : duelDeadlineLabel) + '</div></div>'
+          + '</div>'
           + '</div>'
           + '<div class="duel-guide-focus">'
           + '<div class="duel-guide-focus-top">'
@@ -8859,13 +8964,6 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           + playerCardsHtml
           + '<div class="duel-stage-list">' + stageListHtml + '</div>'
           + '<div class="duel-round-strip">' + roundsStripHtml + '</div>'
-          + '</div>'
-          + '<div class="duel-item-top">'
-          + '<b>Face-à-face avec ' + escapeHtml(opponentName) + '</b>'
-          + '<div class="duel-detail-badges"><span class="chip">' + escapeHtml(getDuelStatusLabel(d.status)) + '</span><span class="chip neutral">' + escapeHtml(getDuelModeLabel(d.matchmakingMode)) + '</span></div>'
-          + '</div>'
-          + '<div class="mini">' + escapeHtml(isMyTurn ? 'C\'est ton tour.' : 'Tour adverse pour l\'instant.') + (d.turnDeadlineAt ? (' Deadline: ' + escapeHtml(formatDateTime(d.turnDeadlineAt)) + '.') : '') + '</div>'
-          + (d.winnerUserId ? ('<div class="mini">Fin du duel: ' + escapeHtml(String(d.winReason || 'résultat final')) + '</div>') : '')
           + (utilityActions.length ? ('<div class="duel-detail-utility">' + utilityActions.join('') + '</div>') : '')
           + openerBlock
           + jokerBlock
