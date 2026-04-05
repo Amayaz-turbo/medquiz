@@ -1,7 +1,8 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, UnprocessableEntityException } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import { PoolClient } from "pg";
 import { DatabaseService } from "../database/database.service";
+import { DuelsService } from "../duels/duels.service";
 
 type DemoChoiceSeed = {
   label: string;
@@ -2167,7 +2168,10 @@ const DEMO_SUBJECTS: DemoSubjectSeed[] = [
 
 @Injectable()
 export class DemoService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly duelsService: DuelsService
+  ) {}
 
   async ensureDemoCatalog(createdByUserId: string) {
     const before = await this.getCatalogStats();
@@ -2192,6 +2196,97 @@ export class DemoService {
       insertedCount,
       openTextSupported,
       ...after
+    };
+  }
+
+  async simulateOpponentTurn(userId: string, duelId: string) {
+    const duel = await this.duelsService.getDuel(userId, duelId);
+
+    if (duel.status !== "in_progress") {
+      throw new UnprocessableEntityException({
+        code: "DEMO_DUEL_NOT_ACTIVE",
+        message: "Le duel n'est pas actif"
+      });
+    }
+
+    if (!duel.currentTurnUserId) {
+      throw new UnprocessableEntityException({
+        code: "DEMO_DUEL_NO_CURRENT_TURN",
+        message: "Aucun tour adverse à simuler"
+      });
+    }
+
+    if (duel.currentTurnUserId === userId) {
+      throw new UnprocessableEntityException({
+        code: "DEMO_DUEL_ALREADY_YOUR_TURN",
+        message: "C'est déjà ton tour"
+      });
+    }
+
+    const opponentUserId = duel.currentTurnUserId;
+    let round = await this.duelsService.getCurrentRound(opponentUserId, duelId);
+    let chosenSubjectId = round.chosenSubjectId ?? null;
+
+    if (!chosenSubjectId) {
+      const fallbackSubject = round.offeredSubjects[0];
+      if (!fallbackSubject) {
+        throw new UnprocessableEntityException({
+          code: "DEMO_DUEL_NO_SUBJECTS_OFFERED",
+          message: "Aucune matière proposée pour simuler ce tour"
+        });
+      }
+
+      await this.duelsService.chooseRoundSubject(opponentUserId, duelId, round.roundNo, {
+        subjectId: fallbackSubject.id
+      });
+      chosenSubjectId = fallbackSubject.id;
+      round = await this.duelsService.getCurrentRound(opponentUserId, duelId);
+    }
+
+    const answeredSlotRows = await this.db.query<{ slot_no: number }>(
+      `
+        SELECT da.slot_no
+        FROM duel_answers da
+        JOIN duel_rounds dr ON dr.id = da.duel_round_id
+        WHERE da.duel_id = $1
+          AND da.user_id = $2
+          AND dr.round_no = $3
+      `,
+      [duelId, opponentUserId, round.roundNo]
+    );
+    const answeredSlots = new Set(answeredSlotRows.rows.map((row) => Number(row.slot_no)));
+
+    const questions = await this.duelsService.getRoundQuestions(opponentUserId, duelId, round.roundNo);
+    let playedQuestions = 0;
+
+    for (const item of questions) {
+      if (answeredSlots.has(Number(item.slotNo))) {
+        continue;
+      }
+
+      const choice = Array.isArray(item.question?.choices) ? item.question.choices[0] : null;
+      if (!choice) {
+        throw new UnprocessableEntityException({
+          code: "DEMO_DUEL_NO_CHOICES",
+          message: "Une question duel n'a pas de choix disponibles"
+        });
+      }
+
+      await this.duelsService.submitRoundAnswer(opponentUserId, duelId, round.roundNo, {
+        slotNo: Number(item.slotNo),
+        questionId: item.question.id,
+        selectedChoiceId: choice.id,
+        responseTimeMs: 1200 + Number(item.slotNo) * 250
+      });
+      playedQuestions += 1;
+    }
+
+    return {
+      duel: await this.duelsService.getDuel(userId, duelId),
+      simulatedUserId: opponentUserId,
+      roundNo: round.roundNo,
+      chosenSubjectId,
+      playedQuestions
     };
   }
 

@@ -7431,6 +7431,19 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         return '';
       }
 
+      function getDuelOpponentUserId(duel, meId) {
+        if (!duel || !meId) {
+          return '';
+        }
+        if (duel.player1Id === meId) {
+          return duel.player2Id || '';
+        }
+        if (duel.player2Id === meId) {
+          return duel.player1Id || '';
+        }
+        return '';
+      }
+
       function getAvatarLoadoutLabels() {
         if (!state.myAvatar || !state.myAvatar.equipment) {
           return [];
@@ -8645,6 +8658,56 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         return null;
       }
 
+      function getReviewedDuelPlayItem() {
+        if (!state.duelPlayReview) {
+          return null;
+        }
+
+        if (state.duelPlayKind === 'opener' && state.openerQuestion) {
+          return {
+            kind: 'opener',
+            question: state.openerQuestion,
+            progressLabel: 'Opener',
+            scopeLabel: state.selectedDuel ? getDuelOpponentTitle(state.selectedDuel) : 'Duel',
+            topicLabel: 'Question d’ouverture',
+            guidance: 'Réponds rapidement pour lancer le duel.',
+            submitLabel: 'Valider l’opener'
+          };
+        }
+
+        if (state.duelPlayKind === 'round' && state.roundQuestions.length) {
+          var reviewed = state.roundQuestions.find(function (item) {
+            return item && (
+              Number(item.slotNo) === Number(state.duelPlayReview.slotNo)
+              || (item.question && item.question.id === state.duelPlayReview.questionId)
+            );
+          });
+          if (!reviewed) {
+            return null;
+          }
+          var selectedSubjectName = '';
+          if (state.currentRound && state.currentRound.chosenSubjectId && Array.isArray(state.currentRound.offeredSubjects)) {
+            var subject = state.currentRound.offeredSubjects.find(function (candidate) {
+              return candidate.id === state.currentRound.chosenSubjectId;
+            });
+            selectedSubjectName = subject ? subject.name : '';
+          }
+          return {
+            kind: 'round',
+            slotNo: reviewed.slotNo,
+            difficultySnapshot: reviewed.difficultySnapshot,
+            question: reviewed.question,
+            progressLabel: 'Question ' + reviewed.slotNo + ' / 3',
+            scopeLabel: selectedSubjectName || 'Manche en cours',
+            topicLabel: 'Manche ' + (state.currentRound ? state.currentRound.roundNo : '-') + ' · duel',
+            guidance: 'Réponds à cette question, puis on t’enchaîne directement sur la suivante.',
+            submitLabel: 'Valider cette question'
+          };
+        }
+
+        return null;
+      }
+
       async function refreshRoundQuestionsForPlay() {
         if (!state.selectedDuelId || !state.currentRound) {
           return;
@@ -8677,7 +8740,10 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           return;
         }
 
-        var playItem = getCurrentDuelPlayItem();
+        var playItem = state.duelPlayReview ? getReviewedDuelPlayItem() : getCurrentDuelPlayItem();
+        if (!playItem && state.duelPlayReview) {
+          playItem = getCurrentDuelPlayItem();
+        }
         if (!playItem) {
           clearDuelPlayAutoAdvance();
           refs.duelPlayContent.classList.remove('hidden');
@@ -8809,7 +8875,7 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           refs.duelNextAnswerBtn.classList.remove('hidden');
           refs.duelNextAnswerBtn.disabled = false;
           refs.duelNextAnswerBtn.textContent = review.turnCompleted || review.remainingSlots === 0
-            ? 'Retour au duel'
+            ? 'Retour au résumé duel'
             : 'Question suivante';
           startDuelPlayAutoAdvance();
           return;
@@ -8843,6 +8909,11 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           }
         }
 
+        var shouldReturnToDuelSummary = Boolean(
+          state.duelPlayKind === 'round'
+          && state.duelPlayReview
+          && (state.duelPlayReview.turnCompleted || state.duelPlayReview.remainingSlots === 0)
+        );
         state.duelPlayReview = null;
         await loadDuelDetail(state.selectedDuelId);
         try {
@@ -8853,6 +8924,9 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           // duel may have changed state between refreshes
         }
         setDuelFlow('detail');
+        if (shouldReturnToDuelSummary) {
+          setStatus('Tour terminé. Retour au résumé duel.', 'ok');
+        }
       }
 
       function renderDuelHome() {
@@ -9123,6 +9197,8 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           ? (d.winnerUserId === meId ? 'Tu as gagné' : (opponentName + ' a gagné'))
           : 'Duel en cours';
         var primaryActionHtml = '';
+        var soloTestActionHtml = '';
+        var rematchActionHtml = '';
         if (canAccept) {
           primaryActionHtml = '<div class="duel-actions"><button class="btn-primary" data-duel-action="accept">Accepter</button><button class="btn-secondary" data-duel-action="decline">Refuser</button></div>';
         } else if (d.status === 'in_progress' && state.currentRound) {
@@ -9135,6 +9211,12 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           } else if (isMyTurn) {
             primaryActionHtml = '<div class="duel-actions"><button class="btn-primary" data-duel-action="load-round-questions">Commencer mes 3 questions</button></div>';
           }
+        }
+        if (d.status === 'in_progress' && meId && d.currentTurnUserId && d.currentTurnUserId !== meId) {
+          soloTestActionHtml = '<div class="duel-actions"><button class="btn-secondary" data-duel-action="simulate-opponent-turn">Simuler le tour adverse</button></div>';
+        }
+        if (d.status === 'completed' && getDuelOpponentUserId(d, meId)) {
+          rematchActionHtml = '<div class="duel-actions"><button class="btn-primary" data-duel-action="rematch">Rejouer contre ' + escapeHtml(opponentName) + '</button></div>';
         }
 
         refs.duelDetail.innerHTML =
@@ -9156,7 +9238,9 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
           + '<div class="duel-overview-card manches"><div class="k">Temps restant</div><div class="v">' + escapeHtml(duelRemainingLabel) + '</div><div class="s">' + escapeHtml(d.status === 'in_progress' ? 'Le chrono tourne.' : getDuelStatusLabel(d.status)) + '</div></div>'
           + '<div class="duel-overview-card status"><div class="k">Matière</div><div class="v">' + escapeHtml(state.currentRound && state.currentRound.chosenSubjectId && Array.isArray(state.currentRound.offeredSubjects) ? ((state.currentRound.offeredSubjects.find(function (subject) { return subject.id === state.currentRound.chosenSubjectId; }) || {}).name || 'Choix à venir') : 'Choix à venir') + '</div><div class="s">' + escapeHtml(state.currentRound && !state.currentRound.chosenSubjectId ? '3 matières seront proposées.' : duelResultLabel) + '</div></div>'
           + '</div>'
-          + primaryActionHtml;
+          + primaryActionHtml
+          + soloTestActionHtml
+          + rematchActionHtml;
         refs.duelDetail.classList.remove('hidden');
         renderDuelHome();
         renderDuelSubjectSelection();
@@ -9646,6 +9730,47 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         }
       }
 
+      async function simulateOpponentTurnFromUi() {
+        if (!state.selectedDuelId) {
+          throw new Error('Sélectionne un duel.');
+        }
+        var result = await api('/demo/duels/' + state.selectedDuelId + '/simulate-opponent-turn', {
+          method: 'POST'
+        });
+        await loadDuels();
+        await loadDuelDetail(state.selectedDuelId);
+        var updatedDuel = result && result.duel ? result.duel : state.selectedDuel;
+        if (updatedDuel && updatedDuel.status === 'completed') {
+          setStatus('Tour adverse simulé. Le duel est terminé.', 'ok');
+          return;
+        }
+        setStatus('Tour adverse simulé. Tu peux reprendre.', 'ok');
+      }
+
+      async function createRematchFromUi() {
+        if (!state.selectedDuel) {
+          throw new Error('Sélectionne un duel terminé.');
+        }
+        var meId = state.me && state.me.id ? state.me.id : '';
+        var opponentUserId = getDuelOpponentUserId(state.selectedDuel, meId);
+        if (!opponentUserId) {
+          throw new Error('Adversaire introuvable pour la revanche.');
+        }
+        var result = await api('/duels', {
+          method: 'POST',
+          body: {
+            matchmakingMode: 'random_free',
+            opponentUserId: opponentUserId
+          }
+        });
+        await loadDuels();
+        if (result && result.duelId) {
+          await loadDuelDetail(result.duelId);
+          setDuelFlow('detail');
+        }
+        setStatus('Nouveau duel lancé contre le même adversaire.', 'ok');
+      }
+
       async function createDuelFromUi() {
         var mode = refs.duelModeSelect.value;
         var body = { matchmakingMode: mode };
@@ -10120,6 +10245,9 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
       }
 
       function getDuelPlayAutoAdvanceMs(review) {
+        if (review && (review.turnCompleted || review.remainingSlots === 0)) {
+          return 5000;
+        }
         return review && review.isCorrect ? REVIEW_AUTO_ADVANCE_OK_MS : REVIEW_AUTO_ADVANCE_ERR_MS;
       }
 
@@ -10145,9 +10273,13 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
         }
         var remainingMs = Math.max(0, deadlineAt - Date.now());
         var remainingSeconds = remainingMs > 0 ? Math.max(1, Math.ceil(remainingMs / 1000)) : 0;
+        var returnToDuel = Boolean(
+          state.duelPlayReview
+          && (state.duelPlayReview.turnCompleted || state.duelPlayReview.remainingSlots === 0)
+        );
         label.textContent = remainingSeconds > 0
-          ? ('Suite automatique dans ' + remainingSeconds + ' s')
-          : 'Suite automatique…';
+          ? ((returnToDuel ? 'Retour au duel dans ' : 'Suite automatique dans ') + remainingSeconds + ' s')
+          : (returnToDuel ? 'Retour au duel…' : 'Suite automatique…');
         bar.style.width = ((remainingMs / durationMs) * 100) + '%';
       }
 
@@ -11236,6 +11368,14 @@ export const DEMO_PAGE_HTML = String.raw`<!doctype html>
             await loadDuels();
             await loadDuelDetail(state.selectedDuelId);
             setStatus('Duel abandonné.', 'info');
+            return;
+          }
+          if (action === 'simulate-opponent-turn') {
+            await simulateOpponentTurnFromUi();
+            return;
+          }
+          if (action === 'rematch') {
+            await createRematchFromUi();
             return;
           }
           if (action === 'load-opener') {

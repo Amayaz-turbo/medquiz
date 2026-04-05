@@ -5,6 +5,7 @@ import { DuelsService } from "./duels.service";
 
 @Module({
   controllers: [DuelsController],
-  providers: [DuelsService, DuelExpirationWorker]
+  providers: [DuelsService, DuelExpirationWorker],
+  exports: [DuelsService]
 })
 export class DuelsModule {}

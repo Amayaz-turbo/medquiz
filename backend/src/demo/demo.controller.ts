@@ -52,4 +52,14 @@ export class DemoController {
     const result = await this.demoService.ensureDemoCatalog(user.userId);
     return { data: result };
   }
+
+  @Post("duels/:duelId/simulate-opponent-turn")
+  @UseGuards(JwtAuthGuard)
+  async simulateOpponentTurn(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("duelId") duelId: string
+  ) {
+    const result = await this.demoService.simulateOpponentTurn(user.userId, duelId);
+    return { data: result };
+  }
 }
